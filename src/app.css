@@ -1,0 +1,54 @@
+@import 'tailwindcss';
+
+/* ------------------------------------------------------------- design tokens */
+@theme {
+	--color-ink: #05060c;
+	--color-ink-2: #0a0d18;
+	--color-panel: #0d1120;
+	--color-paper: #eef1f8;
+	--color-muted: #8b93a8;
+	--color-line: #1c2233;
+
+	/* the four rules of a timeline */
+	--color-fixed: #4f9cff;
+	--color-mutable: #ffa24a;
+	--color-branching: #b57cff;
+	--color-loop: #35d6a4;
+
+	--font-serif: 'Iowan Old Style', 'Palatino Linotype', Palatino, 'Book Antiqua', Georgia, serif;
+	--font-sans: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+	--font-mono: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+}
+
+/* ------------------------------------------------------------------- base */
+:root {
+	color-scheme: dark;
+}
+html {
+	background: radial-gradient(120% 90% at 22% 26%, var(--color-ink-2), var(--color-ink) 72%);
+	background-attachment: fixed;
+	min-height: 100%;
+}
+body {
+	margin: 0;
+	min-height: 100svh;
+	color: var(--color-paper);
+	font-family: var(--font-sans);
+	-webkit-font-smoothing: antialiased;
+}
+a {
+	color: inherit;
+	text-decoration: none;
+}
+::selection {
+	background: color-mix(in srgb, var(--color-branching) 40%, transparent);
+}
+
+/* utility: uppercase mono eyebrow */
+.eyebrow {
+	font-family: var(--font-mono);
+	text-transform: uppercase;
+	letter-spacing: 0.24em;
+	font-size: 0.72rem;
+	color: var(--color-muted);
+}

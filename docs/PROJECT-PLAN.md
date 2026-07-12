@@ -141,6 +141,21 @@ optional per entry, so we ship simple ones first and add rich ones over time.
 
 ---
 
+## 5b. Known design tension — interconnected timelines
+
+The landing concept is a shared **prime timeline** with each specimen's own
+timeline laid onto it. Open problem: some works' timelines genuinely **touch
+each other** — the *Back to the Future* trilogy is one continuous, self-crossing
+timeline, and the *Terminator* films repeatedly revisit and overwrite shared
+dates. Collapsing everything onto one prime line risks losing those cross-links.
+
+Implication for the **data model** (kept flexible now, layout solved later):
+- entries may belong to a `saga` (franchise / shared continuity);
+- a `TimelineEvent` may carry an optional `crossRef` to an event in *another*
+  entry, so franchise crossings can be drawn when we want them.
+
+We build the schema to express this; we defer the landing layout that visualises it.
+
 ## 6. Open Decisions (need your call)
 
 1. **Images / IP.** Using real film stills on a public site is fan-project-common

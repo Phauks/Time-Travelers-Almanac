@@ -1,86 +1,148 @@
 <script lang="ts">
-	import type { TimelineEvent } from '$lib/types';
+	import { Flag, Lightning, MapPin, ArrowUUpLeft, ArrowsClockwise, DotOutline } from 'phosphor-svelte';
+	import type { EventKind, TimelineEvent } from '$lib/types';
 
 	let {
 		events,
 		accent = 'var(--color-branching)'
 	}: { events: TimelineEvent[]; accent?: string } = $props();
 
+	const STEP = 132; // px between nodes on the rail
+	const BASE_Y = 74; // baseline within the rail
+	const RAIL_H = 116;
+
 	let order = $state<'told' | 'happened'>('told');
 
-	let n = $derived(events.length);
+	const byNarrative = [...events].sort((a, b) => a.narrative - b.narrative);
+	let selectedId = $state<string>(byNarrative[0]?.id ?? '');
+	let selected = $derived(events.find((e) => e.id === selectedId) ?? byNarrative[0]);
 
-	// slot index per event id under the current ordering
+	let ordered = $derived(
+		order === 'told'
+			? [...events].sort((a, b) => a.narrative - b.narrative)
+			: [...events].sort((a, b) => a.chrono - b.chrono)
+	);
 	let slots = $derived.by(() => {
-		const arr =
-			order === 'told'
-				? [...events].sort((a, b) => a.narrative - b.narrative)
-				: [...events].sort((a, b) => a.chrono - b.chrono);
-		const map = new Map<string, number>();
-		arr.forEach((e, i) => map.set(e.id, i));
-		return map;
+		const m = new Map<string, number>();
+		ordered.forEach((e, i) => m.set(e.id, i));
+		return m;
 	});
-
+	const innerW = $derived(events.length * STEP);
 	function xOf(id: string): number {
-		const slot = slots.get(id) ?? 0;
-		return ((slot + 0.5) / n) * 100;
+		return (slots.get(id) ?? 0) * STEP + STEP / 2;
 	}
-
-	function dotColor(e: TimelineEvent): string {
-		if (e.kind === 'loop') return 'var(--color-loop)';
-		if (e.kind === 'jump') return '#ffffff';
-		return accent;
-	}
-
 	let jumps = $derived(events.filter((e) => e.jumpTo && slots.has(e.jumpTo)));
+
+	const KIND: Record<EventKind, { label: string; icon: unknown | null; color: string }> = {
+		origin: { label: 'Origin', icon: Flag, color: accent },
+		departure: { label: 'Time jump', icon: Lightning, color: accent },
+		jump: { label: 'Time jump', icon: Lightning, color: accent },
+		arrival: { label: 'Arrival', icon: MapPin, color: accent },
+		return: { label: 'Return', icon: ArrowUUpLeft, color: accent },
+		loop: { label: 'Loop', icon: ArrowsClockwise, color: 'var(--color-loop)' },
+		event: { label: 'Event', icon: DotOutline, color: 'var(--color-muted)' },
+		normal: { label: 'Event', icon: DotOutline, color: 'var(--color-muted)' }
+	};
+	function meta(e: TimelineEvent) {
+		return KIND[e.kind ?? 'event'];
+	}
+	function variantLabel(v?: string): string {
+		if (!v) return '';
+		return v
+			.split('-')
+			.map((w) => w[0].toUpperCase() + w.slice(1))
+			.join(' ');
+	}
+
+	// short date for the rail (first line of chronoLabel)
+	function shortDate(e: TimelineEvent): string {
+		return (e.chronoLabel ?? '').split('·')[0].trim();
+	}
 </script>
 
 <div class="tl" style="--accent:{accent}">
-	<div class="toggle" role="group" aria-label="Timeline ordering">
-		<button class:on={order === 'told'} onclick={() => (order = 'told')} aria-pressed={order === 'told'}>
-			As Told
-		</button>
-		<button
-			class:on={order === 'happened'}
-			onclick={() => (order = 'happened')}
-			aria-pressed={order === 'happened'}
-		>
-			As Happened
-		</button>
+	<div class="head">
+		<div class="toggle" role="group" aria-label="Timeline ordering">
+			<button class:on={order === 'told'} aria-pressed={order === 'told'} onclick={() => (order = 'told')}>
+				As Told
+			</button>
+			<button
+				class:on={order === 'happened'}
+				aria-pressed={order === 'happened'}
+				onclick={() => (order = 'happened')}
+			>
+				As Happened
+			</button>
+		</div>
+		<p class="caption">
+			{order === 'told'
+				? 'The order you experience the story.'
+				: 'The order the events truly occur in time.'}
+		</p>
 	</div>
 
-	<div class="rail">
-		<svg class="arcs" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
-			<line x1="0" y1="50" x2="100" y2="50" class="baseline" />
-			{#each jumps as e (e.id)}
-				{@const x1 = xOf(e.id)}
-				{@const x2 = xOf(e.jumpTo!)}
-				<path
-					d="M {x1} 50 C {x1} 12, {x2} 12, {x2} 50"
-					class="arc"
-					vector-effect="non-scaling-stroke"
-				/>
+	<div class="rail" style="height:{RAIL_H}px">
+		<div class="inner" style="width:{innerW}px; height:{RAIL_H}px">
+			<svg class="arcs" width={innerW} height={RAIL_H} aria-hidden="true">
+				<line x1="0" y1={BASE_Y} x2={innerW} y2={BASE_Y} class="baseline" />
+				{#each jumps as e (e.id)}
+					{@const x1 = xOf(e.id)}
+					{@const x2 = xOf(e.jumpTo!)}
+					<path d="M {x1} {BASE_Y} C {x1} {BASE_Y - 54}, {x2} {BASE_Y - 54}, {x2} {BASE_Y}" class="arc" />
+				{/each}
+			</svg>
+
+			{#each events as e (e.id)}
+				{@const M = meta(e)}
+				<button
+					class="node"
+					class:sel={selectedId === e.id}
+					style="left:{xOf(e.id)}px; top:{BASE_Y}px"
+					onclick={() => (selectedId = e.id)}
+					aria-label={e.label}
+				>
+					<span class="dot" style="background:{M.color}; box-shadow:0 0 12px {M.color}"></span>
+					<span class="date">{shortDate(e)}</span>
+				</button>
 			{/each}
-		</svg>
-
-		{#each events as e (e.id)}
-			<div class="node" style="left:{xOf(e.id)}%">
-				<span class="dot" style="background:{dotColor(e)}; box-shadow:0 0 12px {dotColor(e)}"></span>
-				<span class="yr">{e.chronoLabel ?? ''}</span>
-				<span class="lb">{e.label}</span>
-			</div>
-		{/each}
+		</div>
 	</div>
 
-	<p class="hint">
-		Toggle the ordering — nodes glide between the order you <em>experience</em> the story and the
-		order it <em>really</em> happens.
-	</p>
+	{#if selected}
+		{@const M = meta(selected)}
+		<div class="detail">
+			<div class="badges">
+				<span class="badge" style="--c:{M.color}">
+					{#if M.icon}{@const Icon = M.icon}<Icon size={13} weight="fill" />{/if}
+					{M.label}
+				</span>
+				{#if selected.variant}
+					<span class="badge variant">{variantLabel(selected.variant)}</span>
+				{/if}
+				{#if selected.jumpTo}
+					{@const tgt = events.find((x) => x.id === selected.jumpTo)}
+					{#if tgt}<span class="badge jump">→ {tgt.label}</span>{/if}
+				{/if}
+			</div>
+			<h4>{selected.label}</h4>
+			<p class="when">
+				{selected.chronoLabel}{selected.location ? ` — ${selected.location}` : ''}
+			</p>
+			{#if selected.description}<p class="desc">{selected.description}</p>{/if}
+		</div>
+	{/if}
 </div>
 
 <style>
 	.tl {
 		width: 100%;
+	}
+	.head {
+		display: flex;
+		align-items: center;
+		gap: 1rem;
+		flex-wrap: wrap;
+		margin-bottom: 0.5rem;
 	}
 	.toggle {
 		display: inline-flex;
@@ -90,7 +152,6 @@
 		font-family: var(--font-mono);
 		font-size: 0.72rem;
 		letter-spacing: 0.04em;
-		margin-bottom: 0.5rem;
 	}
 	.toggle button {
 		border: 0;
@@ -108,38 +169,45 @@
 		outline: 2px solid var(--accent);
 		outline-offset: 2px;
 	}
+	.caption {
+		margin: 0;
+		font-size: 0.8rem;
+		color: var(--color-muted);
+	}
 
 	.rail {
 		position: relative;
-		height: 150px;
 		overflow-x: auto;
-		overflow-y: visible;
+		overflow-y: hidden;
+		padding-bottom: 0.4rem;
+	}
+	.inner {
+		position: relative;
 	}
 	.arcs {
 		position: absolute;
 		inset: 0;
-		width: 100%;
-		height: 100%;
 	}
 	.baseline {
 		stroke: var(--color-line);
 		stroke-width: 2;
-		vector-effect: non-scaling-stroke;
 	}
 	.arc {
 		fill: none;
 		stroke: var(--accent);
 		stroke-width: 1.5;
 		stroke-dasharray: 4 4;
-		opacity: 0.75;
+		opacity: 0.8;
 	}
 	.node {
 		position: absolute;
-		top: 50%;
 		transform: translate(-50%, -50%);
-		width: 118px;
-		text-align: center;
+		width: 116px;
+		background: transparent;
+		border: 0;
+		cursor: pointer;
 		transition: left 0.55s cubic-bezier(0.65, 0, 0.35, 1);
+		padding: 0;
 	}
 	.dot {
 		display: block;
@@ -148,26 +216,85 @@
 		border-radius: 50%;
 		margin: 0 auto;
 		border: 3px solid var(--color-ink);
+		transition: transform 0.15s ease;
 	}
-	.yr {
+	.node.sel .dot {
+		transform: scale(1.5);
+		outline: 1.5px solid color-mix(in srgb, var(--color-paper) 70%, transparent);
+		outline-offset: 2px;
+	}
+	.node:focus-visible {
+		outline: none;
+	}
+	.node:focus-visible .dot {
+		outline: 2px solid var(--color-paper);
+		outline-offset: 2px;
+	}
+	.date {
 		display: block;
-		margin-top: 8px;
+		margin-top: 12px;
 		font-family: var(--font-mono);
-		font-size: 0.66rem;
-		letter-spacing: 0.06em;
+		font-size: 0.64rem;
+		letter-spacing: 0.02em;
 		color: var(--color-muted);
-	}
-	.lb {
-		display: block;
-		font-size: 0.78rem;
 		line-height: 1.2;
-		margin-top: 2px;
 	}
-	.hint {
-		margin: 0.75rem 0 0;
-		font-size: 0.8rem;
+	.node.sel .date {
+		color: var(--color-paper);
+	}
+
+	.detail {
+		margin-top: 0.75rem;
+		border: 1px solid var(--color-line);
+		border-left: 3px solid var(--accent);
+		border-radius: 4px;
+		background: color-mix(in srgb, var(--color-panel) 55%, transparent);
+		padding: 0.9rem 1rem 1rem;
+		min-height: 96px;
+	}
+	.badges {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.4rem;
+		margin-bottom: 0.55rem;
+	}
+	.badge {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.3rem;
+		font-family: var(--font-mono);
+		font-size: 0.6rem;
+		letter-spacing: 0.08em;
+		text-transform: uppercase;
+		padding: 3px 8px;
+		border-radius: 999px;
+		color: var(--c, var(--color-muted));
+		border: 1px solid color-mix(in srgb, var(--c, var(--color-muted)) 45%, transparent);
+	}
+	.badge.variant {
+		--c: var(--color-mutable);
+	}
+	.badge.jump {
+		--c: var(--color-paper);
 		color: var(--color-muted);
-		max-width: 46ch;
+	}
+	.detail h4 {
+		font-family: var(--font-serif);
+		font-size: 1.15rem;
+		margin: 0 0 0.2rem;
+	}
+	.when {
+		margin: 0 0 0.5rem;
+		font-family: var(--font-mono);
+		font-size: 0.72rem;
+		color: var(--color-muted);
+	}
+	.desc {
+		margin: 0;
+		font-size: 0.95rem;
+		line-height: 1.55;
+		color: color-mix(in srgb, var(--color-paper) 88%, var(--color-muted));
+		max-width: 62ch;
 	}
 
 	@media (prefers-reduced-motion: reduce) {

@@ -64,6 +64,8 @@ export const specimens: MediaEntry[] = [
 		year: 1985,
 		medium: 'film',
 		saga: 'back-to-the-future',
+		continuity: 'film',
+		partOrder: 1,
 		rules: ['mutable'],
 		mode: ['contraption'],
 		loop: null,
@@ -78,11 +80,144 @@ export const specimens: MediaEntry[] = [
 			'Keep the almanac dry and the flux capacitor charged. If your siblings begin vanishing from photographs, prioritise your parents’ courtship.',
 		related: ['a-connecticut-yankee'],
 		imageSource: 'Film stills → TMDB',
+		sources: [
+			{ label: 'Wikipedia — Back to the Future', url: 'https://en.wikipedia.org/wiki/Back_to_the_Future' },
+			{ label: 'Futurepedia — Twin Pines Mall', url: 'https://backtothefuture.fandom.com/wiki/Twin_Pines_Mall' },
+			{
+				label: 'Futurepedia — Minute by minute in Back to the Future',
+				url: 'https://backtothefuture.fandom.com/wiki/Minute_by_minute_in_Back_to_the_Future'
+			},
+			{ label: 'Screenplay, 4th draft (Gale & Zemeckis)', url: 'https://www.dailyscript.com/scripts/bttf4th.pdf' }
+		],
 		timeline: [
-			{ id: 'b1', label: 'Marty in 1985', narrative: 0, chrono: 1985, chronoLabel: '1985', kind: 'origin', jumpTo: 'b2' },
-			{ id: 'b2', label: 'Blasted to 1955', narrative: 1, chrono: 1955, chronoLabel: '1955', kind: 'jump' },
-			{ id: 'b3', label: "Parents' first dance", narrative: 2, chrono: 1955.4, chronoLabel: '1955' },
-			{ id: 'b4', label: 'Back to (altered) 1985', narrative: 3, chrono: 1985.4, chronoLabel: '1985' }
+			{
+				id: 'demo',
+				label: 'The DeLorean revealed',
+				narrative: 0,
+				chrono: 1985.82,
+				chronoLabel: 'Oct 26, 1985 · 1:15 AM',
+				location: 'Twin Pines Mall, Hill Valley',
+				kind: 'origin',
+				variant: 'prime-1985',
+				description:
+					'Doc Brown demonstrates the time machine, sending Einstein the dog one minute into the future — the first time travel on the timeline.'
+			},
+			{
+				id: 'flee',
+				label: 'Libyans attack — Marty flees',
+				narrative: 1,
+				chrono: 1985.8205,
+				chronoLabel: 'Oct 26, 1985 · 1:20 AM',
+				location: 'Twin Pines Mall, Hill Valley',
+				kind: 'departure',
+				jumpTo: 'arrive55',
+				variant: 'prime-1985',
+				description:
+					'Doc is gunned down. Marty escapes in the DeLorean, hits 88 mph, and is thrown back to the date on the time circuits.'
+			},
+			{
+				id: 'arrive55',
+				label: 'Arrival in 1955',
+				narrative: 2,
+				chrono: 1955.845,
+				chronoLabel: 'Nov 5, 1955 · 6:00 AM',
+				location: 'Peabody Ranch, Hill Valley',
+				kind: 'arrival',
+				description:
+					'Marty crashes into a barn and flattens one of the Peabodys’ twin pines — which is why he will return to a "Lone Pine Mall".'
+			},
+			{
+				id: 'interfere',
+				label: 'The meeting is disrupted',
+				narrative: 3,
+				chrono: 1955.847,
+				chronoLabel: 'Nov 5, 1955',
+				location: 'Downtown Hill Valley',
+				kind: 'event',
+				description:
+					'Marty pushes George clear of the car meant to introduce him to Lorraine. She becomes infatuated with Marty instead — and he begins to fade from the family photograph.'
+			},
+			{
+				id: 'finddoc',
+				label: 'Finds the young Doc',
+				narrative: 4,
+				chrono: 1955.848,
+				chronoLabel: 'Nov 5, 1955',
+				location: "Doc's mansion, Hill Valley",
+				kind: 'event',
+				description:
+					'The 1955 Doc has no power source strong enough to get Marty home — except the lightning known to strike the clock tower a week later.'
+			},
+			{
+				id: 'plan',
+				label: 'Engineering the romance',
+				narrative: 5,
+				chrono: 1955.855,
+				chronoLabel: 'Nov 6–11, 1955',
+				location: 'Hill Valley High',
+				kind: 'event',
+				description:
+					'Marty schemes to get George and Lorraine to fall in love at the Enchantment Under the Sea dance and repair the damage to his own existence.'
+			},
+			{
+				id: 'dance',
+				label: 'Enchantment Under the Sea',
+				narrative: 6,
+				chrono: 1955.864,
+				chronoLabel: 'Nov 12, 1955 · night',
+				location: 'Hill Valley High gym',
+				kind: 'event',
+				variant: 'altered-1985',
+				description:
+					'George stands up to Biff and kisses Lorraine. His parents fall in love, Marty’s existence is secured, and the photograph is restored.'
+			},
+			{
+				id: 'depart55',
+				label: 'The clock-tower lightning',
+				narrative: 7,
+				chrono: 1955.866,
+				chronoLabel: 'Nov 12, 1955 · 10:04 PM',
+				location: 'Courthouse Square, Hill Valley',
+				kind: 'departure',
+				jumpTo: 'return85',
+				description:
+					'Doc runs a wire from the tower to the street; the lightning strikes as the DeLorean hits 88 mph, sending Marty home.'
+			},
+			{
+				id: 'return85',
+				label: 'Back to 1985',
+				narrative: 8,
+				chrono: 1985.821,
+				chronoLabel: 'Oct 26, 1985 · 1:24 AM',
+				location: 'Lone Pine Mall, Hill Valley',
+				kind: 'return',
+				description:
+					'Marty arrives ten minutes before he first left and watches Doc be shot again — but Doc survives, having read Marty’s warning letter and worn a vest.'
+			},
+			{
+				id: 'altered',
+				label: 'A better 1985',
+				narrative: 9,
+				chrono: 1985.822,
+				chronoLabel: 'Oct 26, 1985 · morning',
+				location: 'The McFly home',
+				kind: 'event',
+				variant: 'altered-1985',
+				description:
+					'Marty wakes to an overwritten present: George is a confident author, Lorraine is happy, and Biff is now their meek valet.'
+			},
+			{
+				id: 'hook',
+				label: '“…we don’t need roads.”',
+				narrative: 10,
+				chrono: 1985.823,
+				chronoLabel: 'Oct 26, 1985 · later',
+				location: 'The McFly home',
+				kind: 'departure',
+				variant: 'altered-1985',
+				description:
+					'Doc returns from 2015 and whisks Marty and Jennifer into the future — the thread Part II picks up.'
+			}
 		]
 	},
 	{

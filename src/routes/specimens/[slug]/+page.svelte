@@ -103,6 +103,17 @@
 			</div>
 		</section>
 	{/if}
+
+	{#if s.sources?.length}
+		<section class="sources">
+			<h2>Sources</h2>
+			<ul>
+				{#each s.sources as src (src.url)}
+					<li><a href={src.url} target="_blank" rel="noreferrer noopener">{src.label}</a></li>
+				{/each}
+			</ul>
+		</section>
+	{/if}
 </article>
 
 <style>
@@ -320,5 +331,23 @@
 	.rel-list a:hover {
 		color: var(--color-paper);
 		border-color: color-mix(in srgb, var(--color-paper) 30%, var(--color-line));
+	}
+
+	.sources ul {
+		margin: 0;
+		padding-left: 1.1rem;
+	}
+	.sources li {
+		font-size: 0.85rem;
+		color: var(--color-muted);
+		margin: 0.25rem 0;
+	}
+	.sources a {
+		color: var(--color-muted);
+		text-decoration: underline;
+		text-underline-offset: 2px;
+	}
+	.sources a:hover {
+		color: var(--color-paper);
 	}
 </style>

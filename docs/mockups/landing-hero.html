@@ -3,62 +3,58 @@
   *,*::before,*::after{box-sizing:border-box}
   html,body{margin:0;height:100%}
   :root{
-    --ink:#05060c;
-    --ink2:#0a0d18;
-    --text:#eef1f8;
-    --muted:#8b93a8;
-    --fixed:#4f9cff;     /* self-consistent */
-    --mutable:#ffa24a;   /* overwritten */
-    --branching:#b57cff; /* multiverse */
-    --loop:#35d6a4;      /* repetition */
+    --ink:#05060c; --ink2:#0a0d18; --text:#eef1f8; --muted:#8b93a8;
+    --fixed:#4f9cff; --mutable:#ffa24a; --branching:#b57cff; --loop:#35d6a4;
     --serif:"Iowan Old Style","Palatino Linotype",Palatino,"Book Antiqua",Georgia,serif;
     --sans:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
     --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
   }
-  body{
-    background:radial-gradient(120% 90% at 20% 30%, var(--ink2), var(--ink) 70%);
-    color:var(--text); font-family:var(--sans);
-    -webkit-font-smoothing:antialiased; overflow-x:hidden;
-  }
+  body{background:radial-gradient(120% 90% at 22% 26%, var(--ink2), var(--ink) 72%);
+    color:var(--text); font-family:var(--sans); -webkit-font-smoothing:antialiased; overflow-x:hidden;}
 
-  /* full-viewport animated field */
-  #field{position:fixed; inset:0; width:100%; height:100%; display:block; z-index:0;}
-  .scrim{ /* legibility gradient behind the words */
-    position:fixed; inset:0; z-index:1; pointer-events:none;
-    background:linear-gradient(105deg, rgba(4,5,10,.88) 0%, rgba(4,5,10,.55) 38%, rgba(4,5,10,0) 66%);
-  }
-  .grain{position:fixed; inset:0; z-index:1; pointer-events:none; opacity:.05; mix-blend-mode:overlay;
+  #field{position:fixed; inset:0; width:100%; height:100%; display:block; z-index:0; cursor:grab; touch-action:pan-y;}
+  #field.dragging{cursor:grabbing}
+  .scrim{position:fixed; inset:0; z-index:1; pointer-events:none;
+    background:linear-gradient(180deg, rgba(4,5,10,.78) 0%, rgba(4,5,10,.12) 34%, rgba(4,5,10,.1) 60%, rgba(4,5,10,.7) 100%);}
+  .grain{position:fixed; inset:0; z-index:1; pointer-events:none; opacity:.045; mix-blend-mode:overlay;
     background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/></filter><rect width='120' height='120' filter='url(%23n)'/></svg>");}
 
-  /* ---------- HERO ---------- */
+  /* floating specimen label */
+  #tip{position:fixed; z-index:5; pointer-events:none; opacity:0; transform:translateY(4px);
+    transition:opacity .16s, transform .16s; max-width:250px;
+    background:rgba(8,10,18,.92); border:1px solid rgba(255,255,255,.14); border-radius:4px;
+    padding:11px 13px; backdrop-filter:blur(8px); box-shadow:0 12px 40px rgba(0,0,0,.5);}
+  #tip.on{opacity:1; transform:translateY(0)}
+  #tip .rulebar{height:2px; width:26px; border-radius:2px; margin-bottom:8px}
+  #tip .t{font-family:var(--serif); font-size:17px; line-height:1.15; margin:0 0 3px}
+  #tip .t small{color:var(--muted); font-weight:normal; font-family:var(--sans); font-size:12.5px}
+  #tip .m{font-family:var(--mono); font-size:10.5px; letter-spacing:.09em; text-transform:uppercase; color:var(--muted); margin:0}
+  #tip .m b{color:var(--text); font-weight:600}
+
   .hero{position:relative; z-index:2; min-height:100svh; display:flex; flex-direction:column;
-    padding:clamp(22px,4.5vw,64px); max-width:1240px; margin:0 auto;}
+    padding:clamp(22px,4.5vw,60px); max-width:1300px; margin:0 auto; pointer-events:none;}
+  .hero a,.hero button{pointer-events:auto}
   .topbar{display:flex; align-items:center; gap:12px; font-family:var(--mono); font-size:12px;
     letter-spacing:.24em; text-transform:uppercase; color:var(--muted);}
-  .topbar .mark{display:inline-flex}
   .topbar .spacer{flex:1}
-  .topbar a{color:var(--muted); text-decoration:none}
-  .topbar a:hover{color:var(--text)}
+  .topbar a{color:var(--muted); text-decoration:none} .topbar a:hover{color:var(--text)}
 
-  .hero-mid{flex:1; display:flex; flex-direction:column; justify-content:center; max-width:20em;}
-  .eyebrow{font-family:var(--mono); font-size:12.5px; letter-spacing:.34em; text-transform:uppercase;
-    color:var(--muted); margin:0 0 22px; overflow:hidden;}
+  .hero-mid{margin-top:clamp(20px,6vh,70px); max-width:20em;}
+  .eyebrow{font-family:var(--mono); font-size:12px; letter-spacing:.32em; text-transform:uppercase;
+    color:var(--muted); margin:0 0 20px; overflow:hidden;}
   .eyebrow span{display:inline-block; transform:translateY(110%); animation:rise .9s .1s cubic-bezier(.2,.7,.2,1) forwards;}
-
-  h1{font-family:var(--serif); font-weight:600; margin:0 0 24px;
-    font-size:clamp(40px,7.2vw,92px); line-height:.98; letter-spacing:-.015em; text-wrap:balance;}
+  h1{font-family:var(--serif); font-weight:600; margin:0 0 22px;
+    font-size:clamp(36px,6vw,78px); line-height:.98; letter-spacing:-.015em; text-wrap:balance;}
   h1 .word{display:inline-block; overflow:hidden; vertical-align:top;}
   h1 .word > i{display:inline-block; font-style:inherit; transform:translateY(112%);
     animation:rise 1s cubic-bezier(.2,.75,.15,1) forwards;}
   h1 em{font-style:italic; color:var(--branching);}
-
-  .lede{font-size:clamp(16px,1.9vw,20px); color:#c8cee0; max-width:30ch; line-height:1.5; margin:0 0 34px;
+  .lede{font-size:clamp(15px,1.7vw,19px); color:#c8cee0; max-width:30ch; line-height:1.5; margin:0 0 30px;
     opacity:0; animation:fade 1s .85s ease forwards;}
   .lede b{color:var(--text); font-weight:600}
-
-  .cta{display:flex; flex-wrap:wrap; gap:14px; opacity:0; animation:fade 1s 1.05s ease forwards;}
-  .btn{display:inline-flex; align-items:center; gap:10px; font-family:var(--mono); font-size:12.5px;
-    letter-spacing:.08em; text-transform:uppercase; padding:14px 22px; border-radius:2px; cursor:pointer;
+  .cta{display:flex; flex-wrap:wrap; gap:12px; opacity:0; animation:fade 1s 1.05s ease forwards;}
+  .btn{display:inline-flex; align-items:center; gap:9px; font-family:var(--mono); font-size:12px;
+    letter-spacing:.08em; text-transform:uppercase; padding:13px 20px; border-radius:2px; cursor:pointer;
     border:1px solid transparent; text-decoration:none; color:var(--ink); background:var(--text);
     transition:transform .18s, background .18s, color .18s;}
   .btn:hover{transform:translateY(-2px)}
@@ -66,78 +62,60 @@
   .btn.ghost:hover{border-color:var(--text)}
   .btn svg{width:15px;height:15px}
 
-  /* legend = the thesis: 4 ways a timeline breaks */
-  .legend{display:flex; flex-wrap:wrap; gap:6px 26px; margin-top:46px; padding-top:22px;
-    border-top:1px solid rgba(255,255,255,.09); opacity:0; animation:fade 1.1s 1.35s ease forwards;}
+  .legend{display:flex; flex-wrap:wrap; gap:6px 24px; margin-top:40px; padding-top:20px;
+    border-top:1px solid rgba(255,255,255,.09); max-width:34em; opacity:0; animation:fade 1.1s 1.35s ease forwards;}
   .legend .li{display:flex; align-items:baseline; gap:9px; font-size:13px; color:var(--muted);}
-  .legend .li b{color:var(--text); font-weight:600; font-family:var(--mono); font-size:11.5px;
-    letter-spacing:.12em; text-transform:uppercase;}
+  .legend .li b{color:var(--text); font-weight:600; font-family:var(--mono); font-size:11px; letter-spacing:.12em; text-transform:uppercase;}
   .legend .swatch{width:9px;height:9px;border-radius:50%; align-self:center; box-shadow:0 0 10px currentColor;}
-  .sw-fixed{background:var(--fixed);color:var(--fixed)}
-  .sw-mutable{background:var(--mutable);color:var(--mutable)}
-  .sw-branching{background:var(--branching);color:var(--branching)}
-  .sw-loop{background:var(--loop);color:var(--loop)}
+  .sw-fixed{background:var(--fixed);color:var(--fixed)} .sw-mutable{background:var(--mutable);color:var(--mutable)}
+  .sw-branching{background:var(--branching);color:var(--branching)} .sw-loop{background:var(--loop);color:var(--loop)}
 
-  .scroll-cue{position:absolute; bottom:26px; left:50%; transform:translateX(-50%); z-index:2;
-    font-family:var(--mono); font-size:10.5px; letter-spacing:.3em; text-transform:uppercase; color:var(--muted);
-    display:flex; flex-direction:column; align-items:center; gap:9px; opacity:0; animation:fade 1s 1.6s ease forwards;}
-  .scroll-cue .line{width:1px; height:34px; background:linear-gradient(var(--muted),transparent); animation:drop 1.8s ease-in-out infinite;}
+  .hint{position:fixed; z-index:2; right:clamp(18px,4vw,52px); bottom:26px; font-family:var(--mono);
+    font-size:10.5px; letter-spacing:.22em; text-transform:uppercase; color:var(--muted); display:flex; gap:8px; align-items:center;
+    opacity:0; animation:fade 1s 1.7s ease forwards;}
+  .hint svg{width:14px;height:14px; opacity:.8}
 
-  /* ---------- below the fold: what's inside ---------- */
   .below{position:relative; z-index:2; background:linear-gradient(var(--ink), #070912);
     border-top:1px solid rgba(255,255,255,.07); padding:clamp(48px,8vw,110px) clamp(22px,4.5vw,64px);}
   .below-inner{max-width:1140px; margin:0 auto;}
   .below h2{font-family:var(--serif); font-weight:600; font-size:clamp(24px,3.4vw,34px); margin:0 0 6px; letter-spacing:-.01em;}
   .below p.sub{color:var(--muted); margin:0 0 44px; max-width:52ch;}
-  .index{display:grid; grid-template-columns:repeat(3,1fr); gap:0; border-top:1px solid rgba(255,255,255,.1);}
+  .index{display:grid; grid-template-columns:repeat(3,1fr); border-top:1px solid rgba(255,255,255,.1);}
   @media(max-width:740px){.index{grid-template-columns:1fr}}
-  .idx{padding:26px 26px 30px; border-bottom:1px solid rgba(255,255,255,.1);
-    border-right:1px solid rgba(255,255,255,.1);}
+  .idx{padding:26px 26px 30px; border-bottom:1px solid rgba(255,255,255,.1); border-right:1px solid rgba(255,255,255,.1);}
   @media(max-width:740px){.idx{border-right:0}}
   .idx .no{font-family:var(--mono); font-size:11px; letter-spacing:.2em; color:var(--muted);}
-  .idx .ic{margin:16px 0 14px; color:var(--text)}
-  .idx .ic svg{width:26px;height:26px}
+  .idx .ic{margin:16px 0 14px; color:var(--text)} .idx .ic svg{width:26px;height:26px}
   .idx h3{font-family:var(--serif); font-size:21px; margin:0 0 8px; font-weight:600}
   .idx p{margin:0; color:#aab2c6; font-size:14.5px; line-height:1.55}
-
   .foot{position:relative; z-index:2; background:#070912; color:var(--muted); font-family:var(--mono);
-    font-size:11px; letter-spacing:.16em; text-transform:uppercase; text-align:center; padding:26px;
-    border-top:1px solid rgba(255,255,255,.07);}
+    font-size:11px; letter-spacing:.16em; text-transform:uppercase; text-align:center; padding:26px; border-top:1px solid rgba(255,255,255,.07);}
 
-  @keyframes rise{to{transform:translateY(0)}}
-  @keyframes fade{to{opacity:1}}
-  @keyframes drop{0%,100%{transform:translateY(0);opacity:.3}50%{transform:translateY(6px);opacity:1}}
-
+  @keyframes rise{to{transform:translateY(0)}} @keyframes fade{to{opacity:1}}
   @media (prefers-reduced-motion: reduce){
-    .eyebrow span, h1 .word > i{transform:none; animation:none}
-    .lede,.cta,.legend,.scroll-cue{opacity:1; animation:none}
-    .scroll-cue .line{animation:none}
+    .eyebrow span,h1 .word>i{transform:none;animation:none}
+    .lede,.cta,.legend,.hint{opacity:1;animation:none}
   }
 </style>
 
-<canvas id="field" aria-hidden="true"></canvas>
+<canvas id="field"></canvas>
 <div class="scrim"></div>
 <div class="grain"></div>
+<div id="tip" role="status" aria-live="polite"></div>
 
 <header class="hero">
   <div class="topbar">
-    <span class="mark">
-      <!-- custom infinity/orbit mark (not an icon-pack dependency) -->
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M7 12c0-2.8 2.2-5 5-5s5 2.2 5 5-2.2 5-5 5-5-2.2-5-5Z" opacity=".5"/><path d="M3 12c0-1.7 4-3 9-3s9 1.3 9 3-4 3-9 3-9-1.3-9-3Z"/></svg>
-    </span>
+    <span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" style="vertical-align:-3px"><path d="M7 12c0-2.8 2.2-5 5-5s5 2.2 5 5-2.2 5-5 5-5-2.2-5-5Z" opacity=".5"/><path d="M3 12c0-1.7 4-3 9-3s9 1.3 9 3-4 3-9 3-9-1.3-9-3Z"/></svg></span>
     <span>The Time Traveller's Almanac</span>
     <span class="spacer"></span>
     <a href="#inside">Specimens</a>
   </div>
 
   <div class="hero-mid">
-    <p class="eyebrow"><span>Field edition · vol. ∞ · reprinted continuously</span></p>
-
+    <p class="eyebrow"><span>Field edition · vol. ∞</span></p>
     <h1 id="headline"></h1>
-
-    <p class="lede">Every timeline breaks in one of <b>four ways</b>. Work out which
-      one has you — <em>before</em> you try to fix it.</p>
-
+    <p class="lede">Every timeline breaks in one of <b>four ways</b>. Follow the
+      prime line to find the specimen that has you.</p>
     <div class="cta">
       <a class="btn" href="#">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
@@ -148,224 +126,226 @@
         Browse 100 specimens
       </a>
     </div>
-
     <div class="legend" aria-label="The four rules of a timeline">
-      <span class="li"><span class="swatch sw-fixed"></span><b>Fixed</b> can’t be changed</span>
+      <span class="li"><span class="swatch sw-fixed"></span><b>Fixed</b> can’t change</span>
       <span class="li"><span class="swatch sw-mutable"></span><b>Mutable</b> overwrites</span>
       <span class="li"><span class="swatch sw-branching"></span><b>Branching</b> splits</span>
       <span class="li"><span class="swatch sw-loop"></span><b>Loop</b> repeats</span>
     </div>
   </div>
-
-  <div class="scroll-cue"><span>Scroll</span><span class="line"></span></div>
 </header>
+
+<div class="hint">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M8 12h8M8 12l3-3M8 12l3 3M16 12l-3-3M16 12l-3 3"/></svg>
+  Drag to travel · hover a branch
+</div>
 
 <section class="below" id="inside">
   <div class="below-inner">
     <h2>A guidebook for the temporally displaced.</h2>
-    <p class="sub">One hundred specimens from film, television, books, games and the stage —
-      each diagnosed, dissected, and mapped.</p>
+    <p class="sub">One hundred specimens from film, television, books, games and the stage — each diagnosed, dissected, and mapped.</p>
     <div class="index">
-      <article class="idx">
-        <div class="no">01</div>
+      <article class="idx"><div class="no">01</div>
         <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 3v4M12 17v4M3 12h4M17 12h4"/><circle cx="12" cy="12" r="4"/></svg></div>
-        <h3>Diagnose</h3>
-        <p>Enter your symptoms — a repeating Tuesday, a fading photograph, a second you — and get a verdict on the rules you’re bound by.</p>
-      </article>
-      <article class="idx">
-        <div class="no">02</div>
+        <h3>Diagnose</h3><p>Enter your symptoms — a repeating Tuesday, a fading photograph, a second you — and get a verdict on the rules you’re bound by.</p></article>
+      <article class="idx"><div class="no">02</div>
         <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="4" y="3" width="16" height="18" rx="1.5"/><path d="M8 8h8M8 12h8M8 16h5"/></svg></div>
-        <h3>Study a specimen</h3>
-        <p>Every entry opens into a full dossier: mechanism, paradox exposure, related works, and field notes on what you’re allowed to do.</p>
-      </article>
-      <article class="idx">
-        <div class="no">03</div>
+        <h3>Study a specimen</h3><p>Every entry opens into a full dossier: mechanism, paradox exposure, related works, and field notes on what you’re allowed to do.</p></article>
+      <article class="idx"><div class="no">03</div>
         <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="4" cy="12" r="1.6"/><circle cx="20" cy="12" r="1.6"/><path d="M5.6 12h5l2.4-5.5"/><path d="M13 6.5 15.5 17l2.9-5"/></svg></div>
-        <h3>Walk the timeline</h3>
-        <p>Toggle any story between <em>as told</em> and <em>as happened</em>, and watch the jumps and loops draw themselves.</p>
-      </article>
+        <h3>Walk the timeline</h3><p>Toggle any story between <em>as told</em> and <em>as happened</em>, and watch the jumps and loops draw themselves.</p></article>
     </div>
   </div>
 </section>
-
-<div class="foot">Mostly harmless · a working prototype of the landing sequence</div>
+<div class="foot">Mostly harmless · discovery-page prototype · seeded with real specimens</div>
 
 <script>
-/* ---------------- kinetic headline (staggered word reveal) ---------------- */
+/* kinetic headline */
 (function(){
-  var words = ["You","have","come","loose","from","<em>time</em>."];
-  var h = document.getElementById('headline');
-  h.innerHTML = words.map(function(w,i){
-    var delay = 0.18 + i*0.085;
-    return '<span class="word"><i style="animation-delay:'+delay.toFixed(3)+'s">'+w+'</i></span>' + (i<words.length-1?' ':'');
-  }).join('');
+  var words=["Follow","the","<em>prime</em>","line."];
+  var h=document.getElementById('headline');
+  h.innerHTML=words.map(function(w,i){var d=0.18+i*0.09;
+    return '<span class="word"><i style="animation-delay:'+d.toFixed(3)+'s">'+w+'</i></span>'+(i<words.length-1?' ':'');}).join('');
 })();
 
-/* ---------------- the branching-timeline field ---------------- */
+/* ---------------- the prime timeline discovery field ---------------- */
 (function(){
-  var canvas = document.getElementById('field');
-  var ctx = canvas.getContext('2d');
-  var reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
-  var W=0,H=0,DPR=1;
-  var COLORS = {
-    trunk:   getcss('--mutable'),
-    branch:  getcss('--branching'),
-    loop:    getcss('--loop'),
-    ring:    getcss('--fixed')
-  };
-  function getcss(v){ return getComputedStyle(document.documentElement).getPropertyValue(v).trim() || '#fff'; }
+  var canvas=document.getElementById('field'), ctx=canvas.getContext('2d');
+  var tip=document.getElementById('tip');
+  var reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var css=function(v){return getComputedStyle(document.documentElement).getPropertyValue(v).trim()||'#fff';};
+  var RULE={ fixed:css('--fixed'), mutable:css('--mutable'), branching:css('--branching'), loop:css('--loop') };
+  var RULENAME={fixed:'Fixed',mutable:'Mutable',branching:'Branching',loop:'Loop'};
 
+  /* --- real seed specimens (subset of the 100; positioned by destination era) --- */
+  var MEDIA=[
+    {t:0.045,side:-1,rule:'mutable',   title:'A Connecticut Yankee', year:1889, medium:'Book', dest:'528 AD'},
+    {t:0.12, side:+1,rule:'fixed',     title:'Outlander',            year:1991, medium:'TV',   dest:'1743'},
+    {t:0.19, side:-1,rule:'mutable',   title:'Back to the Future III',year:1990, medium:'Film', dest:'1885'},
+    {t:0.27, side:+1,rule:'fixed',     title:'Somewhere in Time',    year:1980, medium:'Film', dest:'1912'},
+    {t:0.35, side:-1,rule:'mutable',   title:'Back to the Future',   year:1985, medium:'Film', dest:'1955'},
+    {t:0.43, side:+1,rule:'fixed',     title:'The Terminator',       year:1984, medium:'Film', dest:'1984'},
+    {t:0.49, side:-1,rule:'branching', title:'Steins;Gate',          year:2011, medium:'Game', dest:'the present'},
+    {t:0.545,side:+1,rule:'loop',      title:'Groundhog Day',        year:1993, medium:'Film', dest:'the present'},
+    {t:0.60, side:-1,rule:'branching', title:'Primer',               year:2004, medium:'Film', dest:'hours ago'},
+    {t:0.655,side:+1,rule:'fixed',     title:'Tenet',                year:2020, medium:'Film', dest:'inverted now'},
+    {t:0.71, side:-1,rule:'loop',      title:'Edge of Tomorrow',     year:2014, medium:'Film', dest:'near future'},
+    {t:0.77, side:+1,rule:'branching', title:'Terminator Genisys',   year:2015, medium:'Film', dest:'2029'},
+    {t:0.83, side:-1,rule:'branching', title:'Looper',               year:2012, medium:'Film', dest:'2044'},
+    {t:0.90, side:+1,rule:'branching', title:'Days of Future Past',  year:2014, medium:'Film', dest:'1973'},
+    {t:0.965,side:-1,rule:'fixed',     title:'Interstellar',         year:2014, medium:'Film', dest:'deep future'}
+  ];
+  var ERAS=[{t:0.05,l:'ANTIQUITY'},{t:0.24,l:'19TH C.'},{t:0.44,l:'20TH C.'},{t:0.55,l:'NOW'},{t:0.74,l:'NEAR FUTURE'},{t:0.95,l:'DEEP FUTURE'}];
+
+  var W,H,DPR,worldW,marginX,spineY;
   function resize(){
-    DPR = Math.min(window.devicePixelRatio||1, 2);
-    W = window.innerWidth; H = window.innerHeight;
-    canvas.width = W*DPR; canvas.height = H*DPR;
-    ctx.setTransform(DPR,0,0,DPR,0,0);
+    DPR=Math.min(window.devicePixelRatio||1,2); W=innerWidth; H=innerHeight;
+    canvas.width=W*DPR; canvas.height=H*DPR; ctx.setTransform(DPR,0,0,DPR,0,0);
+    worldW=Math.max(W*1.55,1500); marginX=Math.max(90,W*0.12); spineY=H*0.66;
+    build();
   }
-  window.addEventListener('resize', function(){ resize(); reset(); });
+  function xOf(t){ return marginX + t*(worldW-2*marginX); }
 
-  // ---- geometry helpers ----
-  function quad(p0,pc,p1,t){
-    var mt=1-t;
-    return { x: mt*mt*p0.x + 2*mt*t*pc.x + t*t*p1.x,
-             y: mt*mt*p0.y + 2*mt*t*pc.y + t*t*p1.y };
+  /* ---- build branch geometry per specimen ---- */
+  function build(){
+    MEDIA.forEach(function(m){
+      var A={x:xOf(m.t), y:spineY}, dir=m.side, L=Math.min(150, H*0.2), col=RULE[m.rule];
+      var strokes=[];
+      if(m.rule==='branching'){
+        strokes.push(line([A,{x:A.x-L*0.42,y:A.y+dir*L}],col,1.4));
+        strokes.push(line([A,{x:A.x+L*0.42,y:A.y+dir*L*0.82}],col,1.4));
+      } else if(m.rule==='mutable'){
+        strokes.push(curve(A,{x:A.x+L*0.10,y:A.y+dir*L*0.65},{x:A.x+L*0.5,y:A.y+dir*L},col,1.6));
+        var f=line([A,{x:A.x-L*0.05,y:A.y+dir*L*0.95}],col,1.1); f.faint=true; strokes.push(f); // overwritten original
+      } else if(m.rule==='loop'){
+        strokes.push(line([A,{x:A.x,y:A.y+dir*L*0.42}],col,1.4));
+        strokes.push(ring(A.x, A.y+dir*L*0.66, L*0.24, col,1.4));
+      } else { /* fixed = causal ring returning to the line */
+        strokes.push(ring(A.x, A.y+dir*L*0.6, L*0.34, col,1.5));
+        strokes.push(line([A,{x:A.x,y:A.y+dir*L*0.26}],col,1.3));
+      }
+      m.A=A; m.dir=dir; m.L=L; m.col=col; m.strokes=strokes;
+      m.grow=0; m.hover=0; m.tip=Math.max.apply(null,strokes.map(function(s){return dir<0?Math.min.apply(null,s.pts.map(function(p){return p.y;})):Math.max.apply(null,s.pts.map(function(p){return p.y;}));}));
+    });
   }
+  function line(pts,color,w){return {pts:pts,color:color,width:w};}
+  function curve(p0,pc,p1,color,w){var pts=[];for(var i=0;i<=14;i++){var t=i/14,mt=1-t;pts.push({x:mt*mt*p0.x+2*mt*t*pc.x+t*t*p1.x,y:mt*mt*p0.y+2*mt*t*pc.y+t*t*p1.y});}return {pts:pts,color:color,width:w};}
+  function ring(cx,cy,r,color,w){var pts=[];for(var i=0;i<=26;i++){var a=-Math.PI/2+(i/26)*Math.PI*2;pts.push({x:cx+Math.cos(a)*r,y:cy+Math.sin(a)*r});}return {pts:pts,color:color,width:w};}
 
-  var MAX = 150;
-  var segs = [];
-  var particles = [];
+  /* ---- pan state ---- */
+  var panX=0, panMin=0, panMax=1, drift=1, dragging=false, dragStartX=0, panStart=0, lastInteract=-9999, spineGrow=reduce?1:0;
+  function clampPan(){ panMax=Math.max(0,worldW-W); if(panX<0)panX=0; if(panX>panMax)panX=panMax; }
+  var mouse={x:-999,y:-999,active:false};
 
-  function Segment(p0, angle, len, kind, depth, color){
-    this.kind=kind; this.depth=depth; this.color=color;
-    this.p0=p0;
-    // control + endpoint depend on kind
-    var perp = angle + Math.PI/2;
-    var curl, endAng, endLen;
-    if(kind==='loop'){ curl = (Math.random()<.5?1:-1)*len*0.9; endAng=angle+(Math.random()<.5?1:-1)*1.5; endLen=len*0.35; }
-    else if(kind==='ring'){ curl=(Math.random()<.5?1:-1)*len*1.1; endAng=angle+Math.PI*0.85; endLen=len*0.25; }
-    else { curl=(Math.random()-0.5)*len*0.5; endAng=angle+(Math.random()-0.5)*0.25; endLen=len; }
-    this.p1={ x:p0.x+Math.cos(endAng)*endLen, y:p0.y+Math.sin(endAng)*endLen };
-    var mid={ x:(p0.x+this.p1.x)/2, y:(p0.y+this.p1.y)/2 };
-    this.pc={ x:mid.x+Math.cos(perp)*curl, y:mid.y+Math.sin(perp)*curl };
-    this.angle=endAng;
-    this.grow=0; this.speed=(reduce?1: (0.010 + Math.random()*0.012));
-    this.spawned=false; this.emit=0;
-    // precompute polyline
-    this.pts=[]; for(var i=0;i<=16;i++){ this.pts.push(quad(p0,this.pc,this.p1,i/16)); }
-  }
+  canvas.addEventListener('pointerdown',function(e){dragging=true;canvas.classList.add('dragging');dragStartX=e.clientX;panStart=panX;lastInteract=perf();canvas.setPointerCapture(e.pointerId);});
+  canvas.addEventListener('pointermove',function(e){
+    mouse.x=e.clientX;mouse.y=e.clientY;mouse.active=true;
+    if(dragging){panX=panStart-(e.clientX-dragStartX);clampPan();lastInteract=perf();}
+  });
+  window.addEventListener('pointerup',function(){dragging=false;canvas.classList.remove('dragging');});
+  canvas.addEventListener('pointerleave',function(){mouse.active=false;});
+  function perf(){return performance.now();}
 
-  function spawnRoot(){
-    var p0={ x:-40, y:H*(0.5+ (Math.random()-0.5)*0.18) };
-    segs.push(new Segment(p0, -0.05, Math.min(W,H)*0.22, 'trunk', 0, COLORS.trunk));
-  }
-
-  function grow(seg){
-    seg.spawned=true;
-    if(seg.p1.x > W*0.98 || seg.depth>9 || segs.length>MAX) return;
-    var end=seg.p1, a=seg.angle, len=Math.max(40, Math.min(W,H)*0.2*(1-seg.depth*0.06));
-    var r=Math.random();
-    // main continuation (biased rightward) — the surviving timeline
-    if(seg.p1.x < W*0.9){
-      segs.push(new Segment(end, clampRight(a+(Math.random()-0.5)*0.4), len, 'trunk', seg.depth+1, COLORS.trunk));
-    }
-    // fork -> a divergent worldline
-    if(r<0.5 && seg.depth<7){
-      var dir=(Math.random()<.5?1:-1);
-      segs.push(new Segment(end, clampRight(a+dir*(0.5+Math.random()*0.5)), len*0.85, 'branch', seg.depth+1, COLORS.branch));
-    }
-    // occasional loop
-    if(r>0.62 && r<0.74){
-      segs.push(new Segment(end, a, len*1.0, 'loop', seg.depth+1, COLORS.loop));
-    }
-    // rare fixed ring
-    else if(r>=0.92){
-      segs.push(new Segment(end, a, len*0.8, 'ring', seg.depth+1, COLORS.ring));
-    }
-  }
-  function clampRight(a){ // keep general rightward drift so it reads as a timeline
-    while(a>Math.PI)a-=2*Math.PI; while(a<-Math.PI)a+=2*Math.PI;
-    if(a>1.15)a=1.15; if(a<-1.15)a=-1.15; return a;
-  }
-
-  var life=0, fading=false, fadeA=1;
-  function reset(){ segs=[]; particles=[]; life=0; fading=false; fadeA=1; spawnRoot(); if(reduce){ for(var k=0;k<400 && growAllStep();k++){} } }
-  function growAllStep(){ var any=false; for(var i=0;i<segs.length;i++){ if(!segs[i].spawned){ segs[i].grow=1; grow(segs[i]); any=true; } } return any; }
-
-  function step(dt){
-    life+=dt;
-    var allDone=true;
-    for(var i=0;i<segs.length;i++){
-      var s=segs[i];
-      if(s.grow<1){ s.grow=Math.min(1, s.grow+s.speed*dt*60); allDone=false; }
-      else if(!s.spawned){ grow(s); }
-      // emit particles along grown portion
-      s.emit-=dt*60;
-      if(s.grow>0.15 && s.emit<=0 && particles.length<220 && s.kind!=='trunk'){
-        s.emit=14+Math.random()*20;
-        particles.push({ seg:s, u:0, sp:0.006+Math.random()*0.01 });
+  /* ---- hit test ---- */
+  var hovered=null;
+  function hit(){
+    if(dragging){hovered=null;return;}
+    var best=null,bd=30;
+    for(var i=0;i<MEDIA.length;i++){var m=MEDIA[i];var sx=m.A.x-panX;
+      if(Math.abs(mouse.x-sx)<30){
+        var y0=Math.min(spineY,m.tip)-14, y1=Math.max(spineY,m.tip)+14;
+        if(mouse.y>y0&&mouse.y<y1){var d=Math.abs(mouse.x-sx);if(d<bd){bd=d;best=m;}}
       }
     }
-    for(var p=particles.length-1;p>=0;p--){
-      var pt=particles[p]; pt.u+=pt.sp*dt*60*(pt.seg.grow);
-      if(pt.u>=1) particles.splice(p,1);
+    hovered=best;
+    if(best){
+      tip.classList.add('on');
+      tip.innerHTML='<div class="rulebar" style="background:'+best.col+'"></div>'
+        +'<p class="t">'+best.title+' <small>'+best.year+'</small></p>'
+        +'<p class="m"><b>'+RULENAME[best.rule]+'</b> · '+best.medium+' · travels to '+best.dest+'</p>';
+      var tx=Math.min(W-260,(best.A.x-panX)+16), ty=(best.dir<0)?(best.tip-70):(best.tip+14);
+      ty=Math.max(10,Math.min(H-90,ty));
+      tip.style.left=tx+'px'; tip.style.top=ty+'px';
+    } else tip.classList.remove('on');
+  }
+
+  /* ---- particles along the spine ---- */
+  var parts=[]; for(var i=0;i<40;i++)parts.push({x:Math.random()*worldW,sp:14+Math.random()*22});
+
+  function update(dt){
+    if(!reduce && spineGrow<1) spineGrow=Math.min(1,spineGrow+dt*0.7);
+    // sprout branches as the spine front passes
+    var front=marginX+spineGrow*(worldW-2*marginX);
+    for(var i=0;i<MEDIA.length;i++){var m=MEDIA[i];
+      if(m.A.x<=front+30 && m.grow<1) m.grow=Math.min(1,m.grow+dt*1.6);
+      var want=(hovered===m)?1:0; m.hover+=(want-m.hover)*Math.min(1,dt*10);
     }
-    if((segs.length>=MAX && allDone) || life>16){ if(!fading){fading=true;} }
-    if(fading){ fadeA-=dt*0.7; if(fadeA<=0){ reset(); } }
+    // idle drift (paused shortly after interaction)
+    if(!dragging && perf()-lastInteract>2600 && spineGrow>0.6){
+      panX+=drift*dt*14;
+      if(panX<=0){panX=0;drift=1;} else if(panX>=panMax){panX=panMax;drift=-1;}
+    }
+    for(var p=0;p<parts.length;p++){parts[p].x+=parts[p].sp*dt; if(parts[p].x>worldW)parts[p].x-=worldW;}
+    hit();
   }
 
   function draw(){
-    ctx.clearRect(0,0,W,H);
-    ctx.globalAlpha=1;
-    ctx.lineCap='round'; ctx.lineJoin='round';
-    // segments: two-pass glow (wide faint + thin bright), no shadowBlur for perf
-    for(var pass=0; pass<2; pass++){
-      for(var i=0;i<segs.length;i++){
-        var s=segs[i]; if(s.grow<=0) continue;
-        var n=Math.max(1, Math.floor(s.grow*16));
-        ctx.beginPath();
-        ctx.moveTo(s.pts[0].x, s.pts[0].y);
-        for(var j=1;j<=n;j++) ctx.lineTo(s.pts[j].x, s.pts[j].y);
-        if(pass===0){ ctx.strokeStyle=hexA(s.color, 0.10*fadeA); ctx.lineWidth = s.kind==='trunk'?7:5; }
-        else { ctx.strokeStyle=hexA(s.color, (s.kind==='trunk'?0.9:0.7)*fadeA); ctx.lineWidth = s.kind==='trunk'?1.7:1.3; }
-        ctx.stroke();
-      }
-    }
-    // junction nodes
-    for(var i2=0;i2<segs.length;i2++){
-      var s2=segs[i2]; if(s2.grow<0.02) continue;
-      var r=(s2.depth===0?3.4:2.2);
-      dot(s2.pts[0].x, s2.pts[0].y, r, s2.color, fadeA);
-    }
-    // leading tips
-    for(var i3=0;i3<segs.length;i3++){
-      var s3=segs[i3]; if(s3.grow<=0||s3.grow>=1) continue;
-      var tip=quad(s3.p0,s3.pc,s3.p1,s3.grow);
-      dot(tip.x,tip.y, 2.6, '#ffffff', fadeA);
-    }
-    // particles
-    for(var p=0;p<particles.length;p++){
-      var pt=particles[p], q=quad(pt.seg.p0,pt.seg.pc,pt.seg.p1,Math.min(pt.u,pt.seg.grow));
-      dot(q.x,q.y, 1.5, pt.seg.color, (1-pt.u)*0.9*fadeA);
-    }
-  }
-  function dot(x,y,r,color,a){
-    ctx.beginPath(); ctx.fillStyle=hexA(color, 0.9*a); ctx.arc(x,y,r,0,6.283); ctx.fill();
-    ctx.beginPath(); ctx.fillStyle=hexA(color, 0.18*a); ctx.arc(x,y,r*2.6,0,6.283); ctx.fill();
-  }
-  function hexA(hex,a){
-    hex=hex.replace('#',''); if(hex.length===3){hex=hex[0]+hex[0]+hex[1]+hex[1]+hex[2]+hex[2];}
-    var r=parseInt(hex.substr(0,2),16),g=parseInt(hex.substr(2,2),16),b=parseInt(hex.substr(4,2),16);
-    return 'rgba('+r+','+g+','+b+','+Math.max(0,Math.min(1,a))+')';
-  }
+    ctx.clearRect(0,0,W,H); ctx.lineCap='round'; ctx.lineJoin='round';
+    ctx.save(); ctx.translate(-panX,0);
+    var front=marginX+spineGrow*(worldW-2*marginX);
 
-  // ---- run ----
-  resize(); reset();
-  if(reduce){ draw(); return; }
-  var last=performance.now();
-  function loop(now){
-    var dt=Math.min(0.05,(now-last)/1000); last=now;
-    step(dt); draw();
-    requestAnimationFrame(loop);
+    // era ticks
+    ctx.textAlign='center';
+    for(var e=0;e<ERAS.length;e++){var ex=xOf(ERAS[e].t); if(ex>front) continue;
+      ctx.strokeStyle='rgba(255,255,255,.14)'; ctx.lineWidth=1;
+      ctx.beginPath(); ctx.moveTo(ex,spineY+9); ctx.lineTo(ex,spineY+16); ctx.stroke();
+      ctx.fillStyle='rgba(255,255,255,.32)'; ctx.font='10px ui-monospace,Menlo,monospace';
+      ctx.fillText(ERAS[e].l, ex, spineY+30);
+    }
+
+    // the prime spine (draw to the growing front)
+    ctx.beginPath(); ctx.moveTo(marginX, spineY); ctx.lineTo(front, spineY);
+    ctx.strokeStyle='rgba(255,255,255,.12)'; ctx.lineWidth=6; ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(marginX, spineY); ctx.lineTo(front, spineY);
+    ctx.strokeStyle='rgba(238,241,248,.9)'; ctx.lineWidth=1.6; ctx.stroke();
+    // leading head
+    if(spineGrow<1){ glow(front,spineY,3.2,'#ffffff',1); }
+
+    // particles (only on drawn part)
+    for(var p=0;p<parts.length;p++){var px=parts[p].x; if(px<marginX||px>front)continue;
+      glow(px,spineY,1.4,'#ffd9a0',0.8);}
+
+    // branches
+    for(var i=0;i<MEDIA.length;i++){var m=MEDIA[i]; if(m.grow<=0) continue;
+      var hi=m.hover;
+      for(var s=0;s<m.strokes.length;s++){var st=m.strokes[s];
+        strokePartial(st, m.grow, hexA(st.color, (st.faint?0.28:0.85)*(0.7+0.3*hi)), st.width*(1+hi*0.9));
+        if(!st.faint) strokePartial(st, m.grow, hexA(st.color, 0.10+0.14*hi), st.width*5); // glow underlay
+      }
+      // node on spine
+      glow(m.A.x, spineY, 2.4+hi*1.6, m.col, 0.9);
+      if(hi>0.5){ ctx.beginPath(); ctx.arc(m.A.x,spineY,5.5,0,6.283); ctx.strokeStyle=hexA('#ffffff',0.8*hi); ctx.lineWidth=1.4; ctx.stroke(); }
+    }
+    ctx.restore();
   }
-  requestAnimationFrame(loop);
+  function strokePartial(st,g,style,width){
+    var pts=st.pts,n=pts.length-1,last=g*n,k=Math.floor(last),fr=last-k;
+    ctx.beginPath(); ctx.moveTo(pts[0].x,pts[0].y);
+    for(var i=1;i<=k;i++)ctx.lineTo(pts[i].x,pts[i].y);
+    if(k<n && fr>0){ctx.lineTo(pts[k].x+(pts[k+1].x-pts[k].x)*fr, pts[k].y+(pts[k+1].y-pts[k].y)*fr);}
+    ctx.strokeStyle=style; ctx.lineWidth=width; ctx.stroke();
+  }
+  function glow(x,y,r,color,a){
+    ctx.beginPath(); ctx.fillStyle=hexA(color,0.9*a); ctx.arc(x,y,r,0,6.283); ctx.fill();
+    ctx.beginPath(); ctx.fillStyle=hexA(color,0.16*a); ctx.arc(x,y,r*2.8,0,6.283); ctx.fill();
+  }
+  function hexA(hex,a){hex=hex.replace('#','');if(hex.length===3)hex=hex[0]+hex[0]+hex[1]+hex[1]+hex[2]+hex[2];
+    var r=parseInt(hex.substr(0,2),16),g=parseInt(hex.substr(2,2),16),b=parseInt(hex.substr(4,2),16);
+    return 'rgba('+r+','+g+','+b+','+Math.max(0,Math.min(1,a))+')';}
+
+  resize(); window.addEventListener('resize',resize);
+  if(reduce){ for(var i=0;i<MEDIA.length;i++)MEDIA[i].grow=1; draw(); return; }
+  var last=performance.now();
+  (function loop(now){var dt=Math.min(0.05,(now-last)/1000);last=now;update(dt);draw();requestAnimationFrame(loop);})(performance.now());
 })();
 </script>

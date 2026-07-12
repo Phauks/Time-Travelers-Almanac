@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - main
-      - claude/time-travel-media-almanac-h3pkxh
   workflow_dispatch:
 
 permissions:

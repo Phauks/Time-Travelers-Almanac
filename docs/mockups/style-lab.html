@@ -1,0 +1,584 @@
+<title>Almanac — Style Lab</title>
+<style>
+  /* ============================================================= RESET-ish */
+  *, *::before, *::after { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body { margin: 0; }
+  img { max-width: 100%; display: block; }
+  button { font: inherit; color: inherit; cursor: pointer; }
+
+  /* ============================================================= SHELL (neutral chrome, theme-aware) */
+  :root {
+    --shell-bg: #16181d;
+    --shell-panel: #1e2128;
+    --shell-line: #2c3038;
+    --shell-text: #e7e9ee;
+    --shell-muted: #99a0ac;
+    --shell-accent: #8b7bff;
+    --shell-radius: 10px;
+  }
+  @media (prefers-color-scheme: light) {
+    :root {
+      --shell-bg: #eceef2; --shell-panel: #ffffff; --shell-line: #dcdfe6;
+      --shell-text: #1c1f26; --shell-muted: #626a78; --shell-accent: #5b48e0;
+    }
+  }
+  :root[data-theme="dark"] {
+    --shell-bg: #16181d; --shell-panel: #1e2128; --shell-line: #2c3038;
+    --shell-text: #e7e9ee; --shell-muted: #99a0ac; --shell-accent: #8b7bff;
+  }
+  :root[data-theme="light"] {
+    --shell-bg: #eceef2; --shell-panel: #ffffff; --shell-line: #dcdfe6;
+    --shell-text: #1c1f26; --shell-muted: #626a78; --shell-accent: #5b48e0;
+  }
+
+  body {
+    background: var(--shell-bg);
+    color: var(--shell-text);
+    font-family: ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    line-height: 1.5;
+  }
+
+  .shell-bar {
+    position: sticky; top: 0; z-index: 50;
+    display: flex; flex-wrap: wrap; align-items: center; gap: 12px 18px;
+    padding: 12px 20px;
+    background: color-mix(in srgb, var(--shell-bg) 88%, transparent);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--shell-line);
+  }
+  .shell-brand { display: flex; align-items: baseline; gap: 10px; margin-right: auto; }
+  .shell-brand b { font-size: 15px; letter-spacing: .01em; }
+  .shell-brand span { color: var(--shell-muted); font-size: 12.5px; }
+  .shell-brand .infinity { color: var(--shell-accent); font-size: 17px; }
+
+  .dir-switch { display: inline-flex; background: var(--shell-panel); border: 1px solid var(--shell-line); border-radius: 999px; padding: 4px; gap: 2px; }
+  .dir-switch button {
+    border: 0; background: transparent; color: var(--shell-muted);
+    padding: 7px 14px; border-radius: 999px; font-size: 13px; font-weight: 600;
+    letter-spacing: .01em; transition: color .18s, background .18s;
+  }
+  .dir-switch button[aria-pressed="true"] { background: var(--shell-accent); color: #fff; }
+  .dir-switch button:focus-visible { outline: 2px solid var(--shell-accent); outline-offset: 2px; }
+
+  .shell-tools { display: inline-flex; gap: 8px; }
+  .icon-btn {
+    background: var(--shell-panel); border: 1px solid var(--shell-line);
+    color: var(--shell-muted); border-radius: 8px; padding: 7px 11px; font-size: 13px;
+  }
+  .icon-btn:focus-visible { outline: 2px solid var(--shell-accent); outline-offset: 2px; }
+
+  .dir-caption {
+    max-width: 1180px; margin: 0 auto; padding: 18px 20px 4px;
+    color: var(--shell-muted); font-size: 13.5px; display: flex; gap: 10px; align-items: baseline;
+  }
+  .dir-caption b { color: var(--shell-text); }
+
+  /* ============================================================= CANVAS = the previewed product */
+  .canvas {
+    max-width: 1180px; margin: 14px auto 60px; border-radius: 16px; overflow: hidden;
+    border: 1px solid var(--shell-line);
+    box-shadow: 0 24px 60px -30px rgba(0,0,0,.5);
+    /* per-direction tokens defined below; sensible fallbacks here */
+    --bg:#0b0f0e; --panel:#111917; --ink:#d7e0da; --muted:#6f8078;
+    --accent:#ff9f45; --accent2:#46d8c4; --line:#223029; --line-strong:#31463c;
+    --plate:#0e1614; --radius:8px;
+    --font-display: ui-monospace, Menlo, monospace;
+    --font-body: ui-monospace, Menlo, monospace;
+    --font-label: ui-monospace, Menlo, monospace;
+    background: var(--bg); color: var(--ink);
+    font-family: var(--font-body);
+  }
+
+  /* ---- rule/tag semantic colors (shared, tuned per theme via mix) ---- */
+  .canvas { --fixed:#4aa3ff; --mutable:#ff8a5c; --branching:#c084fc; --loop:#38d39f; }
+
+  /* =============================== DIRECTION 1 — THE GUIDE (device / phosphor) */
+  .canvas[data-dir="guide"] {
+    --bg:#080c0b; --panel:#0e1614; --ink:#cfdad3; --muted:#5f726b;
+    --accent:#ff9f45; --accent2:#46d8c4; --line:#1c2a25; --line-strong:#2b3f38;
+    --plate:#0c1412; --radius:6px;
+    --font-display: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    --font-body: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    --font-label: ui-monospace, Menlo, monospace;
+    position: relative;
+  }
+  .canvas[data-dir="guide"]::after { /* scanlines */
+    content:""; position:absolute; inset:0; pointer-events:none; z-index: 3; mix-blend-mode: overlay;
+    background: repeating-linear-gradient(180deg, rgba(255,255,255,.05) 0 1px, transparent 1px 3px);
+    opacity:.5;
+  }
+  .canvas[data-dir="guide"] .hero { text-shadow: 0 0 14px color-mix(in srgb, var(--accent) 30%, transparent); }
+  .canvas[data-dir="guide"] .eyebrow { color: var(--accent2); }
+
+  /* =============================== DIRECTION 2 — THE ALMANAC (ink ledger / letterpress) */
+  .canvas[data-dir="almanac"] {
+    --bg:#e6dfcb; --panel:#efe9d8; --ink:#1b2333; --muted:#6a6350;
+    --accent:#7a2a1c; --accent2:#9a7d2e; --line:#cabf9f; --line-strong:#a99a70;
+    --plate:#e0d8c1; --radius:2px;
+    --font-display: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, "Times New Roman", serif;
+    --font-body: Georgia, "Iowan Old Style", "Times New Roman", serif;
+    --font-label: "Iowan Old Style", Georgia, serif;
+    --fixed:#2f5aa8; --mutable:#a2542a; --branching:#6b3fa0; --loop:#2f7d5b;
+    background-image:
+      radial-gradient(circle at 20% 10%, rgba(0,0,0,.03), transparent 40%),
+      radial-gradient(circle at 80% 60%, rgba(0,0,0,.035), transparent 45%);
+  }
+  .canvas[data-dir="almanac"] .hero-title { font-weight: 600; letter-spacing: -.01em; }
+  .canvas[data-dir="almanac"] .eyebrow { font-variant: small-caps; letter-spacing: .12em; color: var(--accent); }
+
+  /* =============================== DIRECTION 3 — THE CHRONOGRAPH (structural / diagram) */
+  .canvas[data-dir="chrono"] {
+    --bg:#f4f5f8; --panel:#ffffff; --ink:#141824; --muted:#666f80;
+    --accent:#6d4aff; --accent2:#0ea5a5; --line:#e2e5ec; --line-strong:#c9cedb;
+    --plate:#eef0f5; --radius:12px;
+    --font-display: "Helvetica Neue", ui-sans-serif, system-ui, Arial, sans-serif;
+    --font-body: ui-sans-serif, system-ui, "Helvetica Neue", Arial, sans-serif;
+    --font-label: ui-monospace, "SF Mono", Menlo, monospace;
+    --fixed:#2563eb; --mutable:#ea6a37; --branching:#7c3aed; --loop:#0d9f6e;
+  }
+  .canvas[data-dir="chrono"] .hero-title { letter-spacing: -.02em; font-weight: 800; }
+
+  /* ============================================================= SHARED PRODUCT COMPONENTS */
+  .pad { padding: clamp(22px, 4vw, 48px); }
+  .eyebrow {
+    font-family: var(--font-label); font-size: 11.5px; text-transform: uppercase;
+    letter-spacing: .18em; color: var(--accent2); margin: 0 0 14px;
+  }
+  .rule { height:1px; background: var(--line); border:0; margin: 0; }
+  .rule-strong { height:2px; background: var(--line-strong); border:0; }
+
+  /* ---- HERO ---- */
+  .hero { position: relative; z-index: 2; border-bottom: 1px solid var(--line); }
+  .hero-inner { display: grid; gap: 26px; grid-template-columns: 1.4fr .9fr; align-items: center; }
+  @media (max-width: 760px){ .hero-inner{ grid-template-columns: 1fr; } }
+  .hero-title {
+    font-family: var(--font-display); font-size: clamp(30px, 5.4vw, 58px); line-height: 1.02;
+    margin: 0 0 16px; text-wrap: balance;
+  }
+  .hero-lede { font-size: clamp(15px, 1.6vw, 18px); max-width: 46ch; color: color-mix(in srgb, var(--ink) 82%, var(--muted)); margin: 0 0 22px; }
+  .hero-cta { display:inline-flex; align-items:center; gap:10px; }
+  .btn {
+    font-family: var(--font-label); font-size: 13px; letter-spacing: .04em; text-transform: uppercase;
+    padding: 12px 20px; border-radius: var(--radius); border: 1px solid var(--accent);
+    background: var(--accent); color: #fff;
+  }
+  .canvas[data-dir="almanac"] .btn { color:#f6efdb; }
+  .btn.ghost { background: transparent; color: var(--ink); border-color: var(--line-strong); }
+  .btn:focus-visible { outline: 2px solid var(--accent2); outline-offset: 2px; }
+
+  /* device panel in hero (right column) */
+  .hero-panel {
+    background: var(--plate); border: 1px solid var(--line-strong); border-radius: var(--radius);
+    padding: 18px; font-family: var(--font-label); font-size: 12.5px;
+  }
+  .hero-panel h4 { margin:0 0 12px; font-size:11px; letter-spacing:.16em; text-transform:uppercase; color: var(--muted); }
+  .symptom { display:flex; justify-content:space-between; gap:12px; padding:9px 0; border-top:1px dashed var(--line); }
+  .symptom:first-of-type { border-top:0; }
+  .symptom span:last-child { color: var(--accent); white-space:nowrap; }
+
+  /* ---- DIAGNOSE / BROWSE GRID ---- */
+  .section-head { display:flex; align-items:flex-end; justify-content:space-between; gap:16px; margin-bottom:20px; flex-wrap:wrap; }
+  .section-head h2 { font-family: var(--font-display); font-size: clamp(20px,2.6vw,28px); margin:0; }
+  .filters { display:flex; flex-wrap:wrap; gap:8px; }
+  .chip {
+    font-family: var(--font-label); font-size: 11.5px; letter-spacing:.03em;
+    padding: 6px 11px; border-radius: 999px; border:1px solid var(--line-strong);
+    background: transparent; color: var(--muted);
+  }
+  .chip[data-on="true"] { color: var(--ink); border-color: currentColor; }
+  .chip .dot { display:inline-block; width:8px; height:8px; border-radius:50%; margin-right:6px; vertical-align:middle; }
+
+  .grid { display:grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  @media (max-width: 820px){ .grid{ grid-template-columns: repeat(2,1fr);} }
+  @media (max-width: 520px){ .grid{ grid-template-columns: 1fr;} }
+  .card {
+    background: var(--panel); border:1px solid var(--line); border-radius: var(--radius);
+    overflow:hidden; display:flex; flex-direction:column; transition: transform .16s, border-color .16s;
+  }
+  .card:hover { transform: translateY(-3px); border-color: var(--line-strong); }
+  .card .plate {
+    aspect-ratio: 16/10; background: var(--plate); position:relative;
+    display:flex; align-items:center; justify-content:center; border-bottom:1px solid var(--line);
+    overflow:hidden;
+  }
+  .plate .glyph { font-family: var(--font-display); font-size: 40px; opacity:.9; }
+  .plate .src-tag {
+    position:absolute; bottom:8px; right:8px; font-family: var(--font-label);
+    font-size:9.5px; letter-spacing:.08em; text-transform:uppercase; color: var(--muted);
+    background: color-mix(in srgb, var(--bg) 70%, transparent); padding:3px 6px; border-radius:4px;
+  }
+  .plate .medium-tag {
+    position:absolute; top:8px; left:8px; font-family: var(--font-label);
+    font-size:9.5px; letter-spacing:.1em; text-transform:uppercase; color: var(--bg);
+    background: var(--ink); padding:3px 7px; border-radius:4px;
+  }
+  .card-body { padding: 14px 15px 16px; display:flex; flex-direction:column; gap:8px; flex:1; }
+  .card-title { font-family: var(--font-display); font-size: 17px; margin:0; line-height:1.15; }
+  .card-title small { font-weight: normal; color: var(--muted); font-size: 13px; }
+  .card-log { font-size: 13px; color: color-mix(in srgb, var(--ink) 78%, var(--muted)); margin:0; flex:1; }
+  .tags { display:flex; flex-wrap:wrap; gap:6px; margin-top:2px; }
+  .tag {
+    font-family: var(--font-label); font-size:10.5px; letter-spacing:.04em; text-transform:uppercase;
+    padding:3px 8px; border-radius:999px; border:1px solid; background:transparent;
+  }
+  .tag.rule-fixed { color:var(--fixed); border-color: color-mix(in srgb, var(--fixed) 45%, transparent); }
+  .tag.rule-mutable { color:var(--mutable); border-color: color-mix(in srgb, var(--mutable) 45%, transparent); }
+  .tag.rule-branching { color:var(--branching); border-color: color-mix(in srgb, var(--branching) 45%, transparent); }
+  .tag.rule-loop { color:var(--loop); border-color: color-mix(in srgb, var(--loop) 45%, transparent); }
+
+  /* ---- ENTRY DETAIL (the "enterable" page) ---- */
+  .entry { background: color-mix(in srgb, var(--panel) 55%, var(--bg)); border-top: 2px solid var(--line-strong); }
+  .entry-grid { display:grid; grid-template-columns: 300px 1fr; gap: clamp(20px,3vw,40px); }
+  @media (max-width: 860px){ .entry-grid{ grid-template-columns: 1fr; } }
+
+  .entry-plate {
+    background: var(--plate); border:1px solid var(--line-strong); border-radius: var(--radius);
+    aspect-ratio: 3/4; display:flex; align-items:center; justify-content:center; position:relative; overflow:hidden;
+  }
+  .entry-plate .glyph { font-family: var(--font-display); font-size: 84px; opacity:.85; }
+  .entry-plate .src-tag {
+    position:absolute; bottom:10px; left:10px; right:10px; text-align:center;
+    font-family: var(--font-label); font-size:10px; letter-spacing:.06em; text-transform:uppercase;
+    color: var(--muted); background: color-mix(in srgb, var(--bg) 65%, transparent); padding:5px; border-radius:4px;
+  }
+  .thumbs { display:grid; grid-template-columns: repeat(3,1fr); gap:8px; margin-top:10px; }
+  .thumb { aspect-ratio:1; background: var(--plate); border:1px solid var(--line); border-radius: calc(var(--radius) - 1px);
+           display:flex; align-items:center; justify-content:center; font-size:18px; color: var(--muted); }
+  .src-note { font-family: var(--font-label); font-size:10.5px; color: var(--muted); margin-top:10px; line-height:1.5; }
+
+  .entry-title { font-family: var(--font-display); font-size: clamp(26px,4vw,40px); margin:0 0 4px; line-height:1.05; }
+  .entry-sub { color: var(--muted); font-family: var(--font-label); font-size:13px; letter-spacing:.03em; margin:0 0 18px; }
+
+  .verdict {
+    display:grid; grid-template-columns: repeat(3, 1fr); gap:12px; margin: 6px 0 26px;
+  }
+  @media (max-width: 560px){ .verdict{ grid-template-columns:1fr; } }
+  .verdict .cell { background: var(--panel); border:1px solid var(--line); border-left:3px solid var(--accent); border-radius: var(--radius); padding:13px 14px; }
+  .verdict .cell.rule { border-left-color: var(--mutable); }
+  .verdict .cell.mode { border-left-color: var(--accent2); }
+  .verdict .cell.loop { border-left-color: var(--muted); }
+  .verdict .k { font-family: var(--font-label); font-size:10px; letter-spacing:.14em; text-transform:uppercase; color: var(--muted); margin:0 0 5px; }
+  .verdict .v { font-family: var(--font-display); font-size: 17px; margin:0; }
+  .verdict .v small { display:block; font-family: var(--font-body); font-weight:normal; font-size:12px; color: var(--muted); margin-top:2px; }
+
+  .prose { max-width: 62ch; }
+  .prose h3 { font-family: var(--font-display); font-size: 15px; letter-spacing:.02em; margin: 24px 0 8px; }
+  .prose p { margin: 0 0 12px; font-size: 15px; color: color-mix(in srgb, var(--ink) 88%, var(--muted)); }
+  .fieldnote {
+    border-left: 2px solid var(--accent); padding: 4px 0 4px 14px; margin: 16px 0;
+    font-style: italic; color: color-mix(in srgb, var(--ink) 80%, var(--muted)); font-size:14px;
+  }
+  .canvas[data-dir="guide"] .fieldnote { font-style: normal; }
+
+  /* paradox meter */
+  .meter { display:flex; align-items:center; gap:12px; margin: 10px 0 4px; }
+  .meter .bar { flex:1; height:8px; border-radius:999px; background: var(--plate); border:1px solid var(--line); overflow:hidden; }
+  .meter .bar i { display:block; height:100%; width:72%; background: linear-gradient(90deg, var(--loop), var(--mutable), var(--accent)); }
+  .meter .lab { font-family: var(--font-label); font-size:11px; letter-spacing:.08em; text-transform:uppercase; color: var(--muted); }
+
+  /* ---- TIMELINE ---- */
+  .timeline-wrap { background: var(--bg); border-top:1px solid var(--line); }
+  .tl-head { display:flex; align-items:center; justify-content:space-between; gap:16px; margin-bottom:22px; flex-wrap:wrap; }
+  .toggle {
+    display:inline-flex; border:1px solid var(--line-strong); border-radius:999px; overflow:hidden;
+    font-family: var(--font-label); font-size:12px;
+  }
+  .toggle button { border:0; background:transparent; color:var(--muted); padding:8px 16px; letter-spacing:.03em; }
+  .toggle button[aria-pressed="true"] { background: var(--accent); color:#fff; }
+  .canvas[data-dir="almanac"] .toggle button[aria-pressed="true"] { color:#f6efdb; }
+
+  .rail { position: relative; overflow-x:auto; padding: 46px 4px 20px; }
+  .rail-inner { position: relative; min-width: 720px; height: 150px; }
+  .rail-line { position:absolute; left:0; right:0; top: 96px; height:2px; background: var(--line-strong); }
+  .node { position:absolute; top: 70px; transform: translateX(-50%); text-align:center; width: 120px;
+          transition: left .55s cubic-bezier(.65,0,.35,1), opacity .4s; }
+  .node .dot { width:16px; height:16px; border-radius:50%; margin: 0 auto 8px; background: var(--accent); border:3px solid var(--bg);
+               box-shadow: 0 0 0 1px var(--accent); }
+  .node.era-1955 .dot { background: var(--accent2); box-shadow:0 0 0 1px var(--accent2); }
+  .node .yr { font-family: var(--font-label); font-size:11px; color: var(--muted); letter-spacing:.05em; }
+  .node .lb { font-size:12px; line-height:1.2; margin-top:2px; color: var(--ink); }
+  .arc { position:absolute; left:0; top:0; width:100%; height:96px; overflow:visible; pointer-events:none; }
+  .arc path { fill:none; stroke: var(--accent); stroke-width:2; stroke-dasharray:5 5; opacity:.8; }
+  .arc text { fill: var(--accent); font-family: var(--font-label); font-size:10px; letter-spacing:.06em; }
+
+  @media (prefers-reduced-motion: reduce){
+    .node { transition:none; } .card { transition:none; }
+  }
+
+  .foot { color: var(--muted); font-family: var(--font-label); font-size:12px; text-align:center; padding: 22px; border-top:1px solid var(--line); }
+
+  .legend-note { max-width:1180px; margin: 0 auto; padding: 6px 20px 40px; color: var(--shell-muted); font-size:12.5px; }
+  .legend-note code { background: var(--shell-panel); border:1px solid var(--shell-line); padding:1px 6px; border-radius:5px; font-size:12px; }
+</style>
+
+<div class="shell-bar">
+  <div class="shell-brand">
+    <span class="infinity">∞</span>
+    <b>The Time Traveller's Almanac</b>
+    <span>· Style Lab</span>
+  </div>
+  <div class="dir-switch" role="group" aria-label="Visual direction">
+    <button data-dir-btn="guide" aria-pressed="true">The Guide</button>
+    <button data-dir-btn="almanac" aria-pressed="false">The Almanac</button>
+    <button data-dir-btn="chrono" aria-pressed="false">The Chronograph</button>
+  </div>
+  <div class="shell-tools">
+    <button class="icon-btn" id="themeBtn" title="Toggle page theme">◐ Theme</button>
+  </div>
+</div>
+
+<div class="dir-caption" id="dirCaption"></div>
+
+<main class="canvas" id="canvas" data-dir="guide">
+
+  <!-- HERO -->
+  <section class="hero pad">
+    <div class="hero-inner">
+      <div>
+        <p class="eyebrow">Field Edition · Vol. ∞ · Reprinted continuously</p>
+        <h1 class="hero-title">You appear to have come loose from the present. Do not panic.</h1>
+        <p class="hero-lede">A guidebook for the temporally displaced. Identify what <em>kind</em> of
+          time travel has you — and, more urgently, what the rules will let you get away with.</p>
+        <div class="hero-cta">
+          <button class="btn">Diagnose my predicament</button>
+          <button class="btn ghost">Browse the specimens</button>
+        </div>
+      </div>
+      <aside class="hero-panel" aria-label="Symptom checker">
+        <h4>◇ Presenting symptoms</h4>
+        <div class="symptom"><span>"I keep reliving Tuesday."</span><span>→ Loop</span></div>
+        <div class="symptom"><span>"A photo of me is fading."</span><span>→ Mutable</span></div>
+        <div class="symptom"><span>"There are now two of me."</span><span>→ Branching</span></div>
+        <div class="symptom"><span>"It already happened. I checked."</span><span>→ Fixed</span></div>
+      </aside>
+    </div>
+  </section>
+
+  <!-- DIAGNOSE / BROWSE -->
+  <section class="pad">
+    <div class="section-head">
+      <div>
+        <p class="eyebrow">Chapter I</p>
+        <h2>Diagnose by symptom</h2>
+      </div>
+      <div class="filters" aria-label="Filter by rule">
+        <button class="chip" data-on="true"><span class="dot" style="background:var(--fixed)"></span>Fixed</button>
+        <button class="chip" data-on="true"><span class="dot" style="background:var(--mutable)"></span>Mutable</button>
+        <button class="chip" data-on="true"><span class="dot" style="background:var(--branching)"></span>Branching</button>
+        <button class="chip" data-on="true"><span class="dot" style="background:var(--loop)"></span>Loop</button>
+      </div>
+    </div>
+
+    <div class="grid" id="grid"></div>
+  </section>
+
+  <!-- ENTRY DETAIL -->
+  <section class="entry pad">
+    <p class="eyebrow">Specimen No. 019 · full entry</p>
+    <div class="entry-grid">
+      <div>
+        <div class="entry-plate">
+          <span class="glyph">🚗⚡</span>
+          <span class="src-tag">Film still · source: TMDB (attribution)</span>
+        </div>
+        <div class="thumbs">
+          <div class="thumb">▦</div><div class="thumb">▦</div><div class="thumb">▦</div>
+        </div>
+        <p class="src-note"><b>Image sourcing (per medium):</b><br>
+          Film / TV → TMDB stills + posters<br>
+          Books → Open Library covers<br>
+          Games → IGDB / RAWG art<br>
+          Stage → production press photos<br>
+          Hero art → our own woodcut plates</p>
+      </div>
+
+      <div>
+        <h2 class="entry-title">Back to the Future</h2>
+        <p class="entry-sub">1985 · Film · dir. Robert Zemeckis · trilogy</p>
+
+        <div class="verdict">
+          <div class="cell rule">
+            <p class="k">The Rule</p>
+            <p class="v">Mutable<small>The Palimpsest — one timeline, redrawn</small></p>
+          </div>
+          <div class="cell mode">
+            <p class="k">The Mode</p>
+            <p class="v">Contraption<small>DeLorean · 1.21 GW · 88 mph</small></p>
+          </div>
+          <div class="cell loop">
+            <p class="k">Loop status</p>
+            <p class="v">None<small>Linear jumps, no repetition</small></p>
+          </div>
+        </div>
+
+        <div class="prose">
+          <h3>What you're allowed to do</h3>
+          <p>Everything — and that's the danger. This is a single, overwritable timeline.
+            Change the past and the present redraws itself around you. Prevent your parents
+            from meeting and you begin, quite literally, to fade from the family photograph.</p>
+
+          <div class="meter" title="Paradox exposure">
+            <span class="lab">Paradox exposure</span>
+            <span class="bar"><i></i></span>
+            <span class="lab">High</span>
+          </div>
+
+          <p class="fieldnote">Field note: keep the almanac dry and the flux capacitor charged.
+            If you meet yourself, do not shake hands — introductions can wait until you're
+            certain which of you is load-bearing.</p>
+
+          <h3>Mechanism</h3>
+          <p>A plutonium-fuelled contraption reaches 88 mph and displaces the vehicle (and
+            occupants) to a set date. Later instalments substitute a Mr. Fusion and a
+            hover-conversion, but the rule never changes: the timeline is clay.</p>
+
+          <h3>Related specimens</h3>
+          <p style="color:var(--muted); font-size:13px;">Frequency · The Butterfly Effect · About Time · Terminator 2 — all fellow Palimpsests.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- TIMELINE -->
+  <section class="timeline-wrap pad">
+    <div class="tl-head">
+      <div>
+        <p class="eyebrow">Walk the timeline</p>
+        <h2 style="font-family:var(--font-display); margin:0; font-size:clamp(20px,2.6vw,26px);">Back to the Future — event map</h2>
+      </div>
+      <div class="toggle" role="group" aria-label="Timeline ordering">
+        <button data-order="told" aria-pressed="true">As Told</button>
+        <button data-order="happened" aria-pressed="false">As Happened</button>
+      </div>
+    </div>
+
+    <div class="rail">
+      <div class="rail-inner" id="rail">
+        <svg class="arc" id="arc" preserveAspectRatio="none" aria-hidden="true"></svg>
+        <!-- nodes injected by JS -->
+      </div>
+    </div>
+    <p style="color:var(--muted); font-size:12.5px; margin:6px 2px 0; font-family:var(--font-label);">
+      Toggle the ordering — in the real build this re-tweens with anime.js so the story visibly unscrambles.
+    </p>
+  </section>
+
+  <div class="foot">Mostly Harmless · A demonstration mockup — three directions, one set of content.</div>
+</main>
+
+<p class="legend-note">
+  This is a <b>style-comparison mockup</b>, not the final app. Switch directions above (<code>The Guide</code> /
+  <code>The Almanac</code> / <code>The Chronograph</code>) — the same real content re-skins so you can judge which
+  world fits. Media imagery is shown as labelled placeholder plates because sourcing differs by medium.
+</p>
+
+<script>
+(function(){
+  var root = document.documentElement;
+  var canvas = document.getElementById('canvas');
+
+  /* ---------- shell theme toggle ---------- */
+  document.getElementById('themeBtn').addEventListener('click', function(){
+    var cur = root.getAttribute('data-theme');
+    if(!cur){ cur = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark':'light'; }
+    root.setAttribute('data-theme', cur === 'dark' ? 'light':'dark');
+  });
+
+  /* ---------- direction switch ---------- */
+  var captions = {
+    guide:   ['The Guide','The Hitchhiker\'s conceit, literal: a handheld device. Amber phosphor, monospace, scanlines, friendly-emergency tone.'],
+    almanac: ['The Almanac','An antique ephemeris. Ink-navy on aged paper, small-caps, hairline rules — deliberately not the usual cream-and-terracotta.'],
+    chrono:  ['The Chronograph','Modern & structural. The timeline diagram is the identity; a single temporal-violet accent on clean white.']
+  };
+  var capEl = document.getElementById('dirCaption');
+  function setCaption(d){ capEl.innerHTML = '<b>'+captions[d][0]+'</b> — '+captions[d][1]; }
+  setCaption('guide');
+
+  document.querySelectorAll('[data-dir-btn]').forEach(function(b){
+    b.addEventListener('click', function(){
+      var d = b.getAttribute('data-dir-btn');
+      canvas.setAttribute('data-dir', d);
+      document.querySelectorAll('[data-dir-btn]').forEach(function(x){ x.setAttribute('aria-pressed', x===b ? 'true':'false'); });
+      setCaption(d);
+    });
+  });
+
+  /* ---------- browse cards ---------- */
+  var specimens = [
+    {t:'Groundhog Day', y:1993, m:'Film', g:'❄', rule:'loop', log:'A weatherman is issued the same Tuesday until further notice.'},
+    {t:'Back to the Future', y:1985, m:'Film', g:'🚗', rule:'mutable', log:'The timeline is clay; the family photo is the warning light.'},
+    {t:'12 Monkeys', y:1995, m:'Film', g:'🐒', rule:'fixed', log:'You cannot stop it. You were always the one who was there.'},
+    {t:'Primer', y:2004, m:'Film', g:'📦', rule:'branching', log:'Two friends, one box, and more timelines than a whiteboard can hold.'},
+    {t:'Steins;Gate', y:2011, m:'Game', g:'📟', rule:'branching', log:'Text a microwave, split a worldline. Standard Tuesday.'},
+    {t:'Tenet', y:2020, m:'Film', g:'⏱', rule:'fixed', log:'Don\'t try to understand it. Feel it. Then walk backwards.'}
+  ];
+  var ruleName = {fixed:'Fixed', mutable:'Mutable', branching:'Branching', loop:'Loop'};
+  var grid = document.getElementById('grid');
+  grid.innerHTML = specimens.map(function(s){
+    return '<article class="card"><div class="plate">'
+      + '<span class="medium-tag">'+s.m+'</span>'
+      + '<span class="glyph">'+s.g+'</span>'
+      + '<span class="src-tag">plate: '+(s.m==='Game'?'IGDB':s.m==='Book'?'Open Library':'TMDB')+'</span>'
+      + '</div><div class="card-body">'
+      + '<h3 class="card-title">'+s.t+' <small>'+s.y+'</small></h3>'
+      + '<p class="card-log">'+s.log+'</p>'
+      + '<div class="tags"><span class="tag rule-'+s.rule+'">'+ruleName[s.rule]+'</span>'
+      + '<span class="tag" style="color:var(--muted);border-color:var(--line-strong)">'+s.m+'</span></div>'
+      + '</div></article>';
+  }).join('');
+
+  /* ---------- timeline ---------- */
+  // Back to the Future beats; each has a narrative slot and a chronological slot.
+  var beats = [
+    {lb:'Marty in 1985', era:1985, told:0, happ:2},
+    {lb:'Blasted to 1955', era:1955, told:1, happ:0},
+    {lb:'Parents’ first dance', era:1955, told:2, happ:1},
+    {lb:'Back to (altered) 1985', era:1985, told:3, happ:3}
+  ];
+  var rail = document.getElementById('rail');
+  var arc = document.getElementById('arc');
+  var order = 'told';
+
+  function layout(){
+    // remove old nodes
+    Array.prototype.slice.call(rail.querySelectorAll('.node')).forEach(function(n){ n.remove(); });
+    var n = beats.length;
+    beats.forEach(function(b){
+      var slot = order === 'told' ? b.told : b.happ;
+      var pct = (slot + 0.5) / n * 100;
+      var el = document.createElement('div');
+      el.className = 'node era-'+b.era;
+      el.style.left = pct + '%';
+      el.innerHTML = '<div class="dot"></div><div class="yr">'+b.era+'</div><div class="lb">'+b.lb+'</div>';
+      rail.appendChild(el);
+    });
+    drawArc();
+  }
+  function drawArc(){
+    // draw a dashed jump arc between the two 1985-adjacent beats in current order
+    var n = beats.length;
+    function pos(b){ var slot = order==='told'? b.told : b.happ; return (slot+0.5)/n*100; }
+    var from = pos(beats[0]); // Marty in 1985
+    var to   = pos(beats[1]); // Blasted to 1955
+    var x1 = from, x2 = to;
+    arc.innerHTML = '<path d="M '+x1+' 96 C '+x1+' 20, '+x2+' 20, '+x2+' 96" '
+      + 'vector-effect="non-scaling-stroke" transform="scale(1,1)"/>';
+    // use viewBox in % via preserveAspectRatio none: set coordinate space
+    arc.setAttribute('viewBox','0 0 100 96');
+    var t = document.createElementNS('http://www.w3.org/2000/svg','text');
+    t.setAttribute('x', (x1+x2)/2); t.setAttribute('y', 14); t.setAttribute('text-anchor','middle');
+    t.textContent = '⟲ jump';
+    arc.appendChild(t);
+  }
+
+  document.querySelectorAll('[data-order]').forEach(function(b){
+    b.addEventListener('click', function(){
+      order = b.getAttribute('data-order');
+      document.querySelectorAll('[data-order]').forEach(function(x){ x.setAttribute('aria-pressed', x===b?'true':'false'); });
+      layout();
+    });
+  });
+  layout();
+})();
+</script>

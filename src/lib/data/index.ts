@@ -1,5 +1,14 @@
-import type { Loop, Medium, Mode, Rule } from '$lib/types';
+import type { Loop, Medium, Mode, Ratings, Rule } from '$lib/types';
 import { specimens } from './specimens';
+import enrichment from './enrichment.json';
+
+// merge build-time enrichment (posters, refreshed scores) over the authored data
+for (const s of specimens) {
+	const e = (enrichment as Record<string, { poster?: string; ratings?: Partial<Ratings> }>)[s.slug];
+	if (!e) continue;
+	if (e.poster) s.poster = e.poster;
+	if (e.ratings) s.ratings = { ...(s.ratings ?? {}), ...e.ratings };
+}
 
 export { specimens };
 

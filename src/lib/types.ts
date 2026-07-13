@@ -36,6 +36,8 @@ export type LinkKind =
 	| 'metacritic'
 	| 'steam'
 	| 'watch'
+	| 'trailer'
+	| 'goodreads'
 	| 'wikipedia'
 	| 'official'
 	| 'other';
@@ -75,10 +77,14 @@ export interface TimelineEvent {
 	label: string;
 	/** order the audience experiences it (0-based) */
 	narrative: number;
-	/** sortable "real" time: a year (may be fractional) or an abstract index */
+	/** sortable "real" time the beat starts: a year (may be fractional) or an index */
 	chrono: number;
-	/** how to display the moment, e.g. "Nov 12, 1955, 10:04 PM" */
+	/** for beats that span time, the sortable end point (a year or index) */
+	chronoEnd?: number;
+	/** how to display the start of the moment, e.g. "Nov 12, 1955, 10:04 PM" */
 	chronoLabel?: string;
+	/** display for the end of a spanning beat, e.g. "Nov 11, 1955" */
+	chronoEndLabel?: string;
 	/** what happens in this beat */
 	description?: string;
 	/** where it happens, e.g. "Courthouse Square, Hill Valley" */
@@ -160,6 +166,10 @@ export interface MediaEntry {
 	imageSource: string;
 	/** poster/cover image URL (populated by the enrichment step) */
 	poster?: string;
+	/** Wikidata QID (e.g. "Q34028"), a keyless route to a poster and cross-ids */
+	wikidata?: string;
+	/** ISBN for books/comics, a keyless route to an Open Library cover */
+	isbn?: string;
 	/** citations backing this entry's data */
 	sources?: SourceRef[];
 	/** outbound links: IMDb, Rotten Tomatoes, Steam, where-to-watch, etc. */

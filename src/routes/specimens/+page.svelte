@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { base } from '$app/paths';
+	import { browser } from '$app/environment';
 	import { page } from '$app/state';
 	import { specimens, RULE_META, MEDIUM_META } from '$lib/data';
 	import type { Medium, Rule } from '$lib/types';
@@ -9,12 +10,23 @@
 	// only offer medium chips for media that actually appear in the catalogue
 	const media: Medium[] = [...new Set(specimens.map((s) => s.medium))].sort();
 
-	const initialMedium = page.url.searchParams.get('medium') as Medium | null;
 	let active = $state<Set<Rule>>(new Set(rules));
-	let activeMedia = $state<Set<Medium>>(
-		new Set(initialMedium && media.includes(initialMedium) ? [initialMedium] : media)
-	);
+	let activeMedia = $state<Set<Medium>>(new Set(media));
 	let loopOnly = $state(false);
+	let sort = $state<'title' | 'newest' | 'oldest'>('newest');
+
+	// precise sortable date: parse the full release date, else fall back to the year
+	const dateKey = (s: (typeof specimens)[number]) => {
+		const t = s.released ? Date.parse(s.released) : NaN;
+		return Number.isNaN(t) ? Date.parse(`Jan 1, ${s.year}`) : t;
+	};
+
+	// seed the medium filter from an inbound ?medium= link, on the client only
+	// (query strings are not available while prerendering the static page)
+	$effect(() => {
+		const m = page.url.searchParams.get('medium') as Medium | null;
+		if (m && media.includes(m)) activeMedia = new Set([m]);
+	});
 
 	function toggle(r: Rule) {
 		const next = new Set(active);
@@ -29,17 +41,20 @@
 		activeMedia = next;
 	}
 
-	let sagaFilter = $derived(page.url.searchParams.get('saga'));
+	let sagaFilter = $derived(browser ? page.url.searchParams.get('saga') : null);
 
-	let shown = $derived(
-		specimens.filter(
+	let shown = $derived.by(() => {
+		const list = specimens.filter(
 			(s) =>
 				s.rules.some((r) => active.has(r)) &&
 				activeMedia.has(s.medium) &&
 				(!loopOnly || s.loop !== null) &&
 				(!sagaFilter || s.saga === sagaFilter)
-		)
-	);
+		);
+		if (sort === 'title') return list.sort((a, b) => a.title.localeCompare(b.title));
+		const dir = sort === 'newest' ? -1 : 1;
+		return list.sort((a, b) => dir * (dateKey(a) - dateKey(b)) || a.title.localeCompare(b.title));
+	});
 </script>
 
 <svelte:head>
@@ -96,6 +111,20 @@
 					onclick={() => toggleMedium(m)}
 				>
 					<i class="dot"></i>{MEDIUM_META[m]}
+				</button>
+			{/each}
+		</div>
+
+		<div class="fgroup" role="group" aria-label="Sort order">
+			<span class="flabel">Sort</span>
+			{#each [['newest', 'Newest'], ['oldest', 'Oldest'], ['title', 'A to Z']] as [key, label] (key)}
+				<button
+					class="chip sort"
+					class:on={sort === key}
+					aria-pressed={sort === key}
+					onclick={() => (sort = key as typeof sort)}
+				>
+					{label}
 				</button>
 			{/each}
 		</div>
@@ -172,6 +201,9 @@
 	}
 	.chip.med {
 		--c: var(--color-jump);
+	}
+	.chip.sort {
+		--c: var(--color-branching);
 	}
 	.chip {
 		display: inline-flex;

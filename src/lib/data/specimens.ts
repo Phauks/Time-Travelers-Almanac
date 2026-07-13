@@ -216,7 +216,9 @@ export const specimens: MediaEntry[] = [
 				label: 'Engineering the romance',
 				narrative: 5,
 				chrono: 1955.855,
-				chronoLabel: 'Nov 6-11, 1955',
+				chronoEnd: 1955.862,
+				chronoLabel: 'Nov 6, 1955',
+				chronoEndLabel: 'Nov 11, 1955',
 				location: 'Hill Valley High',
 				kind: 'event',
 				description:
@@ -292,7 +294,7 @@ export const specimens: MediaEntry[] = [
 		saga: 'back-to-the-future',
 		continuity: 'film',
 		partOrder: 2,
-		rules: ['mutable'],
+		rules: ['mutable', 'branching'],
 		mode: ['contraption'],
 		loop: null,
 		destEra: 0.72,
@@ -324,7 +326,23 @@ export const specimens: MediaEntry[] = [
 				id: 'prime',
 				label: 'Timeline 1',
 				status: 'original',
-				note: 'one line, overwritten by the almanac and then set right'
+				note: 'the 1985 and 2015 the travellers set out from'
+			},
+			{
+				id: 'dystopia',
+				label: 'Timeline 2',
+				parent: 'prime',
+				branchAt: 'biff-gives',
+				status: 'endangered',
+				note: "Biff's corrupt alternate 1955 to 1985"
+			},
+			{
+				id: 'restored',
+				label: 'Timeline 3',
+				parent: 'dystopia',
+				branchAt: 'retrieve',
+				status: 'restored',
+				note: 'the almanac burned, the line set right again'
 			}
 		],
 		timeline: [
@@ -337,6 +355,7 @@ export const specimens: MediaEntry[] = [
 				location: 'Hill Valley',
 				kind: 'departure',
 				jumpTo: 'arrive15',
+				branch: 'prime',
 				description: 'Doc arrives from 2015 and takes Marty and Jennifer forward to sort out their children.'
 			},
 			{
@@ -347,6 +366,7 @@ export const specimens: MediaEntry[] = [
 				chronoLabel: 'Oct 21, 2015',
 				location: 'Hill Valley',
 				kind: 'arrival',
+				branch: 'prime',
 				description: 'Marty poses as his own son to keep the family out of trouble.'
 			},
 			{
@@ -357,6 +377,7 @@ export const specimens: MediaEntry[] = [
 				chronoLabel: 'Oct 21, 2015',
 				location: 'Hill Valley',
 				kind: 'event',
+				branch: 'prime',
 				description: 'Marty buys a book listing fifty years of sports results, meaning to gamble with it.'
 			},
 			{
@@ -368,6 +389,7 @@ export const specimens: MediaEntry[] = [
 				location: 'Hill Valley',
 				kind: 'departure',
 				jumpTo: 'biff-gives',
+				branch: 'prime',
 				description: 'The elderly Biff overhears the plan, pockets the almanac, and borrows the time machine.'
 			},
 			{
@@ -379,7 +401,8 @@ export const specimens: MediaEntry[] = [
 				location: 'Hill Valley',
 				kind: 'arrival',
 				jumpTo: 'biff-return',
-				description: 'Old Biff hands the almanac to the teenage Biff, seeding a fortune built on rigged bets.'
+				branch: 'dystopia',
+				description: 'Old Biff hands the almanac to the teenage Biff, splitting off a corrupt new timeline from 1955 onward.'
 			},
 			{
 				id: 'biff-return',
@@ -389,8 +412,9 @@ export const specimens: MediaEntry[] = [
 				chronoLabel: 'Oct 21, 2015',
 				location: 'Hill Valley',
 				kind: 'return',
+				branch: 'prime',
 				paradox:
-					"Having just changed 1955, Old Biff drives the DeLorean back to the very 2015 he left. By the film's own rules that future should have been rewritten around him, or erased him entirely. It is the saga's best known continuity error.",
+					"Having just changed 1955, Old Biff drives the DeLorean back to the very 2015 he left. By the film's own rules he should return to his own altered future, not this one. He crosses back onto Timeline 1: the saga's best known continuity error.",
 				description: 'Old Biff returns the machine and staggers off, apparently unaffected.'
 			},
 			{
@@ -402,7 +426,8 @@ export const specimens: MediaEntry[] = [
 				location: 'Hill Valley',
 				kind: 'departure',
 				jumpTo: 'arrive-a',
-				description: 'Unaware of the swap, Doc flies Marty and Jennifer back toward their own 1985.'
+				branch: 'prime',
+				description: 'Unaware of the swap, Doc flies Marty and Jennifer out of 2015 toward home, and into the altered line.'
 			},
 			{
 				id: 'arrive-a',
@@ -412,7 +437,8 @@ export const specimens: MediaEntry[] = [
 				chronoLabel: 'Oct 26, 1985 (altered)',
 				location: 'Hill Valley',
 				kind: 'return',
-				description: 'Doc, Marty and Jennifer come back to a Hill Valley remade in Biff’s image.'
+				branch: 'dystopia',
+				description: 'They land not in their own 1985 but in the Hill Valley the almanac built, remade in Biff’s image.'
 			},
 			{
 				id: 'discover',
@@ -422,6 +448,7 @@ export const specimens: MediaEntry[] = [
 				chronoLabel: '1985 (altered)',
 				location: 'Hill Valley',
 				kind: 'event',
+				branch: 'dystopia',
 				description: 'They learn Biff is rich and powerful, George McFly is dead, and the almanac is the cause.'
 			},
 			{
@@ -433,6 +460,7 @@ export const specimens: MediaEntry[] = [
 				location: 'Hill Valley',
 				kind: 'departure',
 				jumpTo: 'retrieve',
+				branch: 'dystopia',
 				description: 'They trace the change to the day of the Enchantment Under the Sea dance and set off to undo it.'
 			},
 			{
@@ -443,7 +471,8 @@ export const specimens: MediaEntry[] = [
 				chronoLabel: 'Nov 12, 1955',
 				location: 'Hill Valley',
 				kind: 'event',
-				description: 'Working around their earlier selves, they take the almanac from young Biff and burn it.'
+				branch: 'restored',
+				description: 'Working around their earlier selves, they take the almanac from young Biff and burn it, restoring the line.'
 			},
 			{
 				id: 'doc-1885',
@@ -453,6 +482,7 @@ export const specimens: MediaEntry[] = [
 				chronoLabel: 'Nov 12, 1955',
 				location: 'Hill Valley',
 				kind: 'departure',
+				branch: 'restored',
 				crossRef: { entry: 'back-to-the-future-part-iii', event: 'letter' },
 				description: 'A bolt of lightning sends the DeLorean, and Doc, to the year 1885.'
 			}

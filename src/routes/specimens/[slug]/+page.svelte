@@ -22,18 +22,47 @@
 	const LINK_META: Record<string, string> = {
 		steam: 'Steam',
 		watch: 'JustWatch',
+		trailer: 'Trailer',
+		goodreads: 'Goodreads',
 		wikipedia: 'Wikipedia',
 		official: 'Official site',
 		other: 'Link'
 	};
 
 	let linkMap = $derived(Object.fromEntries((s.links ?? []).map((l) => [l.kind, l.url])));
-	let extraLinks = $derived(
-		(s.links ?? []).filter((l) => !['imdb', 'rottentomatoes', 'metacritic'].includes(l.kind))
-	);
+	// non-score links, plus auto-generated trailer (video media) and Goodreads (books)
+	// searches when the entry does not supply its own, so every specimen has them
+	let extraLinks = $derived.by(() => {
+		const links = (s.links ?? []).filter(
+			(l) => !['imdb', 'rottentomatoes', 'metacritic'].includes(l.kind)
+		);
+		const has = (k: string) => links.some((l) => l.kind === k);
+		const out = [...links];
+		if (!has('trailer') && ['film', 'tv', 'game'].includes(s.medium)) {
+			out.push({
+				kind: 'trailer',
+				url: `https://www.youtube.com/results?search_query=${encodeURIComponent(`${s.title} ${s.year} trailer`)}`
+			});
+		}
+		if (!has('goodreads') && s.medium === 'book') {
+			out.push({
+				kind: 'goodreads',
+				url: `https://www.goodreads.com/search?q=${encodeURIComponent(s.title)}`
+			});
+		}
+		return out;
+	});
 	let mates = $derived(sagaMates(s));
 	let related = $derived(relatedSpecimens(s));
 	let sagaLabel = $derived(s.saga ? s.saga.replace(/-/g, ' ') : '');
+	// the saga part immediately before this one, shown at the start of the timeline
+	let prevPart = $derived.by(() => {
+		if (s.partOrder == null) return null;
+		const earlier = mates
+			.filter((m) => (m.partOrder ?? 0) < (s.partOrder ?? 0))
+			.sort((a, b) => (b.partOrder ?? 0) - (a.partOrder ?? 0));
+		return earlier[0] ? { slug: earlier[0].slug, title: earlier[0].title } : null;
+	});
 </script>
 
 <svelte:head>
@@ -50,10 +79,6 @@
 					<span class="src">{s.imageSource}</span>
 				{/if}
 			</div>
-			<section class="mech">
-				<h2>Mechanism</h2>
-				<p>{s.mechanism}</p>
-			</section>
 		</div>
 
 		<div class="col-main">
@@ -131,9 +156,19 @@
 		</aside>
 	</header>
 
+	<section class="mech">
+		<h2>Mechanism</h2>
+		<p>{s.mechanism}</p>
+	</section>
+
 	<section class="timeline">
 		<h2>Timeline</h2>
-		<BranchingTimeline events={s.timeline} branches={s.branches ?? []} accent={ruleColorVar(s.rules[0])} />
+		<BranchingTimeline
+			events={s.timeline}
+			branches={s.branches ?? []}
+			accent={ruleColorVar(s.rules[0])}
+			continuesFrom={prevPart}
+		/>
 	</section>
 
 	{#if mates.length}
@@ -196,18 +231,25 @@
 		grid-area: img;
 	}
 	.mech {
-		margin-top: 1.2rem;
+		margin-top: 2.4rem;
 	}
 	.mech h2 {
 		font-family: var(--font-serif);
 		font-size: 1.25rem;
-		margin: 0 0 0.5rem;
+		margin: 0 0 0.6rem;
 	}
 	.mech p {
 		margin: 0;
-		font-size: 0.95rem;
-		line-height: 1.6;
+		font-size: 1rem;
+		line-height: 1.65;
 		color: color-mix(in srgb, var(--color-paper) 90%, var(--color-muted));
+	}
+	/* on wide screens the mechanism flows as two columns beneath the top row */
+	@media (min-width: 900px) {
+		.mech p {
+			column-count: 2;
+			column-gap: 2.5rem;
+		}
 	}
 	.col-main {
 		grid-area: main;

@@ -1,22 +1,40 @@
 <script lang="ts">
 	// Official brand marks from simple-icons (used per each brand's linking guidelines).
-	import { siImdb, siRottentomatoes, siMetacritic, siSteam, siWikipedia } from 'simple-icons';
+	import {
+		siImdb,
+		siRottentomatoes,
+		siMetacritic,
+		siSteam,
+		siWikipedia,
+		siGoodreads,
+		siYoutube
+	} from 'simple-icons';
 
 	let { kind, size = 15, color }: { kind: string; size?: number; color?: string } = $props();
 
 	type Ico = { path: string; hex: string; title: string };
+	// JustWatch has no simple-icons mark, so we ship a close play-badge stand-in.
+	const JUSTWATCH: Ico = {
+		title: 'JustWatch',
+		hex: 'FDD835',
+		path: 'M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm-2 5.5l7 4.5-7 4.5v-9z'
+	};
 	const ICONS: Record<string, Ico> = {
 		imdb: siImdb,
 		rottentomatoes: siRottentomatoes,
 		metacritic: siMetacritic,
 		steam: siSteam,
-		wikipedia: siWikipedia
+		wikipedia: siWikipedia,
+		goodreads: siGoodreads,
+		trailer: siYoutube,
+		watch: JUSTWATCH
 	};
 	// on a dark ground, pure-black brand hexes need lightening
 	const OVERRIDE: Record<string, string> = {
 		metacritic: '#ffcc33',
 		steam: '#c7d5e0',
-		wikipedia: '#e8ebf2'
+		wikipedia: '#e8ebf2',
+		goodreads: '#d8c7a6'
 	};
 
 	let icon = $derived(ICONS[kind]);

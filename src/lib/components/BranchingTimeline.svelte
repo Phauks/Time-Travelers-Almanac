@@ -7,7 +7,10 @@
 		ArrowsClockwise,
 		DotOutline,
 		Warning,
-		ArrowRight
+		ArrowRight,
+		ArrowLeft,
+		CaretLeft,
+		CaretRight
 	} from 'phosphor-svelte';
 	import { base } from '$app/paths';
 	import { getSpecimen } from '$lib/data';
@@ -16,8 +19,15 @@
 	let {
 		events,
 		branches = [],
-		accent = 'var(--color-branching)'
-	}: { events: TimelineEvent[]; branches?: Branch[]; accent?: string } = $props();
+		accent = 'var(--color-branching)',
+		continuesFrom = null
+	}: {
+		events: TimelineEvent[];
+		branches?: Branch[];
+		accent?: string;
+		/** the media this timeline continues from, shown at the start */
+		continuesFrom?: { slug: string; title: string } | null;
+	} = $props();
 
 	// ---- branch membership: walk narrative order, switch at each branchAt marker ----
 	const byNarr = [...events].sort((a, b) => a.narrative - b.narrative);
@@ -25,12 +35,15 @@
 	const rootId = (branches.find((b) => !b.parent) ?? branches[0])?.id ?? 'main';
 	const branchAtMap = new Map(branches.filter((b) => b.branchAt).map((b) => [b.branchAt!, b.id]));
 	const jumpTargets = new Set(events.filter((e) => e.jumpTo).map((e) => e.jumpTo));
+	// Membership: an event may name its branch explicitly (needed when the story
+	// hops between timelines out of order, as in BTTF Part II). Otherwise we walk
+	// narrative order and switch branch at each branchAt marker.
 	const memberOf = new Map<string, string>();
 	{
 		let cur = rootId;
 		for (const e of byNarr) {
 			if (branchAtMap.has(e.id)) cur = branchAtMap.get(e.id)!;
-			memberOf.set(e.id, cur);
+			memberOf.set(e.id, e.branch ?? cur);
 		}
 	}
 	const laneOf = (id: string) => Math.max(0, branches.findIndex((b) => b.id === id));
@@ -125,6 +138,16 @@
 	let selectedId = $state(byNarr[0]?.id ?? '');
 	let selected = $derived(events.find((e) => e.id === selectedId) ?? byNarr[0]);
 
+	// step through events in whatever order is currently shown
+	let selIndex = $derived(ordered.findIndex((e) => e.id === selectedId));
+	function step(delta: number) {
+		const i = selIndex < 0 ? 0 : selIndex + delta;
+		if (i >= 0 && i < ordered.length) selectedId = ordered[i].id;
+	}
+
+	// stills attached to events, for the gallery
+	let stills = $derived(events.filter((e) => e.image));
+
 	const KIND: Record<EventKind, { label: string; icon: unknown | null }> = {
 		origin: { label: 'Origin', icon: Flag },
 		departure: { label: 'Time jump', icon: Lightning },
@@ -140,6 +163,12 @@
 		const l = e.chronoLabel ?? '';
 		const m = l.match(/\d{4}/); // keep everything up to and including the year
 		return (m ? l.slice(0, m.index! + 4) : l.split(',')[0]).trim();
+	};
+	// full display label, spanning start to end when the beat covers a range
+	const whenLabel = (e: TimelineEvent) => {
+		const base = e.chronoLabel ?? '';
+		const loc = e.location ? `, ${e.location}` : '';
+		return e.chronoEndLabel ? `${base} to ${e.chronoEndLabel}${loc}` : `${base}${loc}`;
 	};
 	function jumpText(fromC: number, toC: number): string {
 		if (fromC < 1000 || toC < 1000) return 'jump';
@@ -169,6 +198,11 @@
 
 	<div class="split">
 	<div class="board-col">
+	{#if continuesFrom}
+		<a class="continues" href="{base}/specimens/{continuesFrom.slug}/">
+			<ArrowLeft size={13} weight="bold" /> Continues from {continuesFrom.title}
+		</a>
+	{/if}
 	<div class="board">
 		<svg viewBox="0 0 {W} {H}" role="img" aria-label="Branching timeline" preserveAspectRatio="none">
 			{#each branches as b, i (b.id)}
@@ -257,14 +291,32 @@
 		{@const M = kmeta(selected)}
 		{@const b = branchById.get(curBranch(selected.id))}
 		<div class="detail" style="border-left-color:{branchColor(curBranch(selected.id))}">
+			<div class="detnav">
+				<button class="arrow" onclick={() => step(-1)} disabled={selIndex <= 0} aria-label="Previous event">
+					<CaretLeft size={15} weight="bold" />
+				</button>
+				<span class="count">{selIndex + 1} / {ordered.length}</span>
+				<button
+					class="arrow"
+					onclick={() => step(1)}
+					disabled={selIndex >= ordered.length - 1}
+					aria-label="Next event"
+				>
+					<CaretRight size={15} weight="bold" />
+				</button>
+			</div>
+			{#if selected.image}
+				<div class="still"><img src={selected.image} alt={selected.label} /></div>
+			{/if}
 			<div class="badges">
 				<span class="badge" style="--c:{branchColor(curBranch(selected.id))}">
 					{#if M.icon}{@const Icon = M.icon}<Icon size={12} weight="fill" />{/if}{M.label}
 				</span>
 				{#if b}<span class="badge branch">{b.label}</span>{/if}
+				{#if selected.source}<span class="badge src">{selected.source}</span>{/if}
 			</div>
 			<h4>{selected.label}</h4>
-			<p class="when">{selected.chronoLabel}{selected.location ? `, ${selected.location}` : ''}</p>
+			<p class="when">{whenLabel(selected)}</p>
 			{#if selected.description}<p class="desc">{selected.description}</p>{/if}
 			{#if selected.paradox}
 				<p class="para"><Warning size={13} weight="fill" /> {selected.paradox}</p>
@@ -281,6 +333,25 @@
 	{/if}
 	</div>
 	</div>
+
+	{#if stills.length}
+		<div class="stills">
+			<p class="stills-h">Stills from the timeline</p>
+			<div class="stills-row">
+				{#each stills as e (e.id)}
+					<button
+						class="thumb"
+						class:on={selectedId === e.id}
+						onclick={() => (selectedId = e.id)}
+						aria-label={e.label}
+					>
+						<img src={e.image} alt={e.label} loading="lazy" />
+						<span>{shortDate(e)}</span>
+					</button>
+				{/each}
+			</div>
+		</div>
+	{/if}
 </div>
 
 <style>
@@ -505,5 +576,123 @@
 		color: #ff8a92;
 		border-top: 1px dashed color-mix(in srgb, #ff6b74 40%, transparent);
 		padding-top: 0.6rem;
+	}
+
+	.continues {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.35rem;
+		margin-bottom: 0.6rem;
+		font-family: var(--font-mono);
+		font-size: 0.68rem;
+		letter-spacing: 0.04em;
+		text-transform: uppercase;
+		color: var(--color-muted);
+		border: 1px solid var(--color-line);
+		border-radius: 999px;
+		padding: 0.3rem 0.7rem;
+	}
+	.continues:hover {
+		color: var(--color-paper);
+		border-color: color-mix(in srgb, var(--color-paper) 35%, var(--color-line));
+	}
+
+	.detnav {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 0.5rem;
+		margin-bottom: 0.7rem;
+	}
+	.detnav .count {
+		font-family: var(--font-mono);
+		font-size: 0.66rem;
+		letter-spacing: 0.08em;
+		color: var(--color-muted);
+	}
+	.arrow {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		width: 28px;
+		height: 28px;
+		border: 1px solid var(--color-line);
+		border-radius: 6px;
+		background: transparent;
+		color: var(--color-paper);
+		cursor: pointer;
+		transition:
+			border-color 0.15s,
+			opacity 0.15s;
+	}
+	.arrow:hover:not(:disabled) {
+		border-color: color-mix(in srgb, var(--color-paper) 40%, var(--color-line));
+	}
+	.arrow:disabled {
+		opacity: 0.35;
+		cursor: default;
+	}
+	.arrow:focus-visible {
+		outline: 2px solid var(--accent);
+		outline-offset: 2px;
+	}
+	.still {
+		border-radius: 6px;
+		overflow: hidden;
+		margin-bottom: 0.7rem;
+		border: 1px solid var(--color-line);
+	}
+	.still img {
+		display: block;
+		width: 100%;
+		height: auto;
+	}
+	.badge.src {
+		--c: var(--accent);
+	}
+
+	.stills {
+		margin-top: 1.4rem;
+	}
+	.stills-h {
+		font-family: var(--font-mono);
+		font-size: 0.62rem;
+		letter-spacing: 0.14em;
+		text-transform: uppercase;
+		color: var(--color-muted);
+		margin: 0 0 0.6rem;
+	}
+	.stills-row {
+		display: flex;
+		gap: 0.6rem;
+		overflow-x: auto;
+		padding-bottom: 0.4rem;
+	}
+	.thumb {
+		flex: 0 0 auto;
+		width: 128px;
+		border: 1px solid var(--color-line);
+		border-radius: 6px;
+		overflow: hidden;
+		background: transparent;
+		padding: 0;
+		cursor: pointer;
+	}
+	.thumb.on {
+		border-color: var(--accent);
+	}
+	.thumb img {
+		display: block;
+		width: 100%;
+		height: 74px;
+		object-fit: cover;
+	}
+	.thumb span {
+		display: block;
+		font-family: var(--font-mono);
+		font-size: 0.58rem;
+		color: var(--color-muted);
+		padding: 0.25rem 0.4rem;
+		text-align: left;
 	}
 </style>

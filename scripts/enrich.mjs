@@ -151,22 +151,54 @@ async function openLibraryPoster(isbn) {
 	}
 }
 
+// The previous output doubles as a cache. Entries already filled are reused
+// without any network call, so day-to-day deploys make almost no requests and
+// stay far under OMDb's 1000/day limit. A refresh (the weekly run, via
+// ENRICH_REFRESH=1) re-pulls everything so scores stay current. A failed fetch
+// never wipes a cached value.
+let cache = {};
+try {
+	cache = JSON.parse(readFileSync(OUT, 'utf8'));
+} catch {
+	cache = {};
+}
+const REFRESH = process.env.ENRICH_REFRESH === '1';
+
 const enrichment = {};
+let fetched = 0;
 for (const e of entries) {
+	const cached = cache[e.slug];
+	if (!REFRESH && cached) {
+		enrichment[e.slug] = cached;
+		console.log(`enrich: ${e.slug} cached`);
+		continue;
+	}
+	fetched++;
 	const { poster: tmdbPoster, trailer, score } = await tmdb(e.imdb);
 	const omdbRatings = await omdb(e.imdb);
 	const poster =
-		tmdbPoster || (await wikidataPoster(e.qid)) || (await openLibraryPoster(e.isbn));
-	const ratings = { ...(score != null ? { tmdb: score } : {}), ...(omdbRatings ?? {}) };
+		tmdbPoster ||
+		(await wikidataPoster(e.qid)) ||
+		(await openLibraryPoster(e.isbn)) ||
+		cached?.poster ||
+		null;
+	const ratings = {
+		...(cached?.ratings ?? {}),
+		...(score != null ? { tmdb: score } : {}),
+		...(omdbRatings ?? {})
+	};
+	const trail = trailer ?? cached?.trailer;
 	const rec = {};
 	if (poster) rec.poster = poster;
 	if (Object.keys(ratings).length) rec.ratings = ratings;
-	if (trailer) rec.trailer = trailer;
+	if (trail) rec.trailer = trail;
 	if (Object.keys(rec).length) enrichment[e.slug] = rec;
 	console.log(
-		`enrich: ${e.slug} ${poster ? 'poster' : '-'} ${Object.keys(ratings).length ? 'ratings' : '-'} ${trailer ? 'trailer' : '-'}`
+		`enrich: ${e.slug} ${poster ? 'poster' : '-'} ${Object.keys(ratings).length ? 'ratings' : '-'} ${trail ? 'trailer' : '-'}`
 	);
 }
 
 writeFileSync(OUT, JSON.stringify(enrichment, null, 2) + '\n');
-console.log(`enrich: wrote ${Object.keys(enrichment).length} entries to ${OUT}`);
+console.log(
+	`enrich: wrote ${Object.keys(enrichment).length} entries (${fetched} fetched, ${entries.length - fetched} cached)${REFRESH ? ' [refresh]' : ''} to ${OUT}`
+);

@@ -1,9 +1,10 @@
 <script lang="ts">
 	import { base } from '$app/paths';
-	import { Warning } from 'phosphor-svelte';
+	import { Warning, MagnifyingGlassPlus } from 'phosphor-svelte';
 	import BranchingTimeline from '$lib/components/BranchingTimeline.svelte';
 	import BrandLogo from '$lib/components/BrandLogo.svelte';
 	import SpecimenCard from '$lib/components/SpecimenCard.svelte';
+	import Lightbox from '$lib/components/Lightbox.svelte';
 	import {
 		RULE_META,
 		MODE_META,
@@ -17,6 +18,18 @@
 
 	let { data }: { data: PageData } = $props();
 	let s = $derived(data.specimen);
+
+	// poster plus any timeline stills, for the lightbox gallery
+	let gallery = $derived([
+		...(s.poster ? [{ src: s.poster, caption: `${s.title} poster` }] : []),
+		...s.timeline.filter((e) => e.image).map((e) => ({ src: e.image!, caption: e.label }))
+	]);
+	let lbOpen = $state(false);
+	let lbIndex = $state(0);
+	function openLightbox(i = 0) {
+		lbIndex = i;
+		lbOpen = true;
+	}
 
 	const riskPct = { low: 33, medium: 66, high: 100 } as const;
 	const LINK_META: Record<string, string> = {
@@ -58,13 +71,21 @@
 	let mates = $derived(sagaMates(s));
 	let related = $derived(relatedSpecimens(s));
 	let sagaLabel = $derived(s.saga ? s.saga.replace(/-/g, ' ') : '');
-	// the saga part immediately before this one, shown at the start of the timeline
+	// the saga parts immediately before and after this one, shown as the
+	// incoming and outgoing connections at the ends of the timeline
 	let prevPart = $derived.by(() => {
 		if (s.partOrder == null) return null;
 		const earlier = mates
 			.filter((m) => (m.partOrder ?? 0) < (s.partOrder ?? 0))
 			.sort((a, b) => (b.partOrder ?? 0) - (a.partOrder ?? 0));
 		return earlier[0] ? { slug: earlier[0].slug, title: earlier[0].title } : null;
+	});
+	let nextPart = $derived.by(() => {
+		if (s.partOrder == null) return null;
+		const later = mates
+			.filter((m) => (m.partOrder ?? 0) > (s.partOrder ?? 0))
+			.sort((a, b) => (a.partOrder ?? 0) - (b.partOrder ?? 0));
+		return later[0] ? { slug: later[0].slug, title: later[0].title } : null;
 	});
 </script>
 
@@ -75,13 +96,18 @@
 <article class="dossier" style="--accent:{ruleColorVar(s.rules[0])}">
 	<header class="top">
 		<div class="col-img">
-			<div class="plate">
-				{#if s.poster}
-					<img src={s.poster} alt="{s.title} poster" />
-				{:else}
-					<span class="src">{s.imageSource}</span>
-				{/if}
-			</div>
+			{#if gallery.length}
+				<button class="plate" onclick={() => openLightbox(0)} aria-label="View {s.title} artwork larger">
+					{#if s.poster}
+						<img src={s.poster} alt="{s.title} poster" />
+					{:else}
+						<span class="src">{s.imageSource}</span>
+					{/if}
+					<span class="zoom"><MagnifyingGlassPlus size={16} weight="bold" /></span>
+				</button>
+			{:else}
+				<div class="plate"><span class="src">{s.imageSource}</span></div>
+			{/if}
 		</div>
 
 		<div class="col-main">
@@ -92,7 +118,7 @@
 				<a href="{base}/specimens/?medium={s.medium}">{MEDIUM_META[s.medium]}</a>
 				{#if s.saga}
 					<span class="dot-sep"></span>
-					<a href="{base}/specimens/?saga={s.saga}" class="cap">{sagaLabel} saga</a>
+					<a href="{base}/specimens/?saga={s.saga}" class="cap">{sagaLabel} franchise</a>
 				{/if}
 			</p>
 
@@ -181,6 +207,7 @@
 			branches={s.branches ?? []}
 			accent={ruleColorVar(s.rules[0])}
 			continuesFrom={prevPart}
+			continuesTo={nextPart}
 		/>
 	</section>
 
@@ -201,6 +228,8 @@
 			</div>
 		</section>
 	{/if}
+
+	<Lightbox images={gallery} bind:open={lbOpen} bind:index={lbIndex} />
 
 	{#if s.sources?.length}
 		<section class="sources">
@@ -244,25 +273,18 @@
 		grid-area: img;
 	}
 	.mech {
-		margin-top: 2.4rem;
+		margin-top: 1.6rem;
 	}
 	.mech h2 {
 		font-family: var(--font-serif);
 		font-size: 1.25rem;
-		margin: 0 0 0.6rem;
+		margin: 0 0 0.5rem;
 	}
 	.mech p {
 		margin: 0;
 		font-size: 1rem;
 		line-height: 1.65;
 		color: color-mix(in srgb, var(--color-paper) 90%, var(--color-muted));
-	}
-	/* on wide screens the mechanism flows as two columns beneath the top row */
-	@media (min-width: 900px) {
-		.mech p {
-			column-count: 2;
-			column-gap: 2.5rem;
-		}
 	}
 	.col-main {
 		grid-area: main;
@@ -284,6 +306,7 @@
 
 	.plate {
 		position: relative;
+		width: 100%;
 		aspect-ratio: 2 / 3;
 		border: 1px solid var(--color-line);
 		border-radius: 6px;
@@ -292,6 +315,35 @@
 		display: flex;
 		align-items: center;
 		justify-content: center;
+		padding: 0;
+	}
+	button.plate {
+		cursor: zoom-in;
+		font: inherit;
+		color: inherit;
+	}
+	.zoom {
+		position: absolute;
+		right: 0.5rem;
+		bottom: 0.5rem;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		width: 30px;
+		height: 30px;
+		border-radius: 999px;
+		background: rgba(3, 5, 12, 0.6);
+		color: #fff;
+		opacity: 0;
+		transition: opacity 0.15s;
+	}
+	button.plate:hover .zoom,
+	button.plate:focus-visible .zoom {
+		opacity: 1;
+	}
+	button.plate:focus-visible {
+		outline: 2px solid var(--accent);
+		outline-offset: 2px;
 	}
 	.plate img {
 		position: absolute;

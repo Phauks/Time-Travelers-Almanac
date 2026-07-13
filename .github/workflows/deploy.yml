@@ -47,10 +47,29 @@ jobs:
         with:
           enablement: true
 
-      - name: Enrich data (posters and scores; no-op without keys)
+      # Weekly cache bucket, so a scheduled run starts a fresh week and refills.
+      - name: Enrichment cache stamp
+        id: stamp
+        run: echo "week=$(date -u +%Y-%V)" >> "$GITHUB_OUTPUT"
+
+      # Persist posters/trailers/scores between runs so day-to-day deploys make
+      # almost no API calls (matters for OMDb's 1000/day limit).
+      - name: Cache enrichment data
+        uses: actions/cache@v4
+        with:
+          path: src/lib/data/enrichment.json
+          key: enrichment-${{ steps.stamp.outputs.week }}-${{ hashFiles('src/lib/data/specimens.ts') }}
+          restore-keys: |
+            enrichment-${{ steps.stamp.outputs.week }}-
+            enrichment-
+
+      - name: Enrich data (posters, trailers, scores; cached, no-op without keys)
         env:
           TMDB_API_KEY: ${{ secrets.TMDB_API_KEY }}
           OMDB_API_KEY: ${{ secrets.OMDB_API_KEY }}
+          # a scheduled run re-pulls everything to keep scores fresh; pushes only
+          # fill gaps from cache
+          ENRICH_REFRESH: ${{ github.event_name == 'schedule' && '1' || '' }}
         run: node scripts/enrich.mjs
 
       - name: Build

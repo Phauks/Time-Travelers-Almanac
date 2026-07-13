@@ -13,20 +13,22 @@
 		CaretRight
 	} from 'phosphor-svelte';
 	import { base } from '$app/paths';
-	import { getSpecimen } from '$lib/data';
 	import type { Branch, EventKind, TimelineEvent } from '$lib/types';
 
 	let {
 		events,
 		branches = [],
 		accent = 'var(--color-branching)',
-		continuesFrom = null
+		continuesFrom = null,
+		continuesTo = null
 	}: {
 		events: TimelineEvent[];
 		branches?: Branch[];
 		accent?: string;
 		/** the media this timeline continues from, shown at the start */
 		continuesFrom?: { slug: string; title: string } | null;
+		/** the media this timeline continues into, shown at the end */
+		continuesTo?: { slug: string; title: string } | null;
 	} = $props();
 
 	// ---- branch membership: walk narrative order, switch at each branchAt marker ----
@@ -198,10 +200,21 @@
 
 	<div class="split">
 	<div class="board-col">
-	{#if continuesFrom}
-		<a class="continues" href="{base}/specimens/{continuesFrom.slug}/">
-			<ArrowLeft size={13} weight="bold" /> Continues from {continuesFrom.title}
-		</a>
+	{#if continuesFrom || continuesTo}
+		<div class="connectors">
+			{#if continuesFrom}
+				<a class="continues" href="{base}/specimens/{continuesFrom.slug}/">
+					<ArrowLeft size={13} weight="bold" /> Continues from {continuesFrom.title}
+				</a>
+			{:else}
+				<span></span>
+			{/if}
+			{#if continuesTo}
+				<a class="continues" href="{base}/specimens/{continuesTo.slug}/">
+					Continues in {continuesTo.title} <ArrowRight size={13} weight="bold" />
+				</a>
+			{/if}
+		</div>
 	{/if}
 	<div class="board">
 		<svg viewBox="0 0 {W} {H}" role="img" aria-label="Branching timeline" preserveAspectRatio="none">
@@ -320,14 +333,6 @@
 			{#if selected.description}<p class="desc">{selected.description}</p>{/if}
 			{#if selected.paradox}
 				<p class="para"><Warning size={13} weight="fill" /> {selected.paradox}</p>
-			{/if}
-			{#if selected.crossRef}
-				{@const tgt = getSpecimen(selected.crossRef.entry)}
-				{#if tgt}
-					<a class="crossref" href="{base}/specimens/{tgt.slug}/">
-						Continues in {tgt.title} <ArrowRight size={13} weight="bold" />
-					</a>
-				{/if}
 			{/if}
 		</div>
 	{/if}
@@ -469,21 +474,6 @@
 		font-size: 15px;
 		font-weight: 700;
 	}
-	.crossref {
-		display: inline-flex;
-		align-items: center;
-		gap: 0.35rem;
-		margin-top: 0.7rem;
-		font-family: var(--font-mono);
-		font-size: 0.72rem;
-		letter-spacing: 0.04em;
-		text-transform: uppercase;
-		color: var(--color-branching);
-	}
-	.crossref:hover {
-		text-decoration: underline;
-		text-underline-offset: 3px;
-	}
 
 	.legend {
 		display: flex;
@@ -578,11 +568,17 @@
 		padding-top: 0.6rem;
 	}
 
+	.connectors {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 0.6rem;
+		margin-bottom: 0.6rem;
+	}
 	.continues {
 		display: inline-flex;
 		align-items: center;
 		gap: 0.35rem;
-		margin-bottom: 0.6rem;
 		font-family: var(--font-mono);
 		font-size: 0.68rem;
 		letter-spacing: 0.04em;

@@ -77,7 +77,7 @@
 
 	{#if sagaFilter}
 		<p class="scope">
-			Showing the {sagaFilter.replace(/-/g, ' ')} saga
+			Showing the {sagaFilter.replace(/-/g, ' ')} franchise
 			<a href="{base}/specimens/">clear filter</a>
 		</p>
 	{/if}

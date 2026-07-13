@@ -621,14 +621,25 @@ export const specimens: MediaEntry[] = [
 				description: 'Marty arrives in 1985, and a freight train smashes the empty DeLorean to pieces on the tracks.'
 			},
 			{
+				id: 'doc-depart',
+				label: 'Doc builds a second time machine',
+				narrative: 6.5,
+				chrono: 1893,
+				chronoLabel: 'circa 1893',
+				location: 'Hill Valley',
+				kind: 'departure',
+				jumpTo: 'doc-train',
+				description: 'Stranded in the Old West, Doc spends years turning a steam locomotive into a time machine, then sets off through time with Clara and their two sons. A second time traveller, on his own.'
+			},
+			{
 				id: 'doc-train',
 				label: 'Doc returns by rail',
 				narrative: 7,
 				chrono: 1985.84,
 				chronoLabel: 'Oct 27, 1985',
 				location: 'Hill Valley',
-				kind: 'event',
-				description: 'Doc reappears in a flying steam time machine with Clara and their sons, proving the future is whatever you make it.'
+				kind: 'arrival',
+				description: 'The flying steam time machine materialises at the tracks where the DeLorean was destroyed, proving the future is whatever you make it.'
 			}
 		]
 	},

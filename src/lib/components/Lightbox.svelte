@@ -6,7 +6,7 @@
 		index = $bindable(0),
 		open = $bindable(false)
 	}: {
-		images: { src: string; caption?: string }[];
+		images: { src: string; caption?: string; credit?: string }[];
 		index?: number;
 		open?: boolean;
 	} = $props();
@@ -95,7 +95,10 @@
 		<figure class="frame" onclick={stop} role="presentation">
 			<img src={current.src} alt={current.caption ?? 'Image'} />
 			<figcaption>
-				<span class="cap">{current.caption ?? ''}{many ? `  (${index + 1} of ${images.length})` : ''}</span>
+				<span class="cap">
+					{current.caption ?? ''}{many ? `  (${index + 1} of ${images.length})` : ''}
+					{#if current.credit}<em class="credit">{current.credit}</em>{/if}
+				</span>
 				<a
 					class="dl"
 					href={info?.url || current.src}
@@ -168,6 +171,13 @@
 		color: #9aa1b2;
 		font-size: 0.66rem;
 		letter-spacing: 0.04em;
+	}
+	.credit {
+		display: block;
+		font-style: normal;
+		font-size: 0.66rem;
+		color: #8790a3;
+		margin-top: 0.25rem;
 	}
 	.ctl {
 		position: absolute;

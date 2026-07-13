@@ -148,6 +148,9 @@ export const specimens: MediaEntry[] = [
 				kind: 'departure',
 				jumpTo: 'einstein',
 				variant: 'prime-1985',
+				image:
+					'https://upload.wikimedia.org/wikipedia/commons/thumb/2/28/TeamTimeCar.com-BTTF_DeLorean_Time_Machine-OtoGodfrey.com-JMortonPhoto.com-07.jpg/960px-TeamTimeCar.com-BTTF_DeLorean_Time_Machine-OtoGodfrey.com-JMortonPhoto.com-07.jpg',
+				imageCredit: 'Oto Godfrey and Justin Morton, CC BY-SA 4.0, via Wikimedia Commons',
 				description:
 					'Doc Brown demonstrates the time machine, sending Einstein the dog one minute into the future  -  the first time travel on the timeline.'
 			},
@@ -245,6 +248,9 @@ export const specimens: MediaEntry[] = [
 				location: 'Courthouse Square, Hill Valley',
 				kind: 'departure',
 				jumpTo: 'return85',
+				image:
+					'https://upload.wikimedia.org/wikipedia/commons/7/71/Universal_Studios%2C_1991%2C_Back_To_The_Future%2C_Courthouse_Square_2.jpg',
+				imageCredit: 'Stephansanders, CC BY-SA 2.0, via Wikimedia Commons',
 				description:
 					'Doc runs a wire from the tower to the street; the lightning strikes as the DeLorean hits 88 mph, sending Marty home.'
 			},
@@ -281,6 +287,9 @@ export const specimens: MediaEntry[] = [
 				kind: 'departure',
 				variant: 'altered-1985',
 				jumpToLabel: '2015',
+				image:
+					'https://upload.wikimedia.org/wikipedia/commons/thumb/a/ac/Space_Center_Houston_March_2022_25_%28Back_to_the_Future_time_machine%29.jpg/960px-Space_Center_Houston_March_2022_25_%28Back_to_the_Future_time_machine%29.jpg',
+				imageCredit: 'Michael Barera, CC BY-SA 4.0, via Wikimedia Commons',
 				crossRef: { entry: 'back-to-the-future-part-ii', event: 'depart85' },
 				description: 'Doc returns from 2015 and takes Marty and Jennifer into the future.'
 			}

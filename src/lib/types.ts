@@ -29,6 +29,22 @@ export interface SourceRef {
 	url: string;
 }
 
+/**
+ * Provenance for an entry or edit. Authored data leaves this undefined; it is
+ * reserved for the planned visitor-contribution flow, where a submission carries
+ * who proposed it and a moderation status so unreviewed data can be held back.
+ */
+export interface Contribution {
+	/** display name or handle of the contributor */
+	by?: string;
+	/** ISO date string of submission (kept as a string; no Date at build time) */
+	submittedAt?: string;
+	/** where the contributor sourced the information */
+	source?: string;
+	/** moderation gate: only `published` should ever ship to the live catalogue */
+	status?: 'proposed' | 'reviewed' | 'published';
+}
+
 /** An outbound link (IMDb, Rotten Tomatoes, Steam, where-to-watch, etc.). */
 export type LinkKind =
 	| 'imdb'
@@ -116,6 +132,9 @@ export interface TimelineEvent {
 	paradox?: string;
 	/** an image for this point on the timeline */
 	image?: string;
+	/** attribution for the image (required for CC-licensed art), e.g.
+	 * "Michael Barera, CC BY-SA 4.0, via Wikimedia Commons" */
+	imageCredit?: string;
 	/** a crossing into another specimen's timeline (franchise continuity) */
 	crossRef?: { entry: string; event: string };
 }
@@ -194,4 +213,7 @@ export interface MediaEntry {
 	/** the branches of this entry's timeline (splinters when the future changes) */
 	branches?: Branch[];
 	timeline: TimelineEvent[];
+
+	/** provenance, set only for visitor-contributed entries or edits (future) */
+	contributed?: Contribution;
 }

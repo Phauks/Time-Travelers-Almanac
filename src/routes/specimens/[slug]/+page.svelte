@@ -5,6 +5,7 @@
 	import BrandLogo from '$lib/components/BrandLogo.svelte';
 	import SpecimenCard from '$lib/components/SpecimenCard.svelte';
 	import Lightbox from '$lib/components/Lightbox.svelte';
+	import VideoModal from '$lib/components/VideoModal.svelte';
 	import {
 		RULE_META,
 		MODE_META,
@@ -21,8 +22,10 @@
 
 	// poster plus any timeline stills, for the lightbox gallery
 	let gallery = $derived([
-		...(s.poster ? [{ src: s.poster, caption: `${s.title} poster` }] : []),
-		...s.timeline.filter((e) => e.image).map((e) => ({ src: e.image!, caption: e.label }))
+		...(s.poster ? [{ src: s.poster, caption: `${s.title} poster`, credit: '' }] : []),
+		...s.timeline
+			.filter((e) => e.image)
+			.map((e) => ({ src: e.image!, caption: e.label, credit: e.imageCredit ?? '' }))
 	]);
 	let lbOpen = $state(false);
 	let lbIndex = $state(0);
@@ -30,6 +33,15 @@
 		lbIndex = i;
 		lbOpen = true;
 	}
+
+	// an embeddable YouTube id from the enrichment trailer, if we have one
+	function youtubeId(url: string | undefined): string | null {
+		if (!url) return null;
+		const m = url.match(/(?:v=|youtu\.be\/|embed\/)([\w-]{11})/);
+		return m ? m[1] : null;
+	}
+	let trailerId = $derived(youtubeId(s.trailer));
+	let videoOpen = $state(false);
 
 	const riskPct = { low: 33, medium: 66, high: 100 } as const;
 	const LINK_META: Record<string, string> = {
@@ -50,14 +62,12 @@
 			(l) => !['imdb', 'rottentomatoes', 'metacritic'].includes(l.kind)
 		);
 		const has = (k: string) => links.some((l) => l.kind === k);
-		const out = [...links];
-		if (!has('trailer') && ['film', 'tv', 'game'].includes(s.medium)) {
+		// an embeddable trailer is shown as an in-page play button, not a link
+		const out = trailerId ? links.filter((l) => l.kind !== 'trailer') : [...links];
+		if (!trailerId && !has('trailer') && ['film', 'tv', 'game'].includes(s.medium)) {
 			out.push({
 				kind: 'trailer',
-				// a real TMDB trailer if enrichment found one, else a YouTube search
-				url:
-					s.trailer ??
-					`https://www.youtube.com/results?search_query=${encodeURIComponent(`${s.title} ${s.year} trailer`)}`
+				url: `https://www.youtube.com/results?search_query=${encodeURIComponent(`${s.title} ${s.year} trailer`)}`
 			});
 		}
 		if (!has('goodreads') && s.medium === 'book') {
@@ -156,6 +166,11 @@
 						<BrandLogo kind="metacritic" size={16} /> <b>{s.ratings.metacritic}</b><span class="unit">/100</span>
 					</a>
 				{/if}
+				{#if trailerId}
+					<button class="chip lk trailer-btn" onclick={() => (videoOpen = true)}>
+						<BrandLogo kind="trailer" size={15} /> Trailer
+					</button>
+				{/if}
 				{#each extraLinks as link (link.url)}
 					<a class="chip lk" href={link.url} target="_blank" rel="noreferrer noopener">
 						<BrandLogo kind={link.kind} size={15} /> {link.label ?? LINK_META[link.kind] ?? 'Link'}
@@ -225,6 +240,19 @@
 		/>
 	</section>
 
+	{#if gallery.length}
+		<section class="imagery">
+			<h2>Gallery</h2>
+			<div class="shots">
+				{#each gallery as g, i (g.src)}
+					<button class="shot" onclick={() => openLightbox(i)} aria-label="View {g.caption}">
+						<img src={g.src} alt={g.caption} loading="lazy" />
+					</button>
+				{/each}
+			</div>
+		</section>
+	{/if}
+
 	{#if mates.length}
 		<section class="gallery">
 			<h2>More in this timeline</h2>
@@ -244,6 +272,9 @@
 	{/if}
 
 	<Lightbox images={gallery} bind:open={lbOpen} bind:index={lbIndex} />
+	{#if trailerId}
+		<VideoModal youtubeId={trailerId} title="{s.title} trailer" bind:open={videoOpen} />
+	{/if}
 
 	{#if s.sources?.length}
 		<section class="sources">
@@ -591,10 +622,45 @@
 
 	.timeline h2,
 	.gallery h2,
+	.imagery h2,
 	.sources h2 {
 		font-family: var(--font-serif);
 		font-size: 1.25rem;
 		margin: 2.4rem 0 0.8rem;
+	}
+
+	.trailer-btn {
+		background: transparent;
+		cursor: pointer;
+	}
+
+	.shots {
+		display: grid;
+		grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+		gap: 0.7rem;
+	}
+	.shot {
+		padding: 0;
+		border: 1px solid var(--color-line);
+		border-radius: 8px;
+		overflow: hidden;
+		background: var(--color-panel);
+		cursor: zoom-in;
+		aspect-ratio: 16 / 10;
+	}
+	.shot img {
+		width: 100%;
+		height: 100%;
+		object-fit: cover;
+		display: block;
+		transition: transform 0.2s;
+	}
+	.shot:hover img {
+		transform: scale(1.04);
+	}
+	.shot:focus-visible {
+		outline: 2px solid var(--accent);
+		outline-offset: 2px;
 	}
 
 	.grid {

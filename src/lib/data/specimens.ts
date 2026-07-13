@@ -92,8 +92,9 @@ export const specimens: MediaEntry[] = [
 		links: [
 			{ kind: 'imdb', url: 'https://www.imdb.com/title/tt0088763/' },
 			{ kind: 'rottentomatoes', url: 'https://www.rottentomatoes.com/m/back_to_the_future' },
-			{ kind: 'watch', url: 'https://www.justwatch.com/us/movie/back-to-the-future' }
+			{ kind: 'watch', url: 'https://www.justwatch.com/us/movie/back-to-the-future-part-i' }
 		],
+		ratings: { imdb: 8.5, rtCritic: 93, rtAudience: 94, metacritic: 87 },
 		timeline: [
 			{
 				id: 'demo',

@@ -47,6 +47,18 @@ export interface LinkRef {
 	label?: string;
 }
 
+/** Aggregator scores. rtAudience has no free API, so it is entered by hand. */
+export interface Ratings {
+	/** IMDb, out of 10 */
+	imdb?: number;
+	/** Metacritic metascore, out of 100 */
+	metacritic?: number;
+	/** Rotten Tomatoes critics (Tomatometer), percent */
+	rtCritic?: number;
+	/** Rotten Tomatoes audience, percent */
+	rtAudience?: number;
+}
+
 export type EventKind =
 	| 'origin' // the story's starting point in time
 	| 'event' // an ordinary beat
@@ -140,6 +152,8 @@ export interface MediaEntry {
 	sources?: SourceRef[];
 	/** outbound links: IMDb, Rotten Tomatoes, Steam, where-to-watch, etc. */
 	links?: LinkRef[];
+	/** aggregator scores */
+	ratings?: Ratings;
 
 	/** the branches of this entry's timeline (splinters when the future changes) */
 	branches?: Branch[];

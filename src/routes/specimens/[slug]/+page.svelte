@@ -1,7 +1,8 @@
 <script lang="ts">
 	import { base } from '$app/paths';
-	import { ArrowLeft, Warning, ArrowSquareOut } from 'phosphor-svelte';
+	import { ArrowLeft, Warning } from 'phosphor-svelte';
 	import Timeline from '$lib/components/Timeline.svelte';
+	import SiteIcon from '$lib/components/SiteIcon.svelte';
 	import {
 		RULE_META,
 		MODE_META,
@@ -22,7 +23,7 @@
 		rottentomatoes: 'Rotten Tomatoes',
 		metacritic: 'Metacritic',
 		steam: 'Steam',
-		watch: 'Where to watch',
+		watch: 'JustWatch',
 		wikipedia: 'Wikipedia',
 		official: 'Official site',
 		other: 'Link'
@@ -52,11 +53,28 @@
 				{s.year} · {MEDIUM_META[s.medium]}{s.saga ? ` · ${s.saga.replace(/-/g, ' ')} saga` : ''}
 			</p>
 			<p class="logline">{s.logline}</p>
+			{#if s.ratings}
+				<div class="ratings">
+					{#if s.ratings.imdb != null}
+						<span class="rt"><SiteIcon kind="imdb" size={14} /> {s.ratings.imdb.toFixed(1)}</span>
+					{/if}
+					{#if s.ratings.rtCritic != null}
+						<span class="rt"><SiteIcon kind="rottentomatoes" size={14} /> {s.ratings.rtCritic}% critics</span>
+					{/if}
+					{#if s.ratings.rtAudience != null}
+						<span class="rt"><SiteIcon kind="rottentomatoes" size={14} /> {s.ratings.rtAudience}% audience</span>
+					{/if}
+					{#if s.ratings.metacritic != null}
+						<span class="rt"><SiteIcon kind="metacritic" size={14} /> {s.ratings.metacritic}</span>
+					{/if}
+				</div>
+			{/if}
+
 			{#if s.links?.length}
 				<div class="links">
 					{#each s.links as link (link.url)}
 						<a class="lk" href={link.url} target="_blank" rel="noreferrer noopener">
-							<ArrowSquareOut size={13} weight="bold" />
+							<SiteIcon kind={link.kind} size={15} />
 							{link.label ?? LINK_META[link.kind] ?? 'Link'}
 						</a>
 					{/each}
@@ -269,6 +287,20 @@
 		line-height: 1.35;
 	}
 
+	.ratings {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.5rem 1.1rem;
+		margin-top: 0.9rem;
+	}
+	.rt {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.4rem;
+		font-family: var(--font-mono);
+		font-size: 0.8rem;
+		color: var(--color-paper);
+	}
 	.links {
 		display: flex;
 		flex-wrap: wrap;

@@ -122,6 +122,17 @@ export const specimens: MediaEntry[] = [
 		],
 		timeline: [
 			{
+				id: 'orig-meet',
+				label: 'The original 1955',
+				narrative: -2,
+				chrono: 1955.35,
+				chronoLabel: 'Nov 1955 (original)',
+				location: 'Downtown Hill Valley',
+				kind: 'event',
+				description:
+					"In the unaltered past, Lorraine's father hits George with the car; she nurses him and the two fall in love. This is the history Marty is about to rewrite."
+			},
+			{
 				id: 'demo',
 				label: 'The DeLorean revealed',
 				narrative: 0,

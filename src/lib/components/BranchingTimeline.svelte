@@ -9,19 +9,21 @@
 	}: { events: TimelineEvent[]; branches?: Branch[]; accent?: string } = $props();
 
 	// ---- branch membership: walk narrative order, switch at each branchAt marker ----
+	const byNarr = [...events].sort((a, b) => a.narrative - b.narrative);
+	const narrIndex = new Map(byNarr.map((e, i) => [e.id, i]));
 	const rootId = (branches.find((b) => !b.parent) ?? branches[0])?.id ?? 'main';
 	const branchAtMap = new Map(branches.filter((b) => b.branchAt).map((b) => [b.branchAt!, b.id]));
+	const jumpTargets = new Set(events.filter((e) => e.jumpTo).map((e) => e.jumpTo));
 	const memberOf = new Map<string, string>();
 	{
 		let cur = rootId;
-		for (const e of [...events].sort((a, b) => a.narrative - b.narrative)) {
+		for (const e of byNarr) {
 			if (branchAtMap.has(e.id)) cur = branchAtMap.get(e.id)!;
 			memberOf.set(e.id, cur);
 		}
 	}
 	const laneOf = (id: string) => Math.max(0, branches.findIndex((b) => b.id === id));
 	const branchById = new Map(branches.map((b) => [b.id, b]));
-
 	const STATUS: Record<string, string> = {
 		original: '#9aa3b5',
 		active: '#9aa3b5',
@@ -29,20 +31,13 @@
 		erased: '#6b7280',
 		restored: '#ffb454'
 	};
-	function branchColor(id: string): string {
-		const b = branchById.get(id);
-		return (b?.status && STATUS[b.status]) || '#b57cff';
-	}
+	const branchColor = (id: string) => (branchById.get(id)?.status && STATUS[branchById.get(id)!.status!]) || '#b57cff';
 
 	// ---- layout ----
-	const W = 1000,
-		ML = 118,
-		MR = 60,
-		TOP = 66,
-		GAP = 66;
+	const W = 1000, ML = 128, MR = 60, TOP = 70, GAP = 72;
 	const SPAN = W - ML - MR;
 	const laneCount = Math.max(1, branches.length);
-	const H = TOP + (laneCount - 1) * GAP + 58;
+	const H = TOP + (laneCount - 1) * GAP + 56;
 	const laneY = (lane: number) => TOP + lane * GAP;
 
 	let order = $state<'told' | 'happened'>('told');
@@ -56,7 +51,7 @@
 	let pos = $derived(
 		ordered.map((e, i) => {
 			const branch = memberOf.get(e.id) ?? rootId;
-			return { e, x: xOf(i), lane: laneOf(branch), y: laneY(laneOf(branch)), branch };
+			return { e, x: xOf(i), branch, y: laneY(laneOf(branch)) };
 		})
 	);
 	let posById = $derived(new Map(pos.map((p) => [p.e.id, p])));
@@ -64,35 +59,33 @@
 	let segs = $derived(
 		branches
 			.map((b) => {
-				const ps = pos.filter((p) => p.branch === b.id);
-				if (!ps.length) return null;
-				const xs = ps.map((p) => p.x);
-				return { b, y: laneY(laneOf(b.id)), x1: Math.min(...xs), x2: Math.max(...xs) };
+				const xs = pos.filter((p) => p.branch === b.id).map((p) => p.x);
+				return xs.length ? { b, y: laneY(laneOf(b.id)), x1: Math.min(...xs), x2: Math.max(...xs) } : null;
 			})
-			.filter((s): s is NonNullable<typeof s> => s !== null)
+			.filter(Boolean) as { b: Branch; y: number; x1: number; x2: number }[]
 	);
-	// connectors between consecutive events on different branches (jump or splinter)
-	let connectors = $derived(
-		pos
-			.slice(1)
-			.map((p, i) => {
-				const prev = pos[i];
-				if (prev.branch === p.branch) return null;
-				return { from: prev, to: p, jump: prev.e.jumpTo === p.e.id };
+	// a branch splinters from its parent at an event NOT reached by a jump (continuous divergence)
+	let splinters = $derived(
+		branches
+			.filter((b) => b.parent && b.branchAt && !jumpTargets.has(b.branchAt))
+			.map((b) => {
+				const to = posById.get(b.branchAt!);
+				const cut = narrIndex.get(b.branchAt!) ?? 0;
+				const before = byNarr
+					.filter((e) => memberOf.get(e.id) === b.parent && (narrIndex.get(e.id) ?? 0) < cut)
+					.pop();
+				const from = before ? posById.get(before.id) : undefined;
+				return to && from ? { from, to } : null;
 			})
-			.filter((c): c is NonNullable<typeof c> => c !== null)
+			.filter(Boolean) as { from: { x: number; y: number }; to: { x: number; y: number } }[]
 	);
-	// same-branch time jumps
+	// every jump, in either ordering
 	let jumps = $derived(
 		pos
-			.filter((p) => {
-				const t = p.e.jumpTo ? posById.get(p.e.jumpTo) : undefined;
-				return t && t.branch === p.branch;
-			})
+			.filter((p) => p.e.jumpTo && posById.get(p.e.jumpTo))
 			.map((p) => ({ from: p, to: posById.get(p.e.jumpTo!)! }))
 	);
 
-	const byNarr = [...events].sort((a, b) => a.narrative - b.narrative);
 	let selectedId = $state(byNarr[0]?.id ?? '');
 	let selected = $derived(events.find((e) => e.id === selectedId) ?? byNarr[0]);
 
@@ -108,6 +101,13 @@
 	};
 	const kmeta = (e: TimelineEvent) => KIND[e.kind ?? 'event'];
 	const shortDate = (e: TimelineEvent) => (e.chronoLabel ?? '').split('·')[0].trim();
+	function jumpText(fromC: number, toC: number): string {
+		if (fromC < 1000 || toC < 1000) return 'jump';
+		const d = Math.round(toC) - Math.round(fromC);
+		if (d === 0) return 'jump';
+		return d < 0 ? `${Math.abs(d)} yrs back` : `${d} yrs on`;
+	}
+	const curBranch = (id: string) => memberOf.get(id) ?? rootId;
 </script>
 
 <div class="btl" style="--accent:{accent}">
@@ -122,23 +122,25 @@
 				onclick={() => (order = 'happened')}>As Happened</button
 			>
 		</div>
-		<p class="cap">
-			{order === 'told'
-				? 'The order you experience the story.'
-				: 'The order the events truly occur in time.'}
-			New branches splinter whenever the future is changed.
-		</p>
 	</div>
+	<p class="cap">
+		{order === 'told' ? 'The order you experience the story.' : 'The order the events truly occur in time.'}
+		<span class="cap-note">New branches splinter whenever the future is changed.</span>
+	</p>
 
 	<div class="board">
 		<svg viewBox="0 0 {W} {H}" role="img" aria-label="Branching timeline" preserveAspectRatio="xMidYMid meet">
-			<!-- lane labels -->
+			<defs>
+				<marker id="tl-arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+					<path d="M0 0 L10 5 L0 10 z" fill="#ffd9a0" />
+				</marker>
+			</defs>
+
 			{#each branches as b, i (b.id)}
-				<text x="8" y={laneY(i) - 4} class="lane-lbl" style="fill:{branchColor(b.id)}">{b.label}</text>
-				<text x="8" y={laneY(i) + 11} class="lane-sub">{b.status}</text>
+				<text x="8" y={laneY(i) - 5} class="lane-lbl" style="fill:{branchColor(b.id)}">{b.label}</text>
+				<text x="8" y={laneY(i) + 10} class="lane-sub">{b.status}</text>
 			{/each}
 
-			<!-- branch base lines -->
 			{#each segs as s (s.b.id)}
 				<line
 					x1={s.x1}
@@ -153,37 +155,36 @@
 				/>
 			{/each}
 
-			<!-- connectors between branches -->
-			{#each connectors as c (c.from.e.id + c.to.e.id)}
+			<!-- continuous splinters (a change in the timeline, same era) -->
+			{#each splinters as c (c.to.x + '-' + c.to.y)}
 				{@const midx = (c.from.x + c.to.x) / 2}
 				<path
 					d="M {c.from.x} {c.from.y} C {midx} {c.from.y}, {midx} {c.to.y}, {c.to.x} {c.to.y}"
 					fill="none"
-					stroke={c.jump ? '#ffd9a0' : branchColor(c.to.branch)}
+					stroke="#b57cff"
 					stroke-width="2"
-					stroke-dasharray={c.jump ? '5 5' : '0'}
 					opacity="0.9"
 				/>
-				<text x={midx} y={(c.from.y + c.to.y) / 2 - 6} text-anchor="middle" class="mini">
-					{c.jump ? 'jump' : 'splinters'}
-				</text>
+				<text x={midx} y={(c.from.y + c.to.y) / 2 - 5} text-anchor="middle" class="mini">splinters</text>
 			{/each}
 
-			<!-- same-branch jumps -->
-			{#each jumps as j (j.from.e.id + j.to.e.id)}
-				{@const top = j.from.y - 34}
+			<!-- time jumps (dashed, arrowed, with magnitude + a break) -->
+			{#each jumps as j (j.from.e.id)}
+				{@const cy = Math.min(j.from.y, j.to.y) - 44}
+				{@const midx = (j.from.x + j.to.x) / 2}
 				<path
-					d="M {j.from.x} {j.from.y} C {j.from.x} {top}, {j.to.x} {top}, {j.to.x} {j.to.y}"
+					d="M {j.from.x} {j.from.y} C {j.from.x} {cy}, {j.to.x} {cy}, {j.to.x} {j.to.y}"
 					fill="none"
 					stroke="#ffd9a0"
-					stroke-width="2"
+					stroke-width="2.2"
 					stroke-dasharray="5 5"
-					opacity="0.85"
+					marker-end="url(#tl-arrow)"
+					opacity="0.95"
 				/>
-				<text x={(j.from.x + j.to.x) / 2} y={top + 2} text-anchor="middle" class="mini">jump</text>
+				<text x={midx} y={cy - 5} text-anchor="middle" class="dots">· · ·</text>
+				<text x={midx} y={cy + 9} text-anchor="middle" class="jumplbl">{jumpText(j.from.e.chrono, j.to.e.chrono)}</text>
 			{/each}
 
-			<!-- nodes -->
 			{#each pos as p (p.e.id)}
 				<g
 					class="node"
@@ -208,10 +209,10 @@
 
 	{#if selected}
 		{@const M = kmeta(selected)}
-		{@const b = branchById.get(memberOf.get(selected.id) ?? rootId)}
-		<div class="detail" style="border-left-color:{branchColor(memberOf.get(selected.id) ?? rootId)}">
+		{@const b = branchById.get(curBranch(selected.id))}
+		<div class="detail" style="border-left-color:{branchColor(curBranch(selected.id))}">
 			<div class="badges">
-				<span class="badge" style="--c:{branchColor(memberOf.get(selected.id) ?? rootId)}">
+				<span class="badge" style="--c:{branchColor(curBranch(selected.id))}">
 					{#if M.icon}{@const Icon = M.icon}<Icon size={12} weight="fill" />{/if}{M.label}
 				</span>
 				{#if b}<span class="badge branch">{b.label}</span>{/if}
@@ -235,7 +236,6 @@
 		align-items: center;
 		gap: 1rem;
 		flex-wrap: wrap;
-		margin-bottom: 0.6rem;
 	}
 	.toggle {
 		display: inline-flex;
@@ -263,10 +263,13 @@
 		outline-offset: 2px;
 	}
 	.cap {
-		margin: 0;
-		font-size: 0.82rem;
+		margin: 0.55rem 0 0.9rem;
+		font-size: 0.85rem;
+		line-height: 1.5;
 		color: var(--color-muted);
-		max-width: 60ch;
+	}
+	.cap-note {
+		color: color-mix(in srgb, var(--color-paper) 55%, var(--color-muted));
 	}
 	.board {
 		border: 1px solid var(--color-line);
@@ -294,7 +297,18 @@
 		font-family: var(--font-mono);
 		font-size: 9px;
 		letter-spacing: 0.06em;
+		fill: #c8a8ff;
+	}
+	.dots {
 		fill: var(--color-muted);
+		font-size: 12px;
+		letter-spacing: 1px;
+	}
+	.jumplbl {
+		font-family: var(--font-mono);
+		font-size: 9px;
+		letter-spacing: 0.04em;
+		fill: #ffd9a0;
 	}
 	.node {
 		cursor: pointer;
@@ -307,7 +321,6 @@
 		font-size: 9px;
 		fill: var(--color-muted);
 	}
-
 	.detail {
 		margin-top: 0.9rem;
 		border: 1px solid var(--color-line);

@@ -260,8 +260,8 @@
 		z-index: 20;
 		transform: translate(-50%, calc(-100% - 14px));
 		pointer-events: none;
-		background: rgba(8, 10, 18, 0.94);
-		border: 1px solid color-mix(in srgb, var(--color-paper) 16%, transparent);
+		background: color-mix(in srgb, var(--color-panel) 94%, transparent);
+		border: 1px solid color-mix(in srgb, var(--color-paper) 22%, transparent);
 		border-radius: 5px;
 		padding: 9px 12px;
 		max-width: 250px;

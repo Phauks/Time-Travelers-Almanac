@@ -1,12 +1,27 @@
 <script lang="ts">
 	import '../app.css';
+	import { onMount } from 'svelte';
 	import { base } from '$app/paths';
 	import { page } from '$app/state';
-	import { GithubLogo, Bug } from 'phosphor-svelte';
+	import { GithubLogo, Bug, Sun, Moon } from 'phosphor-svelte';
 
 	let { children } = $props();
 
 	let onLanding = $derived(page.url.pathname === `${base}/` || page.url.pathname === base);
+
+	let theme = $state<'light' | 'dark'>('light');
+	onMount(() => {
+		theme = (document.documentElement.getAttribute('data-theme') as 'light' | 'dark') || 'light';
+	});
+	function toggleTheme() {
+		theme = theme === 'dark' ? 'light' : 'dark';
+		document.documentElement.setAttribute('data-theme', theme);
+		try {
+			localStorage.setItem('almanac-theme', theme);
+		} catch (e) {
+			// ignore
+		}
+	}
 </script>
 
 <div class="shell">
@@ -21,6 +36,14 @@
 		<nav>
 			<a href="{base}/specimens/">Specimens</a>
 			<a href="{base}/history/">History</a>
+			<button
+				class="icon-link theme-btn"
+				onclick={toggleTheme}
+				aria-label="Toggle colour theme"
+				title="Toggle colour theme"
+			>
+				{#if theme === 'dark'}<Sun size={18} weight="fill" />{:else}<Moon size={18} weight="fill" />{/if}
+			</button>
 			<a
 				class="icon-link"
 				href="https://github.com/Phauks/Time-Travelers-Almanac/issues/new/choose"
@@ -99,5 +122,18 @@
 	.icon-link {
 		display: inline-flex;
 		align-items: center;
+		background: none;
+		border: 0;
+		padding: 0;
+		color: var(--color-muted);
+		cursor: pointer;
+	}
+	.icon-link:hover {
+		color: var(--color-paper);
+	}
+	.icon-link:focus-visible {
+		outline: 2px solid var(--color-branching);
+		outline-offset: 3px;
+		border-radius: 3px;
 	}
 </style>

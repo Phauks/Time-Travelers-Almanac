@@ -94,7 +94,7 @@
 	}
 	.lede {
 		font-size: clamp(1rem, 1.7vw, 1.2rem);
-		color: #c8cee0;
+		color: color-mix(in srgb, var(--color-paper) 82%, var(--color-muted));
 		max-width: 34ch;
 		line-height: 1.5;
 		margin: 0 0 1.6rem;
@@ -176,7 +176,7 @@
 
 	.inside {
 		border-top: 1px solid var(--color-line);
-		background: linear-gradient(var(--color-ink), #070912);
+		background: color-mix(in srgb, var(--color-panel) 55%, var(--color-ink));
 		padding: clamp(3rem, 8vw, 6.5rem) clamp(1rem, 4vw, 3.5rem);
 	}
 	.inside-inner {
@@ -234,12 +234,12 @@
 	}
 	.idx p {
 		margin: 0;
-		color: #aab2c6;
+		color: color-mix(in srgb, var(--color-paper) 72%, var(--color-muted));
 		font-size: 0.9rem;
 		line-height: 1.55;
 	}
 	.foot {
-		background: #070912;
+		background: color-mix(in srgb, var(--color-panel) 55%, var(--color-ink));
 		color: var(--color-muted);
 		font-family: var(--font-mono);
 		font-size: 0.68rem;

@@ -8,6 +8,14 @@
 			name="description"
 			content="The Time Traveller's Almanac  -  a field guide to time travel and time loops in film, TV, books, games and stage."
 		/>
+		<script>
+			try {
+				var t = localStorage.getItem('almanac-theme');
+				document.documentElement.setAttribute('data-theme', t === 'dark' ? 'dark' : 'light');
+			} catch (e) {
+				document.documentElement.setAttribute('data-theme', 'light');
+			}
+		</script>
 		%sveltekit.head%
 	</head>
 	<body data-sveltekit-preload-data="hover">

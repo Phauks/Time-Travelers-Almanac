@@ -2,6 +2,32 @@
 
 /* ------------------------------------------------------------- design tokens */
 @theme {
+	--font-serif: 'Iowan Old Style', 'Palatino Linotype', Palatino, 'Book Antiqua', Georgia, serif;
+	--font-sans: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+	--font-mono: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+}
+
+/* Parchment (light) is the default; dark is opt-in. The [data-theme] selectors
+   match any element, so a subtree (e.g. the landing hero) can force a mode. */
+:root,
+[data-theme='light'] {
+	color-scheme: light;
+	--color-ink: #efe6cf;
+	--color-ink-2: #e6dabd;
+	--color-panel: #f7f1e0;
+	--color-paper: #2b2517;
+	--color-muted: #6f6450;
+	--color-line: #d8c9a4;
+
+	--color-fixed: #2f63c4;
+	--color-mutable: #b9660f;
+	--color-branching: #6c3cbe;
+	--color-loop: #1a875a;
+	--color-jump: #a6640f;
+}
+
+[data-theme='dark'] {
+	color-scheme: dark;
 	--color-ink: #05060c;
 	--color-ink-2: #0a0d18;
 	--color-panel: #0d1120;
@@ -9,23 +35,16 @@
 	--color-muted: #8b93a8;
 	--color-line: #1c2233;
 
-	/* the four rules of a timeline */
 	--color-fixed: #4f9cff;
 	--color-mutable: #ffa24a;
 	--color-branching: #b57cff;
 	--color-loop: #35d6a4;
-
-	--font-serif: 'Iowan Old Style', 'Palatino Linotype', Palatino, 'Book Antiqua', Georgia, serif;
-	--font-sans: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-	--font-mono: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+	--color-jump: #ffd9a0;
 }
 
 /* ------------------------------------------------------------------- base */
-:root {
-	color-scheme: dark;
-}
 html {
-	background: radial-gradient(120% 90% at 22% 26%, var(--color-ink-2), var(--color-ink) 72%);
+	background: radial-gradient(130% 100% at 20% 12%, var(--color-ink-2), var(--color-ink) 72%);
 	background-attachment: fixed;
 	min-height: 100%;
 }
@@ -41,10 +60,9 @@ a {
 	text-decoration: none;
 }
 ::selection {
-	background: color-mix(in srgb, var(--color-branching) 40%, transparent);
+	background: color-mix(in srgb, var(--color-branching) 32%, transparent);
 }
 
-/* utility: uppercase mono eyebrow */
 .eyebrow {
 	font-family: var(--font-mono);
 	text-transform: uppercase;

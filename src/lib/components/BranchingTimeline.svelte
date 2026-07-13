@@ -191,9 +191,9 @@
 				{@const apex = Math.min(j.from.y, j.to.y) - (34 + j.level * 26)}
 				{@const midx = (j.from.x + j.to.x) / 2}
 				<path
+					class="jumpline"
 					d="M {j.from.x} {j.from.y} C {j.from.x} {apex}, {j.to.x} {apex}, {j.to.x} {j.to.y}"
 					fill="none"
-					stroke="#ffd9a0"
 					stroke-width="2"
 					stroke-dasharray="7 6"
 					opacity="0.95"
@@ -210,9 +210,9 @@
 					onclick={() => (selectedId = p.e.id)}
 					onkeydown={(ev) => (ev.key === 'Enter' || ev.key === ' ') && (selectedId = p.e.id)}
 				>
-					<circle cx={p.x} cy={p.y} r={selectedId === p.e.id ? 8 : 6} fill={branchColor(p.branch)} stroke="#05060c" stroke-width="3" />
+					<circle class="n-dot" cx={p.x} cy={p.y} r={selectedId === p.e.id ? 8 : 6} fill={branchColor(p.branch)} />
 					{#if selectedId === p.e.id}
-						<circle cx={p.x} cy={p.y} r="12" fill="none" stroke="#eef1f8" stroke-width="1.2" />
+						<circle class="sel-ring" cx={p.x} cy={p.y} r="12" fill="none" stroke-width="1.2" />
 					{/if}
 					{#if p.e.paradox}
 						<g transform="translate({p.x + 10}, {p.y - 11})">
@@ -315,7 +315,17 @@
 		font-family: var(--font-mono);
 		font-size: 9.5px;
 		letter-spacing: 0.04em;
-		fill: #ffd9a0;
+		fill: var(--color-jump);
+	}
+	.jumpline {
+		stroke: var(--color-jump);
+	}
+	.n-dot {
+		stroke: var(--color-ink);
+		stroke-width: 3;
+	}
+	.sel-ring {
+		stroke: var(--color-paper);
 	}
 	.node {
 		cursor: pointer;
@@ -356,7 +366,7 @@
 	.lg .line {
 		width: 20px;
 		height: 0;
-		border-top: 2px dashed #ffd9a0;
+		border-top: 2px dashed var(--color-jump);
 	}
 	.lg .haz {
 		width: 0;

@@ -24,7 +24,7 @@
 </script>
 
 <svelte:head>
-	<title>Specimens · The Time Traveller's Almanac</title>
+	<title>Specimens, The Time Traveller's Almanac</title>
 </svelte:head>
 
 <section class="page">

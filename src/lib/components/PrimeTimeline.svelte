@@ -162,9 +162,9 @@
 			<span class="bar"></span>
 			<strong>{tip.s.title} <span>{tip.s.year}</span></strong>
 			<span class="meta">
-				{RULE_META[tip.s.rules[0]].name} · {MEDIUM_META[tip.s.medium]}{tip.s.loop
-					? ` · ${LOOP_META[tip.s.loop]}`
-					: ''} · travels to {tip.s.destLabel}
+				{RULE_META[tip.s.rules[0]].name}, {MEDIUM_META[tip.s.medium]}{tip.s.loop
+					? `, ${LOOP_META[tip.s.loop]}`
+					: ''}, travels to {tip.s.destLabel}
 			</span>
 		</div>
 	{/if}

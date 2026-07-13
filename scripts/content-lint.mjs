@@ -28,6 +28,12 @@ const RULES = [
 		message: 'En dash (U+2013) is banned. Use "-" or "to".',
 		regex: /–/g,
 		fix: '-'
+	},
+	{
+		id: 'no-middot',
+		message: 'Middot (U+00B7) is banned. Use a comma or restructure.',
+		regex: /[ \t]*·[ \t]*/g,
+		fix: ', '
 	}
 	// Add more rules here, e.g. smart quotes, non-breaking spaces, banned words.
 ];

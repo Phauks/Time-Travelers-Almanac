@@ -31,13 +31,14 @@
 		erased: '#6b7280',
 		restored: '#ffb454'
 	};
-	const branchColor = (id: string) => (branchById.get(id)?.status && STATUS[branchById.get(id)!.status!]) || '#b57cff';
+	const branchColor = (id: string) =>
+		(branchById.get(id)?.status && STATUS[branchById.get(id)!.status!]) || '#b57cff';
 
 	// ---- layout ----
-	const W = 1000, ML = 128, MR = 60, TOP = 70, GAP = 72;
+	const W = 1000, ML = 104, MR = 40, TOP = 98, GAP = 86;
 	const SPAN = W - ML - MR;
 	const laneCount = Math.max(1, branches.length);
-	const H = TOP + (laneCount - 1) * GAP + 56;
+	const H = TOP + (laneCount - 1) * GAP + 54;
 	const laneY = (lane: number) => TOP + lane * GAP;
 
 	let order = $state<'told' | 'happened'>('told');
@@ -56,15 +57,27 @@
 	);
 	let posById = $derived(new Map(pos.map((p) => [p.e.id, p])));
 
-	let segs = $derived(
-		branches
-			.map((b) => {
-				const xs = pos.filter((p) => p.branch === b.id).map((p) => p.x);
-				return xs.length ? { b, y: laneY(laneOf(b.id)), x1: Math.min(...xs), x2: Math.max(...xs) } : null;
-			})
-			.filter(Boolean) as { b: Branch; y: number; x1: number; x2: number }[]
-	);
-	// a branch splinters from its parent at an event NOT reached by a jump (continuous divergence)
+	const bigGap = (a: number, b: number) => a > 1000 && b > 1000 && Math.abs(a - b) >= 2;
+
+	// base line drawn per adjacent same-branch pair; dashed across a big time gap
+	let segParts = $derived.by(() => {
+		const parts: { x1: number; x2: number; y: number; color: string; dashed: boolean }[] = [];
+		for (const b of branches) {
+			const ps = pos.filter((p) => p.branch === b.id).sort((a, z) => a.x - z.x);
+			for (let i = 0; i < ps.length - 1; i++) {
+				const a = ps[i], z = ps[i + 1];
+				if (a.e.jumpTo === z.e.id || z.e.jumpTo === a.e.id) continue; // a jump covers this hop
+				parts.push({
+					x1: a.x, x2: z.x, y: laneY(laneOf(b.id)),
+					color: branchColor(b.id),
+					dashed: b.status === 'endangered' || bigGap(a.e.chrono, z.e.chrono)
+				});
+			}
+		}
+		return parts;
+	});
+
+	// continuous splinters (a change in the timeline, same era, no travel)
 	let splinters = $derived(
 		branches
 			.filter((b) => b.parent && b.branchAt && !jumpTargets.has(b.branchAt))
@@ -75,16 +88,28 @@
 					.filter((e) => memberOf.get(e.id) === b.parent && (narrIndex.get(e.id) ?? 0) < cut)
 					.pop();
 				const from = before ? posById.get(before.id) : undefined;
-				return to && from ? { from, to } : null;
+				return to && from ? { from, to, color: branchColor(b.id) } : null;
 			})
-			.filter(Boolean) as { from: { x: number; y: number }; to: { x: number; y: number } }[]
+			.filter(Boolean) as { from: { x: number; y: number }; to: { x: number; y: number }; color: string }[]
 	);
-	// every jump, in either ordering
-	let jumps = $derived(
-		pos
+
+	// time jumps, packed into non-overlapping levels so the arcs never cross
+	let jumpsLeveled = $derived.by(() => {
+		const js = pos
 			.filter((p) => p.e.jumpTo && posById.get(p.e.jumpTo))
-			.map((p) => ({ from: p, to: posById.get(p.e.jumpTo!)! }))
-	);
+			.map((p) => {
+				const to = posById.get(p.e.jumpTo!)!;
+				return { from: p, to, x1: Math.min(p.x, to.x), x2: Math.max(p.x, to.x) };
+			})
+			.sort((a, b) => b.x2 - b.x1 - (a.x2 - a.x1));
+		const levels: { x1: number; x2: number }[][] = [];
+		return js.map((j) => {
+			let lvl = 0;
+			while (levels[lvl] && !levels[lvl].every((iv) => j.x2 < iv.x1 - 6 || j.x1 > iv.x2 + 6)) lvl++;
+			(levels[lvl] ||= []).push({ x1: j.x1, x2: j.x2 });
+			return { ...j, level: lvl };
+		});
+	});
 
 	let selectedId = $state(byNarr[0]?.id ?? '');
 	let selected = $derived(events.find((e) => e.id === selectedId) ?? byNarr[0]);
@@ -100,7 +125,11 @@
 		normal: { label: 'Event', icon: DotOutline }
 	};
 	const kmeta = (e: TimelineEvent) => KIND[e.kind ?? 'event'];
-	const shortDate = (e: TimelineEvent) => (e.chronoLabel ?? '').split('·')[0].trim();
+	const shortDate = (e: TimelineEvent) => {
+		const l = e.chronoLabel ?? '';
+		const m = l.match(/\d{4}/); // keep everything up to and including the year
+		return (m ? l.slice(0, m.index! + 4) : l.split(',')[0]).trim();
+	};
 	function jumpText(fromC: number, toC: number): string {
 		if (fromC < 1000 || toC < 1000) return 'jump';
 		const d = Math.round(toC) - Math.round(fromC);
@@ -125,64 +154,51 @@
 	</div>
 	<p class="cap">
 		{order === 'told' ? 'The order you experience the story.' : 'The order the events truly occur in time.'}
-		<span class="cap-note">New branches splinter whenever the future is changed.</span>
 	</p>
 
 	<div class="board">
-		<svg viewBox="0 0 {W} {H}" role="img" aria-label="Branching timeline" preserveAspectRatio="xMidYMid meet">
-			<defs>
-				<marker id="tl-arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
-					<path d="M0 0 L10 5 L0 10 z" fill="#ffd9a0" />
-				</marker>
-			</defs>
-
+		<svg viewBox="0 0 {W} {H}" role="img" aria-label="Branching timeline" preserveAspectRatio="none">
 			{#each branches as b, i (b.id)}
-				<text x="8" y={laneY(i) - 5} class="lane-lbl" style="fill:{branchColor(b.id)}">{b.label}</text>
-				<text x="8" y={laneY(i) + 10} class="lane-sub">{b.status}</text>
+				<text x="6" y={laneY(i) - 6} class="lane-lbl" style="fill:{branchColor(b.id)}">{b.label}</text>
 			{/each}
 
-			{#each segs as s (s.b.id)}
+			{#each segParts as s, i (i)}
 				<line
 					x1={s.x1}
 					y1={s.y}
 					x2={s.x2}
 					y2={s.y}
-					stroke={branchColor(s.b.id)}
+					stroke={s.color}
 					stroke-width="2.5"
 					stroke-linecap="round"
-					stroke-dasharray={s.b.status === 'endangered' ? '2 6' : '0'}
-					opacity="0.9"
+					stroke-dasharray={s.dashed ? '6 7' : '0'}
+					opacity="0.92"
 				/>
 			{/each}
 
-			<!-- continuous splinters (a change in the timeline, same era) -->
-			{#each splinters as c (c.to.x + '-' + c.to.y)}
+			{#each splinters as c, i (i)}
 				{@const midx = (c.from.x + c.to.x) / 2}
 				<path
 					d="M {c.from.x} {c.from.y} C {midx} {c.from.y}, {midx} {c.to.y}, {c.to.x} {c.to.y}"
 					fill="none"
-					stroke="#b57cff"
+					stroke={c.color}
 					stroke-width="2"
 					opacity="0.9"
 				/>
-				<text x={midx} y={(c.from.y + c.to.y) / 2 - 5} text-anchor="middle" class="mini">splinters</text>
 			{/each}
 
-			<!-- time jumps (dashed, arrowed, with magnitude + a break) -->
-			{#each jumps as j (j.from.e.id)}
-				{@const cy = Math.min(j.from.y, j.to.y) - 44}
+			{#each jumpsLeveled as j (j.from.e.id)}
+				{@const apex = Math.min(j.from.y, j.to.y) - (34 + j.level * 26)}
 				{@const midx = (j.from.x + j.to.x) / 2}
 				<path
-					d="M {j.from.x} {j.from.y} C {j.from.x} {cy}, {j.to.x} {cy}, {j.to.x} {j.to.y}"
+					d="M {j.from.x} {j.from.y} C {j.from.x} {apex}, {j.to.x} {apex}, {j.to.x} {j.to.y}"
 					fill="none"
 					stroke="#ffd9a0"
-					stroke-width="2.2"
-					stroke-dasharray="5 5"
-					marker-end="url(#tl-arrow)"
+					stroke-width="2"
+					stroke-dasharray="7 6"
 					opacity="0.95"
 				/>
-				<text x={midx} y={cy - 5} text-anchor="middle" class="dots">· · ·</text>
-				<text x={midx} y={cy + 9} text-anchor="middle" class="jumplbl">{jumpText(j.from.e.chrono, j.to.e.chrono)}</text>
+				<text x={midx} y={apex - 5} text-anchor="middle" class="jumplbl">{jumpText(j.from.e.chrono, j.to.e.chrono)}</text>
 			{/each}
 
 			{#each pos as p (p.e.id)}
@@ -194,17 +210,29 @@
 					onclick={() => (selectedId = p.e.id)}
 					onkeydown={(ev) => (ev.key === 'Enter' || ev.key === ' ') && (selectedId = p.e.id)}
 				>
-					{#if p.e.paradox}
-						<circle cx={p.x} cy={p.y} r="12" fill="none" stroke="#ff6b74" stroke-width="1.4" stroke-dasharray="3 3" />
-					{/if}
 					<circle cx={p.x} cy={p.y} r={selectedId === p.e.id ? 8 : 6} fill={branchColor(p.branch)} stroke="#05060c" stroke-width="3" />
 					{#if selectedId === p.e.id}
 						<circle cx={p.x} cy={p.y} r="12" fill="none" stroke="#eef1f8" stroke-width="1.2" />
+					{/if}
+					{#if p.e.paradox}
+						<g transform="translate({p.x + 10}, {p.y - 11})">
+							<path d="M0 -6.5 L7 6 L-7 6 Z" fill="#ffcc33" stroke="#05060c" stroke-width="1.2" stroke-linejoin="round" />
+							<rect x="-0.9" y="-2.6" width="1.8" height="4.6" rx="0.9" fill="#05060c" />
+							<circle cx="0" cy="4" r="1" fill="#05060c" />
+						</g>
 					{/if}
 					<text x={p.x} y={p.y + 24} text-anchor="middle" class="node-date">{shortDate(p.e)}</text>
 				</g>
 			{/each}
 		</svg>
+	</div>
+
+	<div class="legend">
+		{#each branches as b (b.id)}
+			<span class="lg"><i class="dot" style="background:{branchColor(b.id)}"></i>{b.label}<em>{b.note}</em></span>
+		{/each}
+		<span class="lg"><i class="line"></i>time jump (dashed = distance in time)</span>
+		<span class="lg"><i class="haz"></i>paradox / continuity risk</span>
 	</div>
 
 	{#if selected}
@@ -218,7 +246,7 @@
 				{#if b}<span class="badge branch">{b.label}</span>{/if}
 			</div>
 			<h4>{selected.label}</h4>
-			<p class="when">{selected.chronoLabel}{selected.location ? ` · ${selected.location}` : ''}</p>
+			<p class="when">{selected.chronoLabel}{selected.location ? `, ${selected.location}` : ''}</p>
 			{#if selected.description}<p class="desc">{selected.description}</p>{/if}
 			{#if selected.paradox}
 				<p class="para"><Warning size={13} weight="fill" /> {selected.paradox}</p>
@@ -263,19 +291,15 @@
 		outline-offset: 2px;
 	}
 	.cap {
-		margin: 0.55rem 0 0.9rem;
+		margin: 0.55rem 0 0.8rem;
 		font-size: 0.85rem;
-		line-height: 1.5;
 		color: var(--color-muted);
-	}
-	.cap-note {
-		color: color-mix(in srgb, var(--color-paper) 55%, var(--color-muted));
 	}
 	.board {
 		border: 1px solid var(--color-line);
 		border-radius: 10px;
 		background: color-mix(in srgb, var(--color-panel) 45%, transparent);
-		padding: 0.5rem 0.5rem 0.25rem;
+		padding: 0.35rem 0.5rem;
 	}
 	svg {
 		display: block;
@@ -283,30 +307,13 @@
 		height: auto;
 	}
 	.lane-lbl {
-		font-family: var(--font-serif);
-		font-size: 13px;
-	}
-	.lane-sub {
 		font-family: var(--font-mono);
-		font-size: 8.5px;
-		letter-spacing: 0.08em;
-		text-transform: uppercase;
-		fill: var(--color-muted);
-	}
-	.mini {
-		font-family: var(--font-mono);
-		font-size: 9px;
-		letter-spacing: 0.06em;
-		fill: #c8a8ff;
-	}
-	.dots {
-		fill: var(--color-muted);
-		font-size: 12px;
-		letter-spacing: 1px;
+		font-size: 11px;
+		letter-spacing: 0.02em;
 	}
 	.jumplbl {
 		font-family: var(--font-mono);
-		font-size: 9px;
+		font-size: 9.5px;
 		letter-spacing: 0.04em;
 		fill: #ffd9a0;
 	}
@@ -321,6 +328,44 @@
 		font-size: 9px;
 		fill: var(--color-muted);
 	}
+
+	.legend {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.5rem 1.4rem;
+		margin: 0.9rem 0 0;
+		font-family: var(--font-mono);
+		font-size: 0.68rem;
+		color: var(--color-muted);
+	}
+	.lg {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.45rem;
+	}
+	.lg em {
+		font-style: normal;
+		opacity: 0.7;
+		margin-left: 0.35rem;
+	}
+	.lg .dot {
+		width: 10px;
+		height: 10px;
+		border-radius: 50%;
+	}
+	.lg .line {
+		width: 20px;
+		height: 0;
+		border-top: 2px dashed #ffd9a0;
+	}
+	.lg .haz {
+		width: 0;
+		height: 0;
+		border-left: 6px solid transparent;
+		border-right: 6px solid transparent;
+		border-bottom: 10px solid #ffcc33;
+	}
+
 	.detail {
 		margin-top: 0.9rem;
 		border: 1px solid var(--color-line);

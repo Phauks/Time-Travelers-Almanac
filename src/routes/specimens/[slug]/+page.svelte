@@ -41,7 +41,7 @@
 </script>
 
 <svelte:head>
-	<title>{s.title} · The Time Traveller's Almanac</title>
+	<title>{s.title}, The Time Traveller's Almanac</title>
 </svelte:head>
 
 <article class="dossier" style="--accent:{ruleColorVar(s.rules[0])}">
@@ -53,10 +53,10 @@
 			<span class="src">{s.imageSource}</span>
 		</div>
 		<div>
-			<p class="eyebrow">Specimen · {s.destLabel}</p>
+			<p class="eyebrow">Specimen, {s.destLabel}</p>
 			<h1>{s.title}</h1>
 			<p class="sub">
-				{s.year} · {MEDIUM_META[s.medium]}{s.saga ? ` · ${s.saga.replace(/-/g, ' ')} saga` : ''}
+				{s.year}, {MEDIUM_META[s.medium]}{s.saga ? `, ${s.saga.replace(/-/g, ' ')} saga` : ''}
 			</p>
 			<p class="logline">{s.logline}</p>
 			{#if s.ratings}
@@ -108,7 +108,7 @@
 		<div class="cell mode">
 			<p class="k">The Mode</p>
 			<p class="v">
-				{s.mode.map((m) => MODE_META[m]).join(' · ')}
+				{s.mode.map((m) => MODE_META[m]).join(', ')}
 				<small>How the travel happens</small>
 			</p>
 		</div>

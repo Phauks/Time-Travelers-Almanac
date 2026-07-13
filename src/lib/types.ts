@@ -77,7 +77,7 @@ export interface TimelineEvent {
 	narrative: number;
 	/** sortable "real" time: a year (may be fractional) or an abstract index */
 	chrono: number;
-	/** how to display the moment, e.g. "Nov 12, 1955 · 10:04 PM" */
+	/** how to display the moment, e.g. "Nov 12, 1955, 10:04 PM" */
 	chronoLabel?: string;
 	/** what happens in this beat */
 	description?: string;

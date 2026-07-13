@@ -10,7 +10,7 @@
 
 <section class="hero">
 	<div class="intro">
-		<p class="eyebrow reveal">Field edition · vol. ∞</p>
+		<p class="eyebrow reveal">Field edition, vol. ∞</p>
 		<h1 class="reveal d1">You have come <em>loose</em> from time.</h1>
 		<p class="lede reveal d2">
 			Every timeline breaks in one of <b>four ways</b>. Follow the prime line to find the specimen
@@ -34,7 +34,7 @@
 
 	<div class="board reveal d3">
 		<PrimeTimeline />
-		<p class="board-hint">Each branch is a specimen’s own timeline. Hover to identify · click to open.</p>
+		<p class="board-hint">Each branch is a specimen’s own timeline. Hover to identify, click to open.</p>
 	</div>
 </section>
 
@@ -68,7 +68,7 @@
 	</div>
 </section>
 
-<footer class="foot">Mostly harmless · a working prototype seeded with real specimens</footer>
+<footer class="foot">Mostly harmless, a working prototype seeded with real specimens</footer>
 
 <style>
 	.hero {

@@ -56,7 +56,7 @@
 
 	// short date for the rail (first line of chronoLabel)
 	function shortDate(e: TimelineEvent): string {
-		return (e.chronoLabel ?? '').split('·')[0].trim();
+		return (e.chronoLabel ?? '').split(', ')[0].trim();
 	}
 </script>
 

@@ -99,25 +99,25 @@ export const specimens: MediaEntry[] = [
 		branches: [
 			{
 				id: 'prime',
-				label: 'Prime timeline',
+				label: 'Timeline 1',
 				status: 'original',
-				note: 'the 1985 Marty leaves; his parents met by chance'
+				note: 'the original 1985 and the past behind it'
 			},
 			{
 				id: 'divergent',
-				label: 'Divergent timeline',
+				label: 'Timeline 2',
 				parent: 'prime',
 				branchAt: 'arrive55',
 				status: 'endangered',
-				note: 'Marty is now in the past; his meddling threatens his own existence'
+				note: "Marty's presence in 1955; his own existence is threatened"
 			},
 			{
 				id: 'restored',
-				label: 'Restored timeline',
+				label: 'Timeline 3',
 				parent: 'divergent',
 				branchAt: 'dance',
 				status: 'restored',
-				note: 'his parents fall in love anew; the changed 1985 he returns to'
+				note: 'the repaired 1955 and the altered 1985 he returns to'
 			}
 		],
 		timeline: [
@@ -130,14 +130,14 @@ export const specimens: MediaEntry[] = [
 				location: 'Downtown Hill Valley',
 				kind: 'event',
 				description:
-					"In the unaltered past, Lorraine's father hits George with the car; she nurses him and the two fall in love. This is the history Marty is about to rewrite."
+					"Lorraine's father hits George with the car; she nurses him back to health and the two fall in love."
 			},
 			{
 				id: 'demo',
 				label: 'The DeLorean revealed',
 				narrative: 0,
 				chrono: 1985.82,
-				chronoLabel: 'Oct 26, 1985 · 1:15 AM',
+				chronoLabel: 'Oct 26, 1985, 1:15 AM',
 				location: 'Twin Pines Mall, Hill Valley',
 				kind: 'origin',
 				variant: 'prime-1985',
@@ -149,7 +149,7 @@ export const specimens: MediaEntry[] = [
 				label: 'Libyans attack  -  Marty flees',
 				narrative: 1,
 				chrono: 1985.8205,
-				chronoLabel: 'Oct 26, 1985 · 1:20 AM',
+				chronoLabel: 'Oct 26, 1985, 1:20 AM',
 				location: 'Twin Pines Mall, Hill Valley',
 				kind: 'departure',
 				jumpTo: 'arrive55',
@@ -162,7 +162,7 @@ export const specimens: MediaEntry[] = [
 				label: 'Arrival in 1955',
 				narrative: 2,
 				chrono: 1955.845,
-				chronoLabel: 'Nov 5, 1955 · 6:00 AM',
+				chronoLabel: 'Nov 5, 1955, 6:00 AM',
 				location: 'Peabody Ranch, Hill Valley',
 				kind: 'arrival',
 				description:
@@ -208,7 +208,7 @@ export const specimens: MediaEntry[] = [
 				label: 'Enchantment Under the Sea',
 				narrative: 6,
 				chrono: 1955.864,
-				chronoLabel: 'Nov 12, 1955 · night',
+				chronoLabel: 'Nov 12, 1955, night',
 				location: 'Hill Valley High gym',
 				kind: 'event',
 				variant: 'altered-1985',
@@ -220,7 +220,7 @@ export const specimens: MediaEntry[] = [
 				label: 'The clock-tower lightning',
 				narrative: 7,
 				chrono: 1955.866,
-				chronoLabel: 'Nov 12, 1955 · 10:04 PM',
+				chronoLabel: 'Nov 12, 1955, 10:04 PM',
 				location: 'Courthouse Square, Hill Valley',
 				kind: 'departure',
 				jumpTo: 'return85',
@@ -232,7 +232,7 @@ export const specimens: MediaEntry[] = [
 				label: 'Back to 1985',
 				narrative: 8,
 				chrono: 1985.821,
-				chronoLabel: 'Oct 26, 1985 · 1:24 AM',
+				chronoLabel: 'Oct 26, 1985, 1:24 AM',
 				location: 'Lone Pine Mall, Hill Valley',
 				kind: 'return',
 				description:
@@ -243,7 +243,7 @@ export const specimens: MediaEntry[] = [
 				label: 'A better 1985',
 				narrative: 9,
 				chrono: 1985.822,
-				chronoLabel: 'Oct 26, 1985 · morning',
+				chronoLabel: 'Oct 26, 1985, morning',
 				location: 'The McFly home',
 				kind: 'event',
 				variant: 'altered-1985',
@@ -255,7 +255,7 @@ export const specimens: MediaEntry[] = [
 				label: '“…we don’t need roads.”',
 				narrative: 10,
 				chrono: 1985.823,
-				chronoLabel: 'Oct 26, 1985 · later',
+				chronoLabel: 'Oct 26, 1985, later',
 				location: 'The McFly home',
 				kind: 'departure',
 				variant: 'altered-1985',

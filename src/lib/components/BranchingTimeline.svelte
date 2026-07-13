@@ -21,6 +21,7 @@
 		accent = 'var(--color-branching)',
 		continuesFrom = null,
 		continuesTo = null,
+		fallbackImage = undefined,
 		onOpenImage
 	}: {
 		events: TimelineEvent[];
@@ -30,6 +31,8 @@
 		continuesFrom?: { slug: string; title: string } | null;
 		/** the media this timeline continues into, shown at the end */
 		continuesTo?: { slug: string; title: string } | null;
+		/** poster to show in the event panel when a beat has no still of its own */
+		fallbackImage?: string;
 		/** open a given image in the page's gallery lightbox */
 		onOpenImage?: (src: string) => void;
 	} = $props();
@@ -64,20 +67,22 @@
 		(branchById.get(id)?.status && STATUS[branchById.get(id)!.status!]) || '#b57cff';
 
 	// ---- layout ----
-	const W = 1000, ML = 104, MR = 40, TOP = 98, GAP = 86;
-	const SPAN = W - ML - MR;
+	// The board no longer squeezes every beat into the viewport: each event gets
+	// a fixed step of room, so a long story makes a wide board that scrolls.
+	const ML = 104, MR = 56, TOP = 98, GAP = 86, STEP = 150;
 	const laneCount = Math.max(1, branches.length);
 	const H = TOP + (laneCount - 1) * GAP + 54;
 	const laneY = (lane: number) => TOP + lane * GAP;
 
 	let order = $state<'told' | 'happened'>('told');
 	let n = $derived(events.length);
+	let W = $derived(Math.max(680, ML + MR + Math.max(0, n - 1) * STEP));
 	let ordered = $derived(
 		order === 'told'
 			? [...events].sort((a, b) => a.narrative - b.narrative)
 			: [...events].sort((a, b) => a.chrono - b.chrono)
 	);
-	const xOf = (slot: number) => ML + (n <= 1 ? 0 : (slot / (n - 1)) * SPAN);
+	const xOf = (slot: number) => ML + slot * STEP;
 	let pos = $derived(
 		ordered.map((e, i) => {
 			const branch = memberOf.get(e.id) ?? rootId;
@@ -208,8 +213,7 @@
 </script>
 
 <div class="btl" style="--accent:{accent}">
-	<div class="split">
-	<div class="board-col">
+	<div class="tlx">
 	{#if continuesFrom || continuesTo}
 		<div class="connectors">
 			{#if continuesFrom}
@@ -226,8 +230,10 @@
 			{/if}
 		</div>
 	{/if}
+	<div class="tlx-body">
+	<div class="board-col">
 	<div class="board">
-		<svg viewBox="0 0 {W} {H}" role="img" aria-label="Branching timeline" preserveAspectRatio="none">
+		<svg viewBox="0 0 {W} {H}" style="width:{W}px" role="img" aria-label="Branching timeline">
 			<defs>
 				<marker id="jarrow" viewBox="0 0 12 12" refX="9" refY="6" markerWidth="7" markerHeight="7" orient="auto">
 					<path d="M1 1 L10 6 L1 11" fill="none" stroke="context-stroke" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
@@ -335,17 +341,6 @@
 			{/each}
 		</svg>
 	</div>
-
-	<div class="legend">
-		{#each branches as b (b.id)}
-			<span class="lg"><i class="dot" style="background:{branchColor(b.id)}"></i>{b.label}<em>{b.note}</em></span>
-		{/each}
-		<span class="lg"><i class="flag"></i>origin (story starts here)</span>
-		<span class="lg"><i class="line fwd"></i>jump forward in time</span>
-		<span class="lg"><i class="line back"></i>jump back in time</span>
-		<span class="lg"><i class="ring"></i>time machine fires here</span>
-		<span class="lg"><i class="haz"></i>paradox / continuity risk</span>
-	</div>
 	</div>
 
 	<div class="side">
@@ -377,13 +372,22 @@
 					<CaretRight size={15} weight="bold" />
 				</button>
 			</div>
-			{#if selected.image}
-				<button
-						class="still"
+			<div class="media">
+				{#if selected.image}
+					<button
+						class="shot"
 						onclick={() => onOpenImage?.(selected.image!)}
 						aria-label="Open {selected.label} in the gallery"
-					><img src={selected.image} alt={selected.label} /></button>
-			{/if}
+					>
+						<img src={selected.image} alt={selected.label} />
+					</button>
+				{:else if fallbackImage}
+					<img class="shot-fallback" src={fallbackImage} alt="" />
+					<span class="media-note">no still for this moment yet</span>
+				{:else}
+					<span class="media-note">no image</span>
+				{/if}
+			</div>
 			<div class="badges">
 				<span class="badge" style="--c:{branchColor(curBranch(selected.id))}">
 					{#if M.icon}{@const Icon = M.icon}<Icon size={12} weight="fill" />{/if}{M.label}
@@ -399,6 +403,18 @@
 			{/if}
 		</div>
 	{/if}
+	</div>
+	</div>
+
+	<div class="legend">
+		{#each branches as b (b.id)}
+			<span class="lg"><i class="dot" style="background:{branchColor(b.id)}"></i>{b.label}<em>{b.note}</em></span>
+		{/each}
+		<span class="lg"><i class="flag"></i>origin (story starts here)</span>
+		<span class="lg"><i class="line fwd"></i>jump forward in time</span>
+		<span class="lg"><i class="line back"></i>jump back in time</span>
+		<span class="lg"><i class="ring"></i>time machine fires here</span>
+		<span class="lg"><i class="haz"></i>paradox / continuity risk</span>
 	</div>
 	</div>
 </div>
@@ -434,47 +450,49 @@
 		outline: 2px solid var(--accent);
 		outline-offset: 2px;
 	}
-	.split {
+	/* one coherent card wrapping board, panel, and legend */
+	.tlx {
+		border: 1px solid var(--color-line);
+		border-radius: 12px;
+		background: color-mix(in srgb, var(--color-panel) 45%, transparent);
+		overflow: hidden;
+	}
+	.tlx-body {
 		display: grid;
 		grid-template-columns: minmax(0, 1fr) 340px;
-		gap: 1rem;
-		align-items: start;
+		align-items: stretch;
 	}
 	.board-col {
 		min-width: 0;
 	}
-	.side {
-		position: sticky;
-		top: 1rem;
-	}
-	/* reserved, fixed height so stepping through events never grows the page */
-	.side .detail {
-		height: 440px;
-		overflow-y: auto;
-	}
 	.board {
-		border: 1px solid var(--color-line);
-		border-radius: 10px;
-		background: color-mix(in srgb, var(--color-panel) 45%, transparent);
 		padding: 0.35rem 0.5rem;
 		overflow-x: auto;
 	}
+	/* board scales with the number of events; the wide svg scrolls in place */
 	svg {
 		display: block;
-		width: 100%;
-		min-width: 560px;
 		height: auto;
 	}
+	.side {
+		display: flex;
+		flex-direction: column;
+		border-left: 1px solid var(--color-line);
+		background: color-mix(in srgb, var(--color-panel) 30%, transparent);
+		padding: 0.8rem;
+	}
+	.side .detail {
+		flex: 1;
+		min-height: 0;
+		overflow-y: auto;
+	}
 	@media (max-width: 860px) {
-		.split {
+		.tlx-body {
 			grid-template-columns: 1fr;
 		}
 		.side {
-			position: static;
-		}
-		.side .detail {
-			height: auto;
-			max-height: 60vh;
+			border-left: 0;
+			border-top: 1px solid var(--color-line);
 		}
 	}
 	.lane-lbl {
@@ -544,7 +562,9 @@
 		display: flex;
 		flex-wrap: wrap;
 		gap: 0.5rem 1.4rem;
-		margin: 0.9rem 0 0;
+		margin: 0;
+		padding: 0.7rem 0.9rem;
+		border-top: 1px solid var(--color-line);
 		font-family: var(--font-mono);
 		font-size: 0.68rem;
 		color: var(--color-muted);
@@ -605,11 +625,53 @@
 	}
 
 	.detail {
-		border: 1px solid var(--color-line);
 		border-left: 3px solid var(--accent);
+		border-radius: 4px;
+		padding: 0 0 0 0.8rem;
+	}
+	/* always-reserved image slot: the beat's still, else the poster, else blank */
+	.media {
+		position: relative;
+		height: 150px;
+		flex: none;
+		margin-bottom: 0.7rem;
+		border: 1px solid var(--color-line);
 		border-radius: 6px;
-		background: color-mix(in srgb, var(--color-panel) 55%, transparent);
-		padding: 0.85rem 1rem 1rem;
+		overflow: hidden;
+		background: color-mix(in srgb, var(--color-panel) 70%, #000);
+		display: flex;
+		align-items: center;
+		justify-content: center;
+	}
+	.media .shot {
+		display: block;
+		width: 100%;
+		height: 100%;
+		padding: 0;
+		border: 0;
+		background: transparent;
+		cursor: zoom-in;
+	}
+	.media .shot img {
+		width: 100%;
+		height: 100%;
+		object-fit: cover;
+		display: block;
+	}
+	.media .shot-fallback {
+		width: 100%;
+		height: 100%;
+		object-fit: cover;
+		opacity: 0.28;
+		filter: grayscale(0.3);
+	}
+	.media-note {
+		position: absolute;
+		font-family: var(--font-mono);
+		font-size: 0.6rem;
+		letter-spacing: 0.08em;
+		text-transform: uppercase;
+		color: var(--color-muted);
 	}
 	.badges {
 		display: flex;
@@ -665,7 +727,8 @@
 		align-items: center;
 		justify-content: space-between;
 		gap: 0.6rem;
-		margin-bottom: 0.6rem;
+		padding: 0.7rem 0.9rem;
+		border-bottom: 1px solid var(--color-line);
 	}
 	.continues {
 		display: inline-flex;
@@ -724,25 +787,9 @@
 		outline: 2px solid var(--accent);
 		outline-offset: 2px;
 	}
-	.still {
-		display: block;
-		width: 100%;
-		padding: 0;
-		border-radius: 6px;
-		overflow: hidden;
-		margin-bottom: 0.7rem;
-		border: 1px solid var(--color-line);
-		background: transparent;
-		cursor: zoom-in;
-	}
-	.still img {
-		display: block;
-		width: 100%;
-		height: auto;
-	}
-	.still:focus-visible {
+	.media .shot:focus-visible {
 		outline: 2px solid var(--accent);
-		outline-offset: 2px;
+		outline-offset: -2px;
 	}
 	.badge.src {
 		--c: var(--accent);

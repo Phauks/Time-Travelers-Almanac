@@ -6,16 +6,23 @@
  * self-sufficient with no secrets, and only reach for keyed services when a
  * key happens to be present (they give nicer art and the review scores).
  *
+ * The free setup: TMDB for posters and trailers (a free key, no cost), OMDb's
+ * free tier for the review scores it uniquely provides. OMDb's poster IMAGE
+ * api is paid, so we never use it; TMDB art is free and looks great.
+ *
  * Poster / cover art, in priority order per entry:
- *   1. TMDB           (film, tv)      needs TMDB_API_KEY
- *   2. Wikidata P18   (anything)      KEYLESS, matched via the IMDb id or QID
+ *   1. TMDB           (film, tv)      needs TMDB_API_KEY (free)
+ *   2. Wikidata P18   (anything)      KEYLESS, but ONLY with an explicit `wikidata`
+ *                                     QID (fuzzy id matching picked wrong art)
  *   3. Open Library   (book, comic)   KEYLESS, matched via ISBN
  *
+ * Trailers:
+ *   TMDB videos endpoint yields an official YouTube trailer key (free).
+ *
  * Review scores:
- *   OMDb (IMDb, Metacritic, RT critics)  needs OMDB_API_KEY
+ *   OMDb free tier gives IMDb rating, Metacritic, Rotten Tomatoes critics.
  *   Rotten Tomatoes AUDIENCE has no free API, so it is never overwritten here.
  *
- * With no keys set the keyless paths still run, so most entries still get art.
  * Every network call is guarded; on failure the authored data is used as-is.
  */
 import { readFileSync, writeFileSync } from 'node:fs';
@@ -51,58 +58,68 @@ async function getJson(url) {
 	return r.json();
 }
 
+// OMDb free tier: the review scores it uniquely provides (no poster, that is paid).
 async function omdb(id) {
 	if (!OMDB || !id) return null;
 	try {
 		const j = await getJson(`https://www.omdbapi.com/?apikey=${OMDB}&i=${id}`);
 		if (j.Response === 'False') return null;
-		const out = {};
-		if (j.imdbRating && j.imdbRating !== 'N/A') out.imdb = Number(j.imdbRating);
-		if (j.Metascore && j.Metascore !== 'N/A') out.metacritic = Number(j.Metascore);
+		const ratings = {};
+		if (j.imdbRating && j.imdbRating !== 'N/A') ratings.imdb = Number(j.imdbRating);
+		if (j.Metascore && j.Metascore !== 'N/A') ratings.metacritic = Number(j.Metascore);
 		const rt = (j.Ratings || []).find((x) => x.Source === 'Rotten Tomatoes');
-		if (rt) out.rtCritic = Number(String(rt.Value).replace('%', ''));
-		return out;
+		if (rt) ratings.rtCritic = Number(String(rt.Value).replace('%', ''));
+		return Object.keys(ratings).length ? ratings : null;
 	} catch (e) {
 		console.warn('omdb failed for', id, e.message);
 		return null;
 	}
 }
 
-async function tmdbPoster(id) {
-	if (!TMDB || !id) return null;
+// TMDB (free key): poster art and an official YouTube trailer in one lookup.
+async function tmdb(id) {
+	if (!TMDB || !id) return { poster: null, trailer: null };
 	try {
 		const j = await getJson(
 			`https://api.themoviedb.org/3/find/${id}?api_key=${TMDB}&external_source=imdb_id`
 		);
-		const hit = (j.movie_results && j.movie_results[0]) || (j.tv_results && j.tv_results[0]);
-		return hit && hit.poster_path ? `https://image.tmdb.org/t/p/w500${hit.poster_path}` : null;
+		const movie = j.movie_results && j.movie_results[0];
+		const hit = movie || (j.tv_results && j.tv_results[0]);
+		if (!hit) return { poster: null, trailer: null };
+		const poster = hit.poster_path ? `https://image.tmdb.org/t/p/w500${hit.poster_path}` : null;
+		const type = movie ? 'movie' : 'tv';
+		let trailer = null;
+		try {
+			const v = await getJson(`https://api.themoviedb.org/3/${type}/${hit.id}/videos?api_key=${TMDB}`);
+			const vids = v.results || [];
+			const pick =
+				vids.find((x) => x.site === 'YouTube' && x.type === 'Trailer' && x.official) ||
+				vids.find((x) => x.site === 'YouTube' && x.type === 'Trailer') ||
+				vids.find((x) => x.site === 'YouTube');
+			if (pick) trailer = `https://www.youtube.com/watch?v=${pick.key}`;
+		} catch (e) {
+			console.warn('tmdb videos failed for', id, e.message);
+		}
+		return { poster, trailer };
 	} catch (e) {
 		console.warn('tmdb failed for', id, e.message);
-		return null;
+		return { poster: null, trailer: null };
 	}
 }
 
-// KEYLESS: resolve a Wikidata item (by QID or by its IMDb id) and read its
-// image (P18), returned as a stable Wikimedia Commons file URL.
-async function wikidataPoster({ qid, imdb }) {
+// KEYLESS: read an explicit Wikidata item's image (P18) as a Commons file URL.
+// Only used with a hand-set QID; fuzzy id matching was dropped because it
+// pulled odd, off-topic art (e.g. the wrong Back to the Future image).
+async function wikidataPoster(qid) {
+	if (!qid) return null;
 	try {
-		let id = qid;
-		if (!id && imdb) {
-			const q = encodeURIComponent(
-				`SELECT ?item WHERE { ?item wdt:P345 "${imdb}" } LIMIT 1`
-			);
-			const j = await getJson(`https://query.wikidata.org/sparql?format=json&query=${q}`);
-			const uri = j.results?.bindings?.[0]?.item?.value;
-			id = uri ? uri.split('/').pop() : null;
-		}
-		if (!id) return null;
-		const ent = await getJson(`https://www.wikidata.org/wiki/Special:EntityData/${id}.json`);
-		const claims = ent.entities?.[id]?.claims?.P18;
+		const ent = await getJson(`https://www.wikidata.org/wiki/Special:EntityData/${qid}.json`);
+		const claims = ent.entities?.[qid]?.claims?.P18;
 		const file = claims?.[0]?.mainsnak?.datavalue?.value;
 		if (!file) return null;
 		return `https://commons.wikimedia.org/wiki/Special:FilePath/${encodeURIComponent(file)}?width=500`;
 	} catch (e) {
-		console.warn('wikidata failed for', qid || imdb, e.message);
+		console.warn('wikidata failed for', qid, e.message);
 		return null;
 	}
 }
@@ -123,16 +140,18 @@ async function openLibraryPoster(isbn) {
 
 const enrichment = {};
 for (const e of entries) {
-	const poster =
-		(await tmdbPoster(e.imdb)) ||
-		(await wikidataPoster({ qid: e.qid, imdb: e.imdb })) ||
-		(await openLibraryPoster(e.isbn));
+	const { poster: tmdbPoster, trailer } = await tmdb(e.imdb);
 	const ratings = await omdb(e.imdb);
+	const poster =
+		tmdbPoster || (await wikidataPoster(e.qid)) || (await openLibraryPoster(e.isbn));
 	const rec = {};
 	if (poster) rec.poster = poster;
-	if (ratings && Object.keys(ratings).length) rec.ratings = ratings;
+	if (ratings) rec.ratings = ratings;
+	if (trailer) rec.trailer = trailer;
 	if (Object.keys(rec).length) enrichment[e.slug] = rec;
-	console.log(`enrich: ${e.slug} ${poster ? 'poster' : '-'} ${ratings ? 'ratings' : '-'}`);
+	console.log(
+		`enrich: ${e.slug} ${poster ? 'poster' : '-'} ${ratings ? 'ratings' : '-'} ${trailer ? 'trailer' : '-'}`
+	);
 }
 
 writeFileSync(OUT, JSON.stringify(enrichment, null, 2) + '\n');

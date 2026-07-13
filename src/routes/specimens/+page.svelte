@@ -13,7 +13,7 @@
 	let active = $state<Set<Rule>>(new Set(rules));
 	let activeMedia = $state<Set<Medium>>(new Set(media));
 	let loopOnly = $state(false);
-	let sort = $state<'title' | 'newest' | 'oldest'>('newest');
+	let sort = $state<'title' | 'newest' | 'oldest'>('oldest');
 
 	// precise sortable date: parse the full release date, else fall back to the year
 	const dateKey = (s: (typeof specimens)[number]) => {
@@ -117,7 +117,7 @@
 
 		<div class="fgroup" role="group" aria-label="Sort order">
 			<span class="flabel">Sort</span>
-			{#each [['newest', 'Newest'], ['oldest', 'Oldest'], ['title', 'A to Z']] as [key, label] (key)}
+			{#each [['oldest', 'Oldest'], ['newest', 'Newest'], ['title', 'A to Z']] as [key, label] (key)}
 				<button
 					class="chip sort"
 					class:on={sort === key}

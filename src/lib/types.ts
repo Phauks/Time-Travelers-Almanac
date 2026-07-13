@@ -166,6 +166,8 @@ export interface MediaEntry {
 	imageSource: string;
 	/** poster/cover image URL (populated by the enrichment step) */
 	poster?: string;
+	/** trailer URL (populated by the enrichment step from TMDB) */
+	trailer?: string;
 	/** Wikidata QID (e.g. "Q34028"), a keyless route to a poster and cross-ids */
 	wikidata?: string;
 	/** ISBN for books/comics, a keyless route to an Open Library cover */

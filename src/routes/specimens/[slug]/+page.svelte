@@ -41,7 +41,10 @@
 		if (!has('trailer') && ['film', 'tv', 'game'].includes(s.medium)) {
 			out.push({
 				kind: 'trailer',
-				url: `https://www.youtube.com/results?search_query=${encodeURIComponent(`${s.title} ${s.year} trailer`)}`
+				// a real TMDB trailer if enrichment found one, else a YouTube search
+				url:
+					s.trailer ??
+					`https://www.youtube.com/results?search_query=${encodeURIComponent(`${s.title} ${s.year} trailer`)}`
 			});
 		}
 		if (!has('goodreads') && s.medium === 'book') {

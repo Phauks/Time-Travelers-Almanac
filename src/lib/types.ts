@@ -139,15 +139,21 @@ export interface MediaEntry {
 	/** where it travels to, e.g. "1955" */
 	destLabel: string;
 
-	logline: string; // one cheeky sentence
+	logline: string; // the Almanac's own one-line tagline
+	/** a neutral, factual plot summary */
+	synopsis?: string;
+	/** alternate titles, e.g. "Back to the Future Part I" */
+	aliases?: string[];
 	mechanism: string; // how travel works in-universe
 	paradoxes: string[];
 	paradoxRisk: ParadoxRisk;
 	fieldNote?: string;
-	related?: string[]; // slugs
+	related?: string[]; // legacy manual override; related is now computed
 
 	/** where hero/still art will come from (differs by medium) */
 	imageSource: string;
+	/** poster/cover image URL (populated by the enrichment step) */
+	poster?: string;
 	/** citations backing this entry's data */
 	sources?: SourceRef[];
 	/** outbound links: IMDb, Rotten Tomatoes, Steam, where-to-watch, etc. */

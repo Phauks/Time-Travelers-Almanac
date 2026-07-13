@@ -8,8 +8,12 @@
 
 <a class="card" href="{base}/specimens/{specimen.slug}">
 	<div class="plate">
+		{#if specimen.poster}
+			<img src={specimen.poster} alt="{specimen.title} poster" loading="lazy" />
+		{:else}
+			<span class="src">{specimen.imageSource.split('→')[1]?.trim() ?? 'poster'}</span>
+		{/if}
 		<span class="medium">{MEDIUM_META[specimen.medium]}</span>
-		<span class="src">plate → {specimen.imageSource.split('→')[1]?.trim() ?? 'TMDB'}</span>
 	</div>
 	<div class="body">
 		<h3>{specimen.title} <small>{specimen.year}</small></h3>
@@ -43,10 +47,21 @@
 	}
 	.plate {
 		position: relative;
-		aspect-ratio: 16 / 10;
+		aspect-ratio: 2 / 3;
+		display: flex;
+		align-items: center;
+		justify-content: center;
 		background:
 			radial-gradient(120% 120% at 30% 20%, color-mix(in srgb, var(--color-panel) 90%, #000), #05070e);
 		border-bottom: 1px solid var(--color-line);
+		overflow: hidden;
+	}
+	.plate img {
+		position: absolute;
+		inset: 0;
+		width: 100%;
+		height: 100%;
+		object-fit: cover;
 	}
 	.medium {
 		position: absolute;

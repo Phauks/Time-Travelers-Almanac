@@ -1,15 +1,17 @@
 <script lang="ts">
 	import { base } from '$app/paths';
-	import { ArrowLeft, Warning } from 'phosphor-svelte';
+	import { Warning } from 'phosphor-svelte';
 	import BranchingTimeline from '$lib/components/BranchingTimeline.svelte';
 	import BrandLogo from '$lib/components/BrandLogo.svelte';
+	import SpecimenCard from '$lib/components/SpecimenCard.svelte';
 	import {
 		RULE_META,
 		MODE_META,
 		LOOP_META,
 		MEDIUM_META,
-		getSpecimen,
-		ruleColorVar
+		ruleColorVar,
+		relatedSpecimens,
+		sagaMates
 	} from '$lib/data';
 	import type { PageData } from './$types';
 
@@ -17,11 +19,7 @@
 	let s = $derived(data.specimen);
 
 	const riskPct = { low: 33, medium: 66, high: 100 } as const;
-
 	const LINK_META: Record<string, string> = {
-		imdb: 'IMDb',
-		rottentomatoes: 'Rotten Tomatoes',
-		metacritic: 'Metacritic',
 		steam: 'Steam',
 		watch: 'JustWatch',
 		wikipedia: 'Wikipedia',
@@ -29,15 +27,13 @@
 		other: 'Link'
 	};
 
-	let related = $derived(
-		(s.related ?? []).map((slug) => getSpecimen(slug)).filter((x) => x !== undefined)
-	);
-
-	// ratings link straight to their source; only non-rating links become buttons
 	let linkMap = $derived(Object.fromEntries((s.links ?? []).map((l) => [l.kind, l.url])));
 	let extraLinks = $derived(
 		(s.links ?? []).filter((l) => !['imdb', 'rottentomatoes', 'metacritic'].includes(l.kind))
 	);
+	let mates = $derived(sagaMates(s));
+	let related = $derived(relatedSpecimens(s));
+	let sagaLabel = $derived(s.saga ? s.saga.replace(/-/g, ' ') : '');
 </script>
 
 <svelte:head>
@@ -45,81 +41,78 @@
 </svelte:head>
 
 <article class="dossier" style="--accent:{ruleColorVar(s.rules[0])}">
-	<a class="back" href="{base}/specimens/"><ArrowLeft size={14} weight="bold" /> All specimens</a>
-
-	<header class="head">
-		<div class="plate">
-			<span class="medium">{MEDIUM_META[s.medium]}</span>
-			<span class="src">{s.imageSource}</span>
+	<header class="top">
+		<div class="col-img">
+			<div class="plate">
+				{#if s.poster}
+					<img src={s.poster} alt="{s.title} poster" />
+				{:else}
+					<span class="src">{s.imageSource}</span>
+				{/if}
+			</div>
 		</div>
-		<div>
-			<p class="eyebrow">Specimen, {s.destLabel}</p>
+
+		<div class="col-main">
 			<h1>{s.title}</h1>
 			<p class="sub">
-				{s.year}, {MEDIUM_META[s.medium]}{s.saga ? `, ${s.saga.replace(/-/g, ' ')} saga` : ''}
+				<a href="{base}/history#y{s.year}">{s.year}</a>
+				<span class="dot-sep"></span>
+				<a href="{base}/specimens/?medium={s.medium}">{MEDIUM_META[s.medium]}</a>
+				{#if s.saga}
+					<span class="dot-sep"></span>
+					<a href="{base}/specimens/?saga={s.saga}" class="cap">{sagaLabel} saga</a>
+				{/if}
 			</p>
-			<p class="logline">{s.logline}</p>
-			{#if s.ratings}
-				<div class="ratings">
-					{#if s.ratings.imdb != null}
-						<a class="rt" href={linkMap.imdb} target="_blank" rel="noreferrer noopener">
-							<BrandLogo kind="imdb" size={16} /> <b>{s.ratings.imdb.toFixed(1)}</b><span class="of">/10</span>
-						</a>
-					{/if}
-					{#if s.ratings.rtCritic != null}
-						<a class="rt" href={linkMap.rottentomatoes} target="_blank" rel="noreferrer noopener">
-							<BrandLogo kind="rottentomatoes" size={16} /> <b>{s.ratings.rtCritic}%</b><span class="of">critics</span>
-						</a>
-					{/if}
-					{#if s.ratings.rtAudience != null}
-						<a class="rt" href={linkMap.rottentomatoes} target="_blank" rel="noreferrer noopener">
-							<BrandLogo kind="rottentomatoes" size={16} /> <b>{s.ratings.rtAudience}%</b><span class="of">audience</span>
-						</a>
-					{/if}
-					{#if s.ratings.metacritic != null}
-						<a class="rt" href={linkMap.metacritic} target="_blank" rel="noreferrer noopener">
-							<BrandLogo kind="metacritic" size={16} /> <b>{s.ratings.metacritic}</b><span class="of">/100</span>
-						</a>
-					{/if}
-				</div>
-			{/if}
 
-			{#if extraLinks.length}
-				<div class="links">
-					{#each extraLinks as link (link.url)}
-						<a class="lk" href={link.url} target="_blank" rel="noreferrer noopener">
-							<BrandLogo kind={link.kind} size={14} />
-							{link.label ?? LINK_META[link.kind] ?? 'Link'}
-						</a>
-					{/each}
-				</div>
-			{/if}
+			<p class="synopsis">{s.synopsis ?? s.logline}</p>
+
+			<div class="linkrow">
+				{#if s.ratings?.imdb != null}
+					<a class="chip rt" href={linkMap.imdb} target="_blank" rel="noreferrer noopener">
+						<BrandLogo kind="imdb" size={16} /> <b>{s.ratings.imdb.toFixed(1)}</b><span class="unit">/10</span>
+					</a>
+				{/if}
+				{#if s.ratings?.rtCritic != null}
+					<a class="chip rt" href={linkMap.rottentomatoes} target="_blank" rel="noreferrer noopener">
+						<BrandLogo kind="rottentomatoes" size={16} /> <b>{s.ratings.rtCritic}%</b><span class="unit">Critics</span>
+					</a>
+				{/if}
+				{#if s.ratings?.rtAudience != null}
+					<a class="chip rt" href={linkMap.rottentomatoes} target="_blank" rel="noreferrer noopener">
+						<BrandLogo kind="rottentomatoes" size={16} /> <b>{s.ratings.rtAudience}%</b><span class="unit">Audience</span>
+					</a>
+				{/if}
+				{#if s.ratings?.metacritic != null}
+					<a class="chip rt" href={linkMap.metacritic} target="_blank" rel="noreferrer noopener">
+						<BrandLogo kind="metacritic" size={16} /> <b>{s.ratings.metacritic}</b><span class="unit">/100</span>
+					</a>
+				{/if}
+				{#each extraLinks as link (link.url)}
+					<a class="chip lk" href={link.url} target="_blank" rel="noreferrer noopener">
+						<BrandLogo kind={link.kind} size={15} /> {link.label ?? LINK_META[link.kind] ?? 'Link'}
+					</a>
+				{/each}
+			</div>
 		</div>
+
+		<aside class="col-tt">
+			<div class="tt" style="--c:var(--color-{s.rules[0]})">
+				<p class="k">The Rule</p>
+				<p class="v">{RULE_META[s.rules[0]].name}</p>
+				<p class="d">{RULE_META[s.rules[0]].nickname}. {RULE_META[s.rules[0]].law}</p>
+			</div>
+			<div class="tt mode">
+				<p class="k">The Mode</p>
+				<p class="v">{s.mode.map((m) => MODE_META[m]).join(', ')}</p>
+				<div class="method">method of travel</div>
+			</div>
+			<div class="tt loop">
+				<p class="k">Loop status</p>
+				<p class="v">{s.loop ? LOOP_META[s.loop] : 'None'}</p>
+				<p class="d">{s.loop ? 'A repeating condition applies.' : 'Linear jumps, no repetition.'}</p>
+			</div>
+		</aside>
 	</header>
-
-	<section class="verdict">
-		<div class="cell" style="--c:var(--color-{s.rules[0]})">
-			<p class="k">The Rule</p>
-			<p class="v">
-				{RULE_META[s.rules[0]].name}
-				<small>{RULE_META[s.rules[0]].nickname}  -  {RULE_META[s.rules[0]].law}</small>
-			</p>
-		</div>
-		<div class="cell mode">
-			<p class="k">The Mode</p>
-			<p class="v">
-				{s.mode.map((m) => MODE_META[m]).join(', ')}
-				<small>How the travel happens</small>
-			</p>
-		</div>
-		<div class="cell loop">
-			<p class="k">Loop status</p>
-			<p class="v">
-				{s.loop ? LOOP_META[s.loop] : 'None'}
-				<small>{s.loop ? 'A repeating condition applies' : 'Linear jumps, no repetition'}</small>
-			</p>
-		</div>
-	</section>
 
 	<section class="prose">
 		<h2>Mechanism</h2>
@@ -135,9 +128,8 @@
 				Documented paradoxes: {#each s.paradoxes as p, i (p)}<span>{p}</span>{i < s.paradoxes.length - 1 ? ', ' : ''}{/each}
 			</p>
 		{/if}
-
 		{#if s.fieldNote}
-			<p class="fieldnote">Field note  -  {s.fieldNote}</p>
+			<p class="fieldnote">Field note. {s.fieldNote}</p>
 		{/if}
 	</section>
 
@@ -146,13 +138,20 @@
 		<BranchingTimeline events={s.timeline} branches={s.branches ?? []} accent={ruleColorVar(s.rules[0])} />
 	</section>
 
+	{#if mates.length}
+		<section class="gallery">
+			<h2>More in this timeline</h2>
+			<div class="grid">
+				{#each mates as m (m.slug)}<SpecimenCard specimen={m} />{/each}
+			</div>
+		</section>
+	{/if}
+
 	{#if related.length}
-		<section class="related">
+		<section class="gallery">
 			<h2>Related specimens</h2>
-			<div class="rel-list">
-				{#each related as r (r.slug)}
-					<a href="{base}/specimens/{r.slug}/">{r.title}</a>
-				{/each}
+			<div class="grid">
+				{#each related as r (r.slug)}<SpecimenCard specimen={r} />{/each}
 			</div>
 		</section>
 	{/if}
@@ -171,115 +170,181 @@
 
 <style>
 	.dossier {
-		max-width: 1200px;
+		max-width: 1340px;
 		margin: 0 auto;
-		padding: clamp(1.2rem, 4vw, 2.5rem) clamp(1rem, 4vw, 3.5rem) 5rem;
+		padding: clamp(1.2rem, 3vw, 2.5rem) clamp(1rem, 4vw, 3rem) 5rem;
 	}
-	.back {
-		display: inline-flex;
-		align-items: center;
-		gap: 0.4rem;
-		font-family: var(--font-mono);
-		font-size: 0.7rem;
-		letter-spacing: 0.1em;
-		text-transform: uppercase;
-		color: var(--color-muted);
-		margin-bottom: 1.8rem;
-	}
-	.back:hover {
-		color: var(--color-paper);
-	}
-	.head {
+
+	.top {
 		display: grid;
-		grid-template-columns: 220px 1fr;
-		gap: clamp(1.2rem, 3vw, 2.4rem);
+		gap: clamp(1.4rem, 3vw, 2.5rem);
+		grid-template-columns: 230px minmax(0, 1fr) 300px;
+		grid-template-areas: 'img main tt';
 		align-items: start;
 	}
-	@media (max-width: 640px) {
-		.head {
-			grid-template-columns: 1fr;
+	@media (max-width: 1040px) {
+		.top {
+			grid-template-columns: 200px minmax(0, 1fr);
+			grid-template-areas: 'img main' 'tt tt';
 		}
 	}
+	@media (max-width: 600px) {
+		.top {
+			grid-template-columns: 1fr;
+			grid-template-areas: 'img' 'main' 'tt';
+		}
+	}
+	.col-img {
+		grid-area: img;
+	}
+	.col-main {
+		grid-area: main;
+	}
+	.col-tt {
+		grid-area: tt;
+		display: flex;
+		flex-direction: column;
+		gap: 0.7rem;
+	}
+	@media (max-width: 1040px) and (min-width: 601px) {
+		.col-tt {
+			flex-direction: row;
+		}
+		.col-tt > .tt {
+			flex: 1;
+		}
+	}
+
 	.plate {
 		position: relative;
-		aspect-ratio: 3 / 4;
+		aspect-ratio: 2 / 3;
 		border: 1px solid var(--color-line);
-		border-radius: 4px;
+		border-radius: 6px;
+		overflow: hidden;
 		background: radial-gradient(120% 120% at 30% 20%, #10152a, #05070e);
+		display: flex;
+		align-items: center;
+		justify-content: center;
 	}
-	.medium {
+	.plate img {
 		position: absolute;
-		top: 8px;
-		left: 8px;
-		font-family: var(--font-mono);
-		font-size: 0.58rem;
-		letter-spacing: 0.1em;
-		text-transform: uppercase;
-		background: var(--color-paper);
-		color: var(--color-ink);
-		padding: 3px 7px;
-		border-radius: 4px;
+		inset: 0;
+		width: 100%;
+		height: 100%;
+		object-fit: cover;
 	}
-	.src {
-		position: absolute;
-		bottom: 8px;
-		left: 8px;
-		right: 8px;
-		text-align: center;
+	.plate .src {
 		font-family: var(--font-mono);
-		font-size: 0.56rem;
-		letter-spacing: 0.05em;
+		font-size: 0.62rem;
+		letter-spacing: 0.06em;
 		text-transform: uppercase;
 		color: var(--color-muted);
+		text-align: center;
+		padding: 0 12%;
 	}
+
 	h1 {
 		font-family: var(--font-serif);
 		font-weight: 600;
-		font-size: clamp(2rem, 4.5vw, 3rem);
+		font-size: clamp(2rem, 4.2vw, 3.1rem);
 		line-height: 1.02;
-		margin: 0.3rem 0 0.3rem;
+		margin: 0 0 0.5rem;
 	}
 	.sub {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 0.55rem;
 		font-family: var(--font-mono);
-		font-size: 0.76rem;
+		font-size: 0.78rem;
 		letter-spacing: 0.04em;
 		color: var(--color-muted);
-		margin: 0 0 1rem;
+		margin: 0 0 1.2rem;
+	}
+	.sub a {
+		color: var(--color-muted);
+		text-decoration: underline;
+		text-underline-offset: 3px;
+		text-decoration-color: color-mix(in srgb, var(--color-muted) 45%, transparent);
+	}
+	.sub a:hover {
+		color: var(--color-paper);
+	}
+	.sub .cap {
 		text-transform: capitalize;
 	}
-	.logline {
-		font-family: var(--font-serif);
-		font-style: italic;
-		font-size: 1.15rem;
-		color: color-mix(in srgb, var(--color-paper) 88%, var(--color-muted));
-		margin: 0;
+	.dot-sep {
+		width: 3px;
+		height: 3px;
+		border-radius: 50%;
+		background: var(--color-muted);
+		opacity: 0.6;
+	}
+	.synopsis {
+		font-size: 1.05rem;
+		line-height: 1.6;
+		color: color-mix(in srgb, var(--color-paper) 90%, var(--color-muted));
+		margin: 0 0 1.4rem;
 	}
 
-	.verdict {
-		display: grid;
-		grid-template-columns: repeat(3, 1fr);
-		gap: 0.8rem;
-		margin: 2.4rem 0;
+	.linkrow {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 0.5rem;
 	}
-	@media (max-width: 640px) {
-		.verdict {
-			grid-template-columns: 1fr;
-		}
+	.chip {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.4rem;
+		border: 1px solid var(--color-line);
+		border-radius: 999px;
+		padding: 0.4rem 0.7rem;
+		font-family: var(--font-mono);
+		color: var(--color-paper);
+		transition:
+			color 0.15s,
+			border-color 0.15s;
 	}
-	.cell {
+	.chip:hover {
+		border-color: color-mix(in srgb, var(--color-paper) 35%, var(--color-line));
+	}
+	.rt {
+		font-size: 0.85rem;
+	}
+	.rt b {
+		font-weight: 700;
+	}
+	.rt .unit {
+		color: var(--color-muted);
+		font-size: 0.72rem;
+		margin-left: 0.1rem;
+	}
+	.lk {
+		font-size: 0.68rem;
+		letter-spacing: 0.03em;
+		text-transform: uppercase;
+		color: var(--color-muted);
+	}
+	.lk:hover {
+		color: var(--color-paper);
+	}
+
+	/* time-travel info column */
+	.tt {
 		background: color-mix(in srgb, var(--color-panel) 60%, transparent);
 		border: 1px solid var(--color-line);
 		border-left: 3px solid var(--c, var(--color-branching));
-		border-radius: 4px;
-		padding: 0.85rem 0.9rem;
+		border-radius: 6px;
+		padding: 0.85rem 0.95rem 1rem;
 	}
-	.cell.mode {
+	.tt.mode {
 		--c: var(--color-loop);
 	}
-	.cell.loop {
+	.tt.loop {
 		--c: var(--color-muted);
 	}
-	.k {
+	.tt .k {
 		font-family: var(--font-mono);
 		font-size: 0.62rem;
 		letter-spacing: 0.14em;
@@ -287,80 +352,42 @@
 		color: var(--color-muted);
 		margin: 0 0 0.35rem;
 	}
-	.v {
+	.tt .v {
 		font-family: var(--font-serif);
-		font-size: 1.1rem;
+		font-size: 1.15rem;
 		margin: 0;
 	}
-	.v small {
-		display: block;
-		font-family: var(--font-sans);
-		font-size: 0.74rem;
+	.tt .d {
+		font-size: 0.78rem;
 		color: var(--color-muted);
-		margin-top: 0.25rem;
-		line-height: 1.35;
+		line-height: 1.4;
+		margin: 0.3rem 0 0;
+	}
+	.method {
+		margin-top: 0.6rem;
+		aspect-ratio: 16 / 9;
+		border: 1px dashed var(--color-line);
+		border-radius: 4px;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		font-family: var(--font-mono);
+		font-size: 0.58rem;
+		letter-spacing: 0.1em;
+		text-transform: uppercase;
+		color: color-mix(in srgb, var(--color-muted) 70%, transparent);
 	}
 
-	.ratings {
-		display: flex;
-		flex-wrap: wrap;
-		gap: 0.5rem 1.1rem;
-		margin-top: 0.9rem;
-	}
-	.rt {
-		display: inline-flex;
-		align-items: center;
-		gap: 0.45rem;
-		font-family: var(--font-mono);
-		font-size: 0.85rem;
-		color: var(--color-paper);
-		border: 1px solid var(--color-line);
-		border-radius: 999px;
-		padding: 0.4rem 0.75rem;
-		transition: border-color 0.15s;
-	}
-	.rt:hover {
-		border-color: color-mix(in srgb, var(--color-paper) 35%, var(--color-line));
-	}
-	.rt b {
-		font-weight: 700;
-	}
-	.rt .of {
-		color: var(--color-muted);
-		font-size: 0.72rem;
-	}
-	.links {
-		display: flex;
-		flex-wrap: wrap;
-		gap: 0.5rem;
-		margin-top: 1rem;
-	}
-	.lk {
-		display: inline-flex;
-		align-items: center;
-		gap: 0.4rem;
-		font-family: var(--font-mono);
-		font-size: 0.68rem;
-		letter-spacing: 0.03em;
-		text-transform: uppercase;
-		padding: 0.5rem 0.8rem;
-		border: 1px solid var(--color-line);
-		border-radius: 999px;
-		color: var(--color-muted);
-		transition:
-			color 0.15s,
-			border-color 0.15s;
-	}
-	.lk:hover {
-		color: var(--color-paper);
-		border-color: color-mix(in srgb, var(--color-paper) 35%, var(--color-line));
-	}
 	.prose h2,
 	.timeline h2,
-	.related h2 {
+	.gallery h2,
+	.sources h2 {
 		font-family: var(--font-serif);
-		font-size: 1.2rem;
-		margin: 2rem 0 0.6rem;
+		font-size: 1.25rem;
+		margin: 2.4rem 0 0.8rem;
+	}
+	.prose {
+		margin-top: 2.4rem;
 	}
 	.prose p {
 		margin: 0 0 0.9rem;
@@ -373,6 +400,7 @@
 		align-items: center;
 		gap: 0.75rem;
 		margin: 1rem 0 0.5rem;
+		max-width: 520px;
 	}
 	.meter .bar {
 		flex: 1;
@@ -415,26 +443,10 @@
 		color: color-mix(in srgb, var(--color-paper) 82%, var(--color-muted));
 	}
 
-	.timeline {
-		margin-top: 1.5rem;
-	}
-	.rel-list {
-		display: flex;
-		flex-wrap: wrap;
-		gap: 0.5rem;
-	}
-	.rel-list a {
-		font-family: var(--font-mono);
-		font-size: 0.72rem;
-		letter-spacing: 0.04em;
-		padding: 0.5rem 0.9rem;
-		border: 1px solid var(--color-line);
-		border-radius: 999px;
-		color: var(--color-muted);
-	}
-	.rel-list a:hover {
-		color: var(--color-paper);
-		border-color: color-mix(in srgb, var(--color-paper) 30%, var(--color-line));
+	.grid {
+		display: grid;
+		grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+		gap: 1rem;
 	}
 
 	.sources ul {

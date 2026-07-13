@@ -2,7 +2,7 @@
 	import '../app.css';
 	import { base } from '$app/paths';
 	import { page } from '$app/state';
-	import { GithubLogo } from 'phosphor-svelte';
+	import { GithubLogo, Bug } from 'phosphor-svelte';
 
 	let { children } = $props();
 
@@ -20,8 +20,19 @@
 		</a>
 		<nav>
 			<a href="{base}/specimens/">Specimens</a>
+			<a href="{base}/history/">History</a>
 			<a
-				class="gh"
+				class="icon-link"
+				href="https://github.com/Phauks/Time-Travelers-Almanac/issues/new/choose"
+				target="_blank"
+				rel="noreferrer noopener"
+				aria-label="Report a correction or contribute"
+				title="Report a correction or contribute"
+			>
+				<Bug size={18} />
+			</a>
+			<a
+				class="icon-link"
 				href="https://github.com/Phauks/Time-Travelers-Almanac"
 				target="_blank"
 				rel="noreferrer noopener"
@@ -85,7 +96,7 @@
 	nav a:hover {
 		color: var(--color-paper);
 	}
-	.gh {
+	.icon-link {
 		display: inline-flex;
 		align-items: center;
 	}

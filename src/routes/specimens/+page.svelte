@@ -1,11 +1,11 @@
 <script lang="ts">
-	import { specimens, RULE_META } from '$lib/data';
-	import type { Rule } from '$lib/types';
+	import { base } from '$app/paths';
+	import { page } from '$app/state';
+	import { specimens, RULE_META, MEDIUM_META } from '$lib/data';
+	import type { Medium, Rule } from '$lib/types';
 	import SpecimenCard from '$lib/components/SpecimenCard.svelte';
 
 	const rules: Rule[] = ['fixed', 'mutable', 'branching'];
-
-	// active filters  -  start with all on; "loop" is a separate toggle
 	let active = $state<Set<Rule>>(new Set(rules));
 	let loopOnly = $state(false);
 
@@ -16,9 +16,16 @@
 		active = next;
 	}
 
+	let sagaFilter = $derived(page.url.searchParams.get('saga'));
+	let mediumFilter = $derived(page.url.searchParams.get('medium') as Medium | null);
+
 	let shown = $derived(
 		specimens.filter(
-			(s) => s.rules.some((r) => active.has(r)) && (!loopOnly || s.loop !== null)
+			(s) =>
+				s.rules.some((r) => active.has(r)) &&
+				(!loopOnly || s.loop !== null) &&
+				(!sagaFilter || s.saga === sagaFilter) &&
+				(!mediumFilter || s.medium === mediumFilter)
 		)
 	);
 </script>
@@ -31,9 +38,18 @@
 	<p class="eyebrow">The catalogue</p>
 	<h1>Diagnose by symptom</h1>
 	<p class="lede">
-		Filter the specimens by the <b>rule</b> that binds them. More of the hundred are catalogued
-		with each edition.
+		Filter the specimens by the <b>rule</b> that binds them. More of the hundred are catalogued with
+		each edition.
 	</p>
+
+	{#if sagaFilter || mediumFilter}
+		<p class="scope">
+			Showing{#if mediumFilter}
+				{MEDIUM_META[mediumFilter]}{/if}{#if sagaFilter}
+				the {sagaFilter.replace(/-/g, ' ')} saga{/if}
+			<a href="{base}/specimens/">clear filter</a>
+		</p>
+	{/if}
 
 	<div class="filters" role="group" aria-label="Filter by rule">
 		{#each rules as r (r)}
@@ -65,15 +81,15 @@
 	</div>
 
 	{#if shown.length === 0}
-		<p class="empty">No specimens match. Widen the filters  -  time is generous like that.</p>
+		<p class="empty">No specimens match. Widen the filters, time is generous like that.</p>
 	{/if}
 </section>
 
 <style>
 	.page {
-		max-width: 1140px;
+		max-width: 1240px;
 		margin: 0 auto;
-		padding: clamp(1.5rem, 5vw, 3.5rem) clamp(1rem, 4vw, 3.5rem) 5rem;
+		padding: clamp(1.5rem, 5vw, 3.5rem) clamp(1rem, 4vw, 3rem) 5rem;
 	}
 	h1 {
 		font-family: var(--font-serif);
@@ -85,9 +101,26 @@
 	.lede {
 		color: var(--color-muted);
 		max-width: 52ch;
-		margin: 0 0 1.8rem;
+		margin: 0 0 1.4rem;
 	}
 	.lede b {
+		color: var(--color-paper);
+	}
+	.scope {
+		font-family: var(--font-mono);
+		font-size: 0.8rem;
+		color: var(--color-paper);
+		margin: 0 0 1.4rem;
+		text-transform: capitalize;
+	}
+	.scope a {
+		margin-left: 0.6rem;
+		color: var(--color-muted);
+		text-transform: none;
+		text-decoration: underline;
+		text-underline-offset: 2px;
+	}
+	.scope a:hover {
 		color: var(--color-paper);
 	}
 	.filters {
@@ -129,18 +162,8 @@
 	}
 	.grid {
 		display: grid;
-		grid-template-columns: repeat(3, 1fr);
+		grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
 		gap: 1rem;
-	}
-	@media (max-width: 820px) {
-		.grid {
-			grid-template-columns: repeat(2, 1fr);
-		}
-	}
-	@media (max-width: 520px) {
-		.grid {
-			grid-template-columns: 1fr;
-		}
 	}
 	.empty {
 		color: var(--color-muted);

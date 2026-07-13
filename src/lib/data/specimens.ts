@@ -72,6 +72,9 @@ export const specimens: MediaEntry[] = [
 		destEra: 0.35,
 		destLabel: '1955',
 		logline: 'The timeline is clay; the family photograph is the warning light.',
+		synopsis:
+			'A teenager, Marty McFly, is accidentally sent from 1985 to 1955 in a time machine built by his friend, the scientist Doc Brown. Stranded in the past, he disrupts the meeting of his own parents and must set their romance right, and find a way home, before he is erased from history.',
+		aliases: ['Back to the Future Part I', 'Back to the Future Part 1'],
 		mechanism:
 			'A plutonium-fuelled DeLorean reaching 88 mph displaces its occupants to a set date. Change the past and the present  -  and your own existence  -  redraws accordingly.',
 		paradoxes: ['grandfather', 'ontological'],

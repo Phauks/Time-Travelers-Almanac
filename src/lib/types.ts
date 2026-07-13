@@ -85,10 +85,7 @@ export type EventKind =
 	| 'departure' // a time jump leaves from here
 	| 'arrival' // a traveller lands here
 	| 'return' // a traveller comes back to their home era
-	| 'loop' // a repeat / reset
-	// legacy aliases still accepted by the renderer
-	| 'normal'
-	| 'jump';
+	| 'loop'; // a repeat / reset
 
 export interface TimelineEvent {
 	id: string;
@@ -100,7 +97,7 @@ export interface TimelineEvent {
 	/** for beats that span time, the sortable end point (a year or index) */
 	chronoEnd?: number;
 	/** how to display the start of the moment, e.g. "Nov 12, 1955, 10:04 PM" */
-	chronoLabel?: string;
+	chronoStartLabel?: string;
 	/** display for the end of a spanning beat, e.g. "Nov 11, 1955" */
 	chronoEndLabel?: string;
 	/** what happens in this beat */
@@ -122,9 +119,7 @@ export interface TimelineEvent {
 	traveler?: string;
 	/** which timeline branch this beat lives on (see MediaEntry.branches) */
 	branch?: string;
-	/** legacy: superseded by `branch` */
-	variant?: string;
-	/** which saga part this event belongs to (for combined saga timelines) */
+	/** which franchise part this event belongs to (for combined franchise timelines) */
 	part?: string;
 	/** which media/part this beat is sourced from, shown on combined master timelines */
 	source?: string;
@@ -167,8 +162,8 @@ export interface MediaEntry {
 	released?: string;
 	medium: Medium;
 	/** franchise grouping, e.g. "back-to-the-future" */
-	saga?: string;
-	/** which canon within the saga this entry belongs to */
+	franchise?: string;
+	/** which canon within the franchise this entry belongs to */
 	continuity?: Continuity;
 	/** order within its continuity (e.g. film 1, 2, 3) */
 	partOrder?: number;
@@ -191,10 +186,7 @@ export interface MediaEntry {
 	paradoxes: string[];
 	paradoxRisk: ParadoxRisk;
 	fieldNote?: string;
-	related?: string[]; // legacy manual override; related is now computed
 
-	/** where hero/still art will come from (differs by medium) */
-	imageSource: string;
 	/** poster/cover image URL (populated by the enrichment step) */
 	poster?: string;
 	/** trailer URL (populated by the enrichment step from TMDB) */

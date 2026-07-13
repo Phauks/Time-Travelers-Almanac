@@ -23,13 +23,11 @@ export const specimens: MediaEntry[] = [
 		paradoxRisk: 'medium',
 		fieldNote:
 			'Should you find yourself advising a king, resist the urge to introduce gunpowder. It rarely ends the way you hope.',
-		related: ['back-to-the-future'],
-		imageSource: 'Book covers → Open Library',
 		timeline: [
-			{ id: 'cy1', label: 'Hank in 1889', narrative: 0, chrono: 1889, chronoLabel: '1889', kind: 'origin' },
-			{ id: 'cy2', label: 'Knocked to 528 AD', narrative: 1, chrono: 528, chronoLabel: '528', kind: 'jump', jumpTo: 'cy2' },
-			{ id: 'cy3', label: 'Industrialises Camelot', narrative: 2, chrono: 528.5, chronoLabel: '528' },
-			{ id: 'cy4', label: 'Wakes in 1889', narrative: 3, chrono: 1889.1, chronoLabel: '1889' }
+			{ id: 'cy1', label: 'Hank in 1889', narrative: 0, chrono: 1889, chronoStartLabel: '1889', kind: 'origin' },
+			{ id: 'cy2', label: 'Knocked to 528 AD', narrative: 1, chrono: 528, chronoStartLabel: '528', kind: 'departure', jumpTo: 'cy2' },
+			{ id: 'cy3', label: 'Industrialises Camelot', narrative: 2, chrono: 528.5, chronoStartLabel: '528' },
+			{ id: 'cy4', label: 'Wakes in 1889', narrative: 3, chrono: 1889.1, chronoStartLabel: '1889' }
 		]
 	},
 	{
@@ -38,7 +36,7 @@ export const specimens: MediaEntry[] = [
 		year: 1984,
 		released: 'October 26, 1984',
 		medium: 'film',
-		saga: 'terminator',
+		franchise: 'terminator',
 		rules: ['fixed'],
 		mode: ['contraption'],
 		loop: 'causal',
@@ -51,13 +49,11 @@ export const specimens: MediaEntry[] = [
 		paradoxRisk: 'high',
 		fieldNote:
 			'You cannot prevent the future by visiting the past  -  you are how the future was arranged. Bring a jacket; you arrive with nothing.',
-		related: ['twelve-monkeys'],
-		imageSource: 'Film stills → TMDB',
 		timeline: [
-			{ id: 't1', label: 'Machines rise', narrative: 0, chrono: 2029, chronoLabel: '2029', kind: 'origin' },
-			{ id: 't2', label: 'Kyle sent back', narrative: 1, chrono: 1984, chronoLabel: '1984', kind: 'jump', jumpTo: 't3' },
-			{ id: 't3', label: "John's conception", narrative: 2, chrono: 1984.3, chronoLabel: '1984', kind: 'loop' },
-			{ id: 't4', label: 'Future war continues', narrative: 3, chrono: 2029.2, chronoLabel: '2029' }
+			{ id: 't1', label: 'Machines rise', narrative: 0, chrono: 2029, chronoStartLabel: '2029', kind: 'origin' },
+			{ id: 't2', label: 'Kyle sent back', narrative: 1, chrono: 1984, chronoStartLabel: '1984', kind: 'departure', jumpTo: 't3' },
+			{ id: 't3', label: "John's conception", narrative: 2, chrono: 1984.3, chronoStartLabel: '1984', kind: 'loop' },
+			{ id: 't4', label: 'Future war continues', narrative: 3, chrono: 2029.2, chronoStartLabel: '2029' }
 		]
 	},
 	{
@@ -66,7 +62,7 @@ export const specimens: MediaEntry[] = [
 		year: 1985,
 		released: 'July 3, 1985',
 		medium: 'film',
-		saga: 'back-to-the-future',
+		franchise: 'back-to-the-future',
 		continuity: 'film',
 		partOrder: 1,
 		rules: ['mutable'],
@@ -84,8 +80,6 @@ export const specimens: MediaEntry[] = [
 		paradoxRisk: 'high',
 		fieldNote:
 			'Keep the almanac dry and the flux capacitor charged. If your siblings begin vanishing from photographs, prioritise your parents’ courtship.',
-		related: ['a-connecticut-yankee'],
-		imageSource: 'Film stills → TMDB',
 		sources: [
 			{ label: 'Wikipedia  -  Back to the Future', url: 'https://en.wikipedia.org/wiki/Back_to_the_Future' },
 			{ label: 'Futurepedia  -  Twin Pines Mall', url: 'https://backtothefuture.fandom.com/wiki/Twin_Pines_Mall' },
@@ -132,7 +126,7 @@ export const specimens: MediaEntry[] = [
 				label: 'The original 1955',
 				narrative: -2,
 				chrono: 1955.35,
-				chronoLabel: 'Nov 1955 (original)',
+				chronoStartLabel: 'Nov 1955 (original)',
 				location: 'Downtown Hill Valley',
 				kind: 'event',
 				description:
@@ -143,14 +137,10 @@ export const specimens: MediaEntry[] = [
 				label: 'The DeLorean revealed',
 				narrative: 0,
 				chrono: 1985.82,
-				chronoLabel: 'Oct 26, 1985, 1:15 AM',
+				chronoStartLabel: 'Oct 26, 1985, 1:15 AM',
 				location: 'Twin Pines Mall, Hill Valley',
 				kind: 'departure',
 				jumpTo: 'einstein',
-				variant: 'prime-1985',
-				image:
-					'https://upload.wikimedia.org/wikipedia/commons/thumb/2/28/TeamTimeCar.com-BTTF_DeLorean_Time_Machine-OtoGodfrey.com-JMortonPhoto.com-07.jpg/960px-TeamTimeCar.com-BTTF_DeLorean_Time_Machine-OtoGodfrey.com-JMortonPhoto.com-07.jpg',
-				imageCredit: 'Oto Godfrey and Justin Morton, CC BY-SA 4.0, via Wikimedia Commons',
 				description:
 					'Doc Brown demonstrates the time machine, sending Einstein the dog one minute into the future  -  the first time travel on the timeline.'
 			},
@@ -159,10 +149,9 @@ export const specimens: MediaEntry[] = [
 				label: 'Einstein arrives, one minute on',
 				narrative: 0.5,
 				chrono: 1985.8201,
-				chronoLabel: 'Oct 26, 1985, 1:16 AM',
+				chronoStartLabel: 'Oct 26, 1985, 1:16 AM',
 				location: 'Twin Pines Mall, Hill Valley',
 				kind: 'arrival',
-				variant: 'prime-1985',
 				description:
 					'The DeLorean reappears with its clock exactly one minute behind. Einstein becomes the first time traveller, and Doc proves the machine works.'
 			},
@@ -171,11 +160,10 @@ export const specimens: MediaEntry[] = [
 				label: 'Libyans attack  -  Marty flees',
 				narrative: 1,
 				chrono: 1985.8205,
-				chronoLabel: 'Oct 26, 1985, 1:20 AM',
+				chronoStartLabel: 'Oct 26, 1985, 1:20 AM',
 				location: 'Twin Pines Mall, Hill Valley',
 				kind: 'departure',
 				jumpTo: 'arrive55',
-				variant: 'prime-1985',
 				description:
 					'Doc is gunned down. Marty escapes in the DeLorean, hits 88 mph, and is thrown back to the date on the time circuits.'
 			},
@@ -184,7 +172,7 @@ export const specimens: MediaEntry[] = [
 				label: 'Arrival in 1955',
 				narrative: 2,
 				chrono: 1955.845,
-				chronoLabel: 'Nov 5, 1955, 6:00 AM',
+				chronoStartLabel: 'Nov 5, 1955, 6:00 AM',
 				location: 'Peabody Ranch, Hill Valley',
 				kind: 'arrival',
 				description:
@@ -195,7 +183,7 @@ export const specimens: MediaEntry[] = [
 				label: 'The meeting is disrupted',
 				narrative: 3,
 				chrono: 1955.847,
-				chronoLabel: 'Nov 5, 1955',
+				chronoStartLabel: 'Nov 5, 1955',
 				location: 'Downtown Hill Valley',
 				kind: 'event',
 				description:
@@ -208,7 +196,7 @@ export const specimens: MediaEntry[] = [
 				label: 'Finds the young Doc',
 				narrative: 4,
 				chrono: 1955.848,
-				chronoLabel: 'Nov 5, 1955',
+				chronoStartLabel: 'Nov 5, 1955',
 				location: "Doc's mansion, Hill Valley",
 				kind: 'event',
 				description:
@@ -220,7 +208,7 @@ export const specimens: MediaEntry[] = [
 				narrative: 5,
 				chrono: 1955.855,
 				chronoEnd: 1955.862,
-				chronoLabel: 'Nov 6, 1955',
+				chronoStartLabel: 'Nov 6, 1955',
 				chronoEndLabel: 'Nov 11, 1955',
 				location: 'Hill Valley High',
 				kind: 'event',
@@ -232,10 +220,9 @@ export const specimens: MediaEntry[] = [
 				label: 'Enchantment Under the Sea',
 				narrative: 6,
 				chrono: 1955.864,
-				chronoLabel: 'Nov 12, 1955, night',
+				chronoStartLabel: 'Nov 12, 1955, night',
 				location: 'Hill Valley High gym',
 				kind: 'event',
-				variant: 'altered-1985',
 				description:
 					'George stands up to Biff and kisses Lorraine. His parents fall in love, Marty’s existence is secured, and the photograph is restored.'
 			},
@@ -244,13 +231,10 @@ export const specimens: MediaEntry[] = [
 				label: 'The clock-tower lightning',
 				narrative: 7,
 				chrono: 1955.866,
-				chronoLabel: 'Nov 12, 1955, 10:04 PM',
+				chronoStartLabel: 'Nov 12, 1955, 10:04 PM',
 				location: 'Courthouse Square, Hill Valley',
 				kind: 'departure',
 				jumpTo: 'return85',
-				image:
-					'https://upload.wikimedia.org/wikipedia/commons/7/71/Universal_Studios%2C_1991%2C_Back_To_The_Future%2C_Courthouse_Square_2.jpg',
-				imageCredit: 'Stephansanders, CC BY-SA 2.0, via Wikimedia Commons',
 				description:
 					'Doc runs a wire from the tower to the street; the lightning strikes as the DeLorean hits 88 mph, sending Marty home.'
 			},
@@ -259,7 +243,7 @@ export const specimens: MediaEntry[] = [
 				label: 'Back to 1985',
 				narrative: 8,
 				chrono: 1985.821,
-				chronoLabel: 'Oct 26, 1985, 1:24 AM',
+				chronoStartLabel: 'Oct 26, 1985, 1:24 AM',
 				location: 'Lone Pine Mall, Hill Valley',
 				kind: 'return',
 				description:
@@ -270,10 +254,9 @@ export const specimens: MediaEntry[] = [
 				label: 'A better 1985',
 				narrative: 9,
 				chrono: 1985.822,
-				chronoLabel: 'Oct 26, 1985, morning',
+				chronoStartLabel: 'Oct 26, 1985, morning',
 				location: 'The McFly home',
 				kind: 'event',
-				variant: 'altered-1985',
 				description:
 					'Marty wakes to an overwritten present: George is a confident author, Lorraine is happy, and Biff is now their meek valet.'
 			},
@@ -282,14 +265,10 @@ export const specimens: MediaEntry[] = [
 				label: '“…we don’t need roads.”',
 				narrative: 10,
 				chrono: 1985.823,
-				chronoLabel: 'Oct 26, 1985, later',
+				chronoStartLabel: 'Oct 26, 1985, later',
 				location: 'The McFly home',
 				kind: 'departure',
-				variant: 'altered-1985',
 				jumpToLabel: '2015',
-				image:
-					'https://upload.wikimedia.org/wikipedia/commons/thumb/a/ac/Space_Center_Houston_March_2022_25_%28Back_to_the_Future_time_machine%29.jpg/960px-Space_Center_Houston_March_2022_25_%28Back_to_the_Future_time_machine%29.jpg',
-				imageCredit: 'Michael Barera, CC BY-SA 4.0, via Wikimedia Commons',
 				crossRef: { entry: 'back-to-the-future-part-ii', event: 'depart85' },
 				description: 'Doc returns from 2015 and takes Marty and Jennifer into the future.'
 			}
@@ -301,7 +280,7 @@ export const specimens: MediaEntry[] = [
 		year: 1989,
 		released: 'November 22, 1989',
 		medium: 'film',
-		saga: 'back-to-the-future',
+		franchise: 'back-to-the-future',
 		continuity: 'film',
 		partOrder: 2,
 		rules: ['mutable', 'branching'],
@@ -319,7 +298,6 @@ export const specimens: MediaEntry[] = [
 		paradoxRisk: 'high',
 		fieldNote:
 			'If you must revisit a day you have already lived, do not let your earlier self see you, and never leave an almanac lying around.',
-		imageSource: 'Film stills, TMDB',
 		sources: [
 			{ label: 'Wikipedia, Back to the Future Part II', url: 'https://en.wikipedia.org/wiki/Back_to_the_Future_Part_II' },
 			{ label: 'Futurepedia, Back to the Future timeline', url: 'https://backtothefuture.fandom.com/wiki/Back_to_the_Future_timeline' }
@@ -361,7 +339,7 @@ export const specimens: MediaEntry[] = [
 				label: 'Off to the future',
 				narrative: 0,
 				chrono: 1985.83,
-				chronoLabel: 'Oct 26, 1985',
+				chronoStartLabel: 'Oct 26, 1985',
 				location: 'Hill Valley',
 				kind: 'departure',
 				jumpTo: 'arrive15',
@@ -373,18 +351,31 @@ export const specimens: MediaEntry[] = [
 				label: 'Arrival in 2015',
 				narrative: 1,
 				chrono: 2015.8,
-				chronoLabel: 'Oct 21, 2015',
+				chronoStartLabel: 'Oct 21, 2015',
 				location: 'Hill Valley',
 				kind: 'arrival',
 				branch: 'prime',
-				description: 'Marty poses as his own son to keep the family out of trouble.'
+				description: 'The whole reason for the trip: in the future Doc read about, Marty Jr. is talked into a robbery and jailed, and the family falls apart. Marty poses as his own son to stop it.'
+			},
+			{
+				id: 'griff',
+				label: "Marty Jr. and the jail future",
+				narrative: 1.5,
+				chrono: 2015.805,
+				chronoStartLabel: 'Oct 21, 2015, 4:00 PM',
+				location: "Cafe 80s, Hill Valley",
+				kind: 'event',
+				branch: 'prime',
+				paradox:
+					"The averted future: left alone, Marty Jr. joins Griff Tannen's hoverboard robbery, is arrested within two hours, and in trying to free him Marlene is jailed too. It is the ruin Doc came back to prevent.",
+				description: "Griff Tannen tries to recruit Marty Jr. for a heist. Marty, disguised as his son, turns Griff down; Griff's gang crash into the courthouse and are arrested instead, and the jail future never happens."
 			},
 			{
 				id: 'almanac',
 				label: 'The sports almanac',
 				narrative: 2,
 				chrono: 2015.81,
-				chronoLabel: 'Oct 21, 2015',
+				chronoStartLabel: 'Oct 21, 2015',
 				location: 'Hill Valley',
 				kind: 'event',
 				branch: 'prime',
@@ -395,7 +386,7 @@ export const specimens: MediaEntry[] = [
 				label: 'Old Biff takes the DeLorean',
 				narrative: 3,
 				chrono: 2015.82,
-				chronoLabel: 'Oct 21, 2015',
+				chronoStartLabel: 'Oct 21, 2015',
 				location: 'Hill Valley',
 				kind: 'departure',
 				jumpTo: 'biff-gives',
@@ -407,7 +398,7 @@ export const specimens: MediaEntry[] = [
 				label: 'Biff arms his younger self',
 				narrative: 4,
 				chrono: 1955.9,
-				chronoLabel: 'Nov 12, 1955',
+				chronoStartLabel: 'Nov 12, 1955',
 				location: 'Hill Valley',
 				kind: 'arrival',
 				jumpTo: 'biff-return',
@@ -419,7 +410,7 @@ export const specimens: MediaEntry[] = [
 				label: 'The impossible return',
 				narrative: 5,
 				chrono: 2015.83,
-				chronoLabel: 'Oct 21, 2015',
+				chronoStartLabel: 'Oct 21, 2015',
 				location: 'Hill Valley',
 				kind: 'return',
 				branch: 'prime',
@@ -432,7 +423,7 @@ export const specimens: MediaEntry[] = [
 				label: 'The group flies home',
 				narrative: 5.5,
 				chrono: 2015.835,
-				chronoLabel: 'Oct 21, 2015',
+				chronoStartLabel: 'Oct 21, 2015',
 				location: 'Hill Valley',
 				kind: 'departure',
 				jumpTo: 'arrive-a',
@@ -444,7 +435,7 @@ export const specimens: MediaEntry[] = [
 				label: 'A different 1985',
 				narrative: 6,
 				chrono: 1985.84,
-				chronoLabel: 'Oct 26, 1985 (altered)',
+				chronoStartLabel: 'Oct 26, 1985 (altered)',
 				location: 'Hill Valley',
 				kind: 'return',
 				branch: 'dystopia',
@@ -455,7 +446,7 @@ export const specimens: MediaEntry[] = [
 				label: "Biff's empire",
 				narrative: 7,
 				chrono: 1985.85,
-				chronoLabel: '1985 (altered)',
+				chronoStartLabel: '1985 (altered)',
 				location: 'Hill Valley',
 				kind: 'event',
 				branch: 'dystopia',
@@ -466,7 +457,7 @@ export const specimens: MediaEntry[] = [
 				label: 'Back to 1955 again',
 				narrative: 8,
 				chrono: 1985.86,
-				chronoLabel: 'Oct 1985 (altered)',
+				chronoStartLabel: 'Oct 1985 (altered)',
 				location: 'Hill Valley',
 				kind: 'departure',
 				jumpTo: 'retrieve',
@@ -478,7 +469,7 @@ export const specimens: MediaEntry[] = [
 				label: 'Retrieving the almanac',
 				narrative: 9,
 				chrono: 1955.905,
-				chronoLabel: 'Nov 12, 1955',
+				chronoStartLabel: 'Nov 12, 1955',
 				location: 'Hill Valley',
 				kind: 'event',
 				branch: 'restored',
@@ -489,7 +480,7 @@ export const specimens: MediaEntry[] = [
 				label: 'Doc is struck to 1885',
 				narrative: 10,
 				chrono: 1955.92,
-				chronoLabel: 'Nov 12, 1955',
+				chronoStartLabel: 'Nov 12, 1955',
 				location: 'Hill Valley',
 				kind: 'departure',
 				branch: 'restored',
@@ -506,7 +497,7 @@ export const specimens: MediaEntry[] = [
 		year: 1990,
 		released: 'May 25, 1990',
 		medium: 'film',
-		saga: 'back-to-the-future',
+		franchise: 'back-to-the-future',
 		continuity: 'film',
 		partOrder: 3,
 		rules: ['mutable'],
@@ -524,7 +515,6 @@ export const specimens: MediaEntry[] = [
 		paradoxRisk: 'medium',
 		fieldNote:
 			'If your machine runs dry in a century without petrol, a fast enough train will serve. Mind the ravine.',
-		imageSource: 'Film stills, TMDB',
 		sources: [
 			{ label: 'Wikipedia, Back to the Future Part III', url: 'https://en.wikipedia.org/wiki/Back_to_the_Future_Part_III' },
 			{ label: 'Futurepedia, Back to the Future timeline', url: 'https://backtothefuture.fandom.com/wiki/Back_to_the_Future_timeline' }
@@ -537,7 +527,20 @@ export const specimens: MediaEntry[] = [
 		],
 		ratings: { imdb: 7.5, rtCritic: 79, rtAudience: 78, metacritic: 55 },
 		branches: [
-			{ id: 'main', label: 'Timeline 1', status: 'original', note: 'the single restored timeline of the saga' }
+			{
+				id: 'original',
+				label: 'Timeline 1',
+				status: 'endangered',
+				note: 'the history Marty found: Buford Tannen shoots Doc dead in 1885'
+			},
+			{
+				id: 'saved',
+				label: 'Timeline 2',
+				parent: 'original',
+				branchAt: 'showdown',
+				status: 'restored',
+				note: 'Marty prevents the killing; Doc lives and both make it home'
+			}
 		],
 		timeline: [
 			{
@@ -545,9 +548,10 @@ export const specimens: MediaEntry[] = [
 				label: 'A letter from 1885',
 				narrative: 0,
 				chrono: 1955.95,
-				chronoLabel: 'Nov 15, 1955',
+				chronoStartLabel: 'Nov 15, 1955',
 				location: 'Hill Valley',
 				kind: 'origin',
+				branch: 'original',
 				description: "Marty, still in 1955, receives Doc's seventy-year-old letter. Doc is alive and well in 1885, having been sent there by lightning."
 			},
 			{
@@ -555,20 +559,22 @@ export const specimens: MediaEntry[] = [
 				label: 'The tombstone',
 				narrative: 0.5,
 				chrono: 1955.955,
-				chronoLabel: 'Nov 1955',
+				chronoStartLabel: 'Nov 1955',
 				location: 'Boot Hill, Hill Valley',
 				kind: 'event',
-				description: "The 1955 Doc and Marty find a photograph of Doc's headstone: he is shot in the back by Buford Tannen days after the letter was written."
+				branch: 'original',
+				description: "The 1955 Doc and Marty find a photograph of Doc's headstone: he is shot in the back by Buford Tannen days after the letter was written. This is the timeline Marty must overwrite."
 			},
 			{
 				id: 'depart55',
 				label: 'Off to the Old West',
 				narrative: 1,
 				chrono: 1955.96,
-				chronoLabel: 'Nov 16, 1955',
+				chronoStartLabel: 'Nov 16, 1955',
 				location: 'Pohatchee Drive-In, Hill Valley',
 				kind: 'departure',
 				jumpTo: 'arrive85',
+				branch: 'original',
 				description: 'The 1955 Doc repairs the mine-stored DeLorean and sends Marty back to save his friend.'
 			},
 			{
@@ -576,9 +582,10 @@ export const specimens: MediaEntry[] = [
 				label: 'Arrival in 1885',
 				narrative: 2,
 				chrono: 1885.67,
-				chronoLabel: 'Sep 2, 1885, 8:00 AM',
+				chronoStartLabel: 'Sep 2, 1885, 8:00 AM',
 				location: 'Hill Valley',
 				kind: 'arrival',
+				branch: 'original',
 				description: 'Marty lands in the frontier, tears the DeLorean fuel line on arrival, and finds Doc with five days to live.'
 			},
 			{
@@ -586,9 +593,10 @@ export const specimens: MediaEntry[] = [
 				label: 'Doc meets Clara',
 				narrative: 3,
 				chrono: 1885.68,
-				chronoLabel: 'Sep 4, 1885',
+				chronoStartLabel: 'Sep 4, 1885',
 				location: 'Hill Valley',
 				kind: 'event',
+				branch: 'original',
 				description: 'Doc catches the new schoolteacher, Clara Clayton, from a fall into the ravine and falls in love, complicating the escape.'
 			},
 			{
@@ -596,9 +604,10 @@ export const specimens: MediaEntry[] = [
 				label: 'No fuel, one plan',
 				narrative: 3.5,
 				chrono: 1885.69,
-				chronoLabel: 'Sep 5, 1885',
+				chronoStartLabel: 'Sep 5, 1885',
 				location: 'Hill Valley',
 				kind: 'event',
+				branch: 'original',
 				description: 'With no gasoline in 1885, the two plot to push the DeLorean to 88 mph using a stolen steam locomotive.'
 			},
 			{
@@ -606,30 +615,46 @@ export const specimens: MediaEntry[] = [
 				label: 'Mad Dog Tannen',
 				narrative: 4,
 				chrono: 1885.7,
-				chronoLabel: 'Sep 6, 1885',
+				chronoStartLabel: 'Sep 6, 1885',
 				location: 'Hill Valley',
 				kind: 'event',
-				description: 'Marty, going by "Clint Eastwood", is goaded into a pistol duel with the gunman Buford Tannen.'
+				branch: 'original',
+				description: 'Marty, going by "Clint Eastwood", is goaded into a pistol duel with the gunman Buford Tannen, set for dawn the next day.'
 			},
 			{
 				id: 'showdown',
 				label: 'The showdown and the train',
 				narrative: 5,
 				chrono: 1885.71,
-				chronoLabel: 'Sep 7, 1885, 8:00 AM',
+				chronoStartLabel: 'Sep 7, 1885, 8:00 AM',
 				location: 'Hill Valley',
 				kind: 'departure',
 				jumpTo: 'return85',
-				description: 'Marty survives the showdown, then rides a hijacked locomotive that drives the DeLorean to 88 mph. Doc stays behind for Clara.'
+				branch: 'saved',
+				description: 'Marty faces Buford and lives, splitting off a new timeline where Doc is not killed. He then rides a hijacked locomotive that drives the DeLorean to 88 mph. Doc stays behind for Clara.'
+			},
+			{
+				id: 'doc-fate',
+				label: "Doc's original fate",
+				narrative: 5.5,
+				chrono: 1885.712,
+				chronoStartLabel: 'Sep 7, 1885',
+				location: 'Palace Saloon, Hill Valley',
+				kind: 'event',
+				branch: 'original',
+				paradox:
+					'The death Marty came to prevent. In the unaltered 1885, Buford guns Doc down over an eighty-dollar debt; the Boot Hill headstone is its record. It survives only as the timeline Marty overwrites.',
+				description: 'The endangered timeline runs on without Marty: here Buford shoots Doc in the back the morning of the duel.'
 			},
 			{
 				id: 'return85',
 				label: 'Home, and the machine destroyed',
 				narrative: 6,
 				chrono: 1985.83,
-				chronoLabel: 'Oct 27, 1985',
+				chronoStartLabel: 'Oct 27, 1985',
 				location: 'Hill Valley',
 				kind: 'return',
+				branch: 'saved',
 				description: 'Marty arrives in 1985, and a freight train smashes the empty DeLorean to pieces on the tracks.'
 			},
 			{
@@ -637,11 +662,12 @@ export const specimens: MediaEntry[] = [
 				label: 'Doc returns by rail',
 				narrative: 7,
 				chrono: 1985.84,
-				chronoLabel: 'Oct 27, 1985',
+				chronoStartLabel: 'Oct 27, 1985',
 				location: 'Hill Valley',
 				kind: 'arrival',
 				jumpFromLabel: '1885',
 				traveler: 'Doc',
+				branch: 'saved',
 				description: 'Doc, who stayed behind in 1885, spent years turning a steam locomotive into a time machine. It materialises at the tracks with Clara and their sons aboard, a second time traveller arriving under his own power.'
 			}
 		]
@@ -664,13 +690,11 @@ export const specimens: MediaEntry[] = [
 		paradoxRisk: 'high',
 		fieldNote:
 			'If a childhood memory seems to be about you, sit down. It probably is, and it does not improve.',
-		related: ['the-terminator'],
-		imageSource: 'Film stills → TMDB',
 		timeline: [
-			{ id: 'm1', label: 'Plague future', narrative: 0, chrono: 2035, chronoLabel: '2035', kind: 'origin' },
-			{ id: 'm2', label: 'Sent to the 1990s', narrative: 1, chrono: 1996, chronoLabel: '1996', kind: 'jump' },
-			{ id: 'm3', label: 'The airport', narrative: 2, chrono: 1996.5, chronoLabel: '1996', kind: 'loop' },
-			{ id: 'm4', label: 'The memory completes', narrative: 3, chrono: 1996.6, chronoLabel: '1996' }
+			{ id: 'm1', label: 'Plague future', narrative: 0, chrono: 2035, chronoStartLabel: '2035', kind: 'origin' },
+			{ id: 'm2', label: 'Sent to the 1990s', narrative: 1, chrono: 1996, chronoStartLabel: '1996', kind: 'departure' },
+			{ id: 'm3', label: 'The airport', narrative: 2, chrono: 1996.5, chronoStartLabel: '1996', kind: 'loop' },
+			{ id: 'm4', label: 'The memory completes', narrative: 3, chrono: 1996.6, chronoStartLabel: '1996' }
 		]
 	},
 	{
@@ -690,13 +714,11 @@ export const specimens: MediaEntry[] = [
 		paradoxRisk: 'medium',
 		fieldNote:
 			'El Psy Kongroo. Every message you send to yesterday costs you the world you are standing in.',
-		related: ['primer'],
-		imageSource: 'Game art → IGDB / RAWG',
 		timeline: [
-			{ id: 's1', label: 'Send a D-Mail', narrative: 0, chrono: 0, chronoLabel: 'α', kind: 'origin', jumpTo: 's2' },
-			{ id: 's2', label: 'Worldline shifts', narrative: 1, chrono: 0.1, chronoLabel: 'β', kind: 'jump' },
-			{ id: 's3', label: 'Divergence 1.048596', narrative: 2, chrono: 0.2, chronoLabel: 'β', kind: 'loop' },
-			{ id: 's4', label: 'Steins Gate reached', narrative: 3, chrono: 0.3, chronoLabel: 'Ω' }
+			{ id: 's1', label: 'Send a D-Mail', narrative: 0, chrono: 0, chronoStartLabel: 'α', kind: 'origin', jumpTo: 's2' },
+			{ id: 's2', label: 'Worldline shifts', narrative: 1, chrono: 0.1, chronoStartLabel: 'β', kind: 'departure' },
+			{ id: 's3', label: 'Divergence 1.048596', narrative: 2, chrono: 0.2, chronoStartLabel: 'β', kind: 'loop' },
+			{ id: 's4', label: 'Steins Gate reached', narrative: 3, chrono: 0.3, chronoStartLabel: 'Ω' }
 		]
 	},
 	{
@@ -717,13 +739,11 @@ export const specimens: MediaEntry[] = [
 		paradoxRisk: 'high',
 		fieldNote:
 			'Are you talking or listening? By the time you are sure, there may be a third of you doing the other thing.',
-		related: ['steins-gate'],
-		imageSource: 'Film stills → TMDB',
 		timeline: [
-			{ id: 'p1', label: 'The box works', narrative: 0, chrono: 1, chronoLabel: 'day 1', kind: 'origin' },
-			{ id: 'p2', label: 'Ride back six hours', narrative: 1, chrono: 0.75, chronoLabel: '−6h', kind: 'jump', jumpTo: 'p2' },
-			{ id: 'p3', label: 'Doubled selves', narrative: 2, chrono: 0.8, chronoLabel: '−6h', kind: 'loop' },
-			{ id: 'p4', label: 'Timelines multiply', narrative: 3, chrono: 1.5, chronoLabel: 'day 1+' }
+			{ id: 'p1', label: 'The box works', narrative: 0, chrono: 1, chronoStartLabel: 'day 1', kind: 'origin' },
+			{ id: 'p2', label: 'Ride back six hours', narrative: 1, chrono: 0.75, chronoStartLabel: '−6h', kind: 'departure', jumpTo: 'p2' },
+			{ id: 'p3', label: 'Doubled selves', narrative: 2, chrono: 0.8, chronoStartLabel: '−6h', kind: 'loop' },
+			{ id: 'p4', label: 'Timelines multiply', narrative: 3, chrono: 1.5, chronoStartLabel: 'day 1+' }
 		]
 	},
 	{
@@ -744,13 +764,11 @@ export const specimens: MediaEntry[] = [
 		paradoxRisk: 'medium',
 		fieldNote:
 			'Death is now a checkpoint, not a full stop. Small comfort, given how often you will reach it.',
-		related: ['twelve-monkeys'],
-		imageSource: 'Film stills → TMDB',
 		timeline: [
-			{ id: 'e1', label: 'Die on the beach', narrative: 0, chrono: 1, chronoLabel: 'day', kind: 'origin' },
-			{ id: 'e2', label: 'Reset to morning', narrative: 1, chrono: 0, chronoLabel: 'morning', kind: 'loop', jumpTo: 'e1' },
-			{ id: 'e3', label: 'Learn, advance', narrative: 2, chrono: 0.5, chronoLabel: 'day' },
-			{ id: 'e4', label: 'Break the loop', narrative: 3, chrono: 2, chronoLabel: 'after' }
+			{ id: 'e1', label: 'Die on the beach', narrative: 0, chrono: 1, chronoStartLabel: 'day', kind: 'origin' },
+			{ id: 'e2', label: 'Reset to morning', narrative: 1, chrono: 0, chronoStartLabel: 'morning', kind: 'loop', jumpTo: 'e1' },
+			{ id: 'e3', label: 'Learn, advance', narrative: 2, chrono: 0.5, chronoStartLabel: 'day' },
+			{ id: 'e4', label: 'Break the loop', narrative: 3, chrono: 2, chronoStartLabel: 'after' }
 		]
 	},
 	{
@@ -771,13 +789,11 @@ export const specimens: MediaEntry[] = [
 		paradoxRisk: 'low',
 		fieldNote:
 			'There is no machine to sabotage and no button to press. The only exit is self-improvement, which is the cruellest mechanism of all.',
-		related: ['edge-of-tomorrow'],
-		imageSource: 'Film stills → TMDB',
 		timeline: [
-			{ id: 'g1', label: 'Feb 2  -  wake', narrative: 0, chrono: 0, chronoLabel: '6:00', kind: 'origin' },
-			{ id: 'g2', label: 'The day plays out', narrative: 1, chrono: 0.5, chronoLabel: 'day' },
-			{ id: 'g3', label: 'Midnight  -  reset', narrative: 2, chrono: 1, chronoLabel: '00:00', kind: 'loop', jumpTo: 'g1' },
-			{ id: 'g4', label: 'Feb 3 at last', narrative: 3, chrono: 2, chronoLabel: 'Feb 3' }
+			{ id: 'g1', label: 'Feb 2  -  wake', narrative: 0, chrono: 0, chronoStartLabel: '6:00', kind: 'origin' },
+			{ id: 'g2', label: 'The day plays out', narrative: 1, chrono: 0.5, chronoStartLabel: 'day' },
+			{ id: 'g3', label: 'Midnight  -  reset', narrative: 2, chrono: 1, chronoStartLabel: '00:00', kind: 'loop', jumpTo: 'g1' },
+			{ id: 'g4', label: 'Feb 3 at last', narrative: 3, chrono: 2, chronoStartLabel: 'Feb 3' }
 		]
 	},
 	{
@@ -798,13 +814,11 @@ export const specimens: MediaEntry[] = [
 		paradoxRisk: 'high',
 		fieldNote:
 			'An hour here may cost you seven years back home. Budget your away-missions accordingly.',
-		related: ['twelve-monkeys'],
-		imageSource: 'Film stills → TMDB',
 		timeline: [
-			{ id: 'i1', label: 'Leave a dying Earth', narrative: 0, chrono: 2067, chronoLabel: '2067', kind: 'origin' },
-			{ id: 'i2', label: "Miller's planet (dilation)", narrative: 1, chrono: 2067.1, chronoLabel: '2067' },
-			{ id: 'i3', label: 'Into the tesseract', narrative: 2, chrono: 2070, chronoLabel: '2070', kind: 'jump', jumpTo: 'i4' },
-			{ id: 'i4', label: 'Message to Murph (past)', narrative: 3, chrono: 2040, chronoLabel: '2040', kind: 'loop' }
+			{ id: 'i1', label: 'Leave a dying Earth', narrative: 0, chrono: 2067, chronoStartLabel: '2067', kind: 'origin' },
+			{ id: 'i2', label: "Miller's planet (dilation)", narrative: 1, chrono: 2067.1, chronoStartLabel: '2067' },
+			{ id: 'i3', label: 'Into the tesseract', narrative: 2, chrono: 2070, chronoStartLabel: '2070', kind: 'departure', jumpTo: 'i4' },
+			{ id: 'i4', label: 'Message to Murph (past)', narrative: 3, chrono: 2040, chronoStartLabel: '2040', kind: 'loop' }
 		]
 	}
 ];

@@ -13,7 +13,7 @@
 		if (!term) return [];
 		return specimens
 			.filter((s) => {
-				const hay = [s.title, ...(s.aliases ?? []), s.saga ?? '', String(s.year)]
+				const hay = [s.title, ...(s.aliases ?? []), s.franchise ?? '', String(s.year)]
 					.join(' ')
 					.toLowerCase();
 				return hay.includes(term);

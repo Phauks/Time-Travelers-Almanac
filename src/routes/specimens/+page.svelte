@@ -15,9 +15,9 @@
 	let loopOnly = $state(false);
 	let sort = $state<'title' | 'newest' | 'oldest'>('title');
 
-	// alphabetical by title, but keep saga parts in their real order (I, II, III)
+	// alphabetical by title, but keep franchise parts in their real order (I, II, III)
 	const byTitle = (a: (typeof specimens)[number], b: (typeof specimens)[number]) =>
-		a.saga && a.saga === b.saga
+		a.franchise && a.franchise === b.franchise
 			? (a.partOrder ?? 0) - (b.partOrder ?? 0)
 			: a.title.localeCompare(b.title);
 
@@ -47,7 +47,7 @@
 		activeMedia = next;
 	}
 
-	let sagaFilter = $derived(browser ? page.url.searchParams.get('saga') : null);
+	let franchiseFilter = $derived(browser ? page.url.searchParams.get('franchise') : null);
 
 	let shown = $derived.by(() => {
 		const list = specimens.filter(
@@ -55,7 +55,7 @@
 				s.rules.some((r) => active.has(r)) &&
 				activeMedia.has(s.medium) &&
 				(!loopOnly || s.loop !== null) &&
-				(!sagaFilter || s.saga === sagaFilter)
+				(!franchiseFilter || s.franchise === franchiseFilter)
 		);
 		if (sort === 'title') return list.sort(byTitle);
 		const dir = sort === 'newest' ? -1 : 1;
@@ -75,9 +75,9 @@
 		each edition.
 	</p>
 
-	{#if sagaFilter}
+	{#if franchiseFilter}
 		<p class="scope">
-			Showing the {sagaFilter.replace(/-/g, ' ')} franchise
+			Showing the {franchiseFilter.replace(/-/g, ' ')} franchise
 			<a href="{base}/specimens/">clear filter</a>
 		</p>
 	{/if}

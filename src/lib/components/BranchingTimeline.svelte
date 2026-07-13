@@ -20,7 +20,8 @@
 		branches = [],
 		accent = 'var(--color-branching)',
 		continuesFrom = null,
-		continuesTo = null
+		continuesTo = null,
+		onOpenImage
 	}: {
 		events: TimelineEvent[];
 		branches?: Branch[];
@@ -29,6 +30,8 @@
 		continuesFrom?: { slug: string; title: string } | null;
 		/** the media this timeline continues into, shown at the end */
 		continuesTo?: { slug: string; title: string } | null;
+		/** open a given image in the page's gallery lightbox */
+		onOpenImage?: (src: string) => void;
 	} = $props();
 
 	// ---- branch membership: walk narrative order, switch at each branchAt marker ----
@@ -172,31 +175,26 @@
 		if (i >= 0 && i < ordered.length) selectedId = ordered[i].id;
 	}
 
-	// stills attached to events, for the gallery
-	let stills = $derived(events.filter((e) => e.image));
-
 	// nodes where a time machine fires (a departure) get a portal ring
 	let departureIds = $derived(new Set(events.filter((e) => e.jumpTo || e.jumpToLabel).map((e) => e.id)));
 
 	const KIND: Record<EventKind, { label: string; icon: unknown | null }> = {
 		origin: { label: 'Origin', icon: Flag },
 		departure: { label: 'Time jump', icon: Lightning },
-		jump: { label: 'Time jump', icon: Lightning },
 		arrival: { label: 'Arrival', icon: MapPin },
 		return: { label: 'Return', icon: ArrowUUpLeft },
 		loop: { label: 'Loop', icon: ArrowsClockwise },
-		event: { label: 'Event', icon: DotOutline },
-		normal: { label: 'Event', icon: DotOutline }
+		event: { label: 'Event', icon: DotOutline }
 	};
 	const kmeta = (e: TimelineEvent) => KIND[e.kind ?? 'event'];
 	const shortDate = (e: TimelineEvent) => {
-		const l = e.chronoLabel ?? '';
+		const l = e.chronoStartLabel ?? '';
 		const m = l.match(/\d{4}/); // keep everything up to and including the year
 		return (m ? l.slice(0, m.index! + 4) : l.split(',')[0]).trim();
 	};
 	// full display label, spanning start to end when the beat covers a range
 	const whenLabel = (e: TimelineEvent) => {
-		const base = e.chronoLabel ?? '';
+		const base = e.chronoStartLabel ?? '';
 		const loc = e.location ? `, ${e.location}` : '';
 		return e.chronoEndLabel ? `${base} to ${e.chronoEndLabel}${loc}` : `${base}${loc}`;
 	};
@@ -210,22 +208,6 @@
 </script>
 
 <div class="btl" style="--accent:{accent}">
-	<div class="head">
-		<div class="toggle" role="group" aria-label="Timeline ordering">
-			<button class:on={order === 'told'} aria-pressed={order === 'told'} onclick={() => (order = 'told')}
-				>As Told</button
-			>
-			<button
-				class:on={order === 'happened'}
-				aria-pressed={order === 'happened'}
-				onclick={() => (order = 'happened')}>As Happened</button
-			>
-		</div>
-	</div>
-	<p class="cap">
-		{order === 'told' ? 'The order you experience the story.' : 'The order the events truly occur in time.'}
-	</p>
-
 	<div class="split">
 	<div class="board-col">
 	{#if continuesFrom || continuesTo}
@@ -328,6 +310,12 @@
 					{#if departureIds.has(p.e.id)}
 						<circle class="dep-ring" cx={p.x} cy={p.y} r="10" fill="none" stroke-width="1.4" stroke-dasharray="2.5 2.5" />
 					{/if}
+					{#if p.e.kind === 'origin'}
+						<g class="origin-mark" transform="translate({p.x - 11}, {p.y - 3})">
+							<line x1="0" y1="1" x2="0" y2="-12" stroke-width="1.5" stroke-linecap="round" />
+							<path d="M0 -12 L7 -10 L0 -7.5 Z" />
+						</g>
+					{/if}
 					<circle class="n-dot" cx={p.x} cy={p.y} r={selectedId === p.e.id ? 8 : 6} fill={branchColor(p.branch)} />
 					{#if selectedId === p.e.id}
 						<circle class="sel-ring" cx={p.x} cy={p.y} r="13" fill="none" stroke-width="1.2" />
@@ -352,6 +340,7 @@
 		{#each branches as b (b.id)}
 			<span class="lg"><i class="dot" style="background:{branchColor(b.id)}"></i>{b.label}<em>{b.note}</em></span>
 		{/each}
+		<span class="lg"><i class="flag"></i>origin (story starts here)</span>
 		<span class="lg"><i class="line fwd"></i>jump forward in time</span>
 		<span class="lg"><i class="line back"></i>jump back in time</span>
 		<span class="lg"><i class="ring"></i>time machine fires here</span>
@@ -360,6 +349,16 @@
 	</div>
 
 	<div class="side">
+	<div class="toggle" role="group" aria-label="Timeline ordering">
+		<button class:on={order === 'told'} aria-pressed={order === 'told'} onclick={() => (order = 'told')}
+			>As Told</button
+		>
+		<button
+			class:on={order === 'happened'}
+			aria-pressed={order === 'happened'}
+			onclick={() => (order = 'happened')}>As Happened</button
+		>
+	</div>
 	{#if selected}
 		{@const M = kmeta(selected)}
 		{@const b = branchById.get(curBranch(selected.id))}
@@ -379,7 +378,11 @@
 				</button>
 			</div>
 			{#if selected.image}
-				<div class="still"><img src={selected.image} alt={selected.label} /></div>
+				<button
+						class="still"
+						onclick={() => onOpenImage?.(selected.image!)}
+						aria-label="Open {selected.label} in the gallery"
+					><img src={selected.image} alt={selected.label} /></button>
 			{/if}
 			<div class="badges">
 				<span class="badge" style="--c:{branchColor(curBranch(selected.id))}">
@@ -398,50 +401,27 @@
 	{/if}
 	</div>
 	</div>
-
-	{#if stills.length}
-		<div class="stills">
-			<p class="stills-h">Stills from the timeline</p>
-			<div class="stills-row">
-				{#each stills as e (e.id)}
-					<button
-						class="thumb"
-						class:on={selectedId === e.id}
-						onclick={() => (selectedId = e.id)}
-						aria-label={e.label}
-					>
-						<img src={e.image} alt={e.label} loading="lazy" />
-						<span>{shortDate(e)}</span>
-					</button>
-				{/each}
-			</div>
-		</div>
-	{/if}
 </div>
 
 <style>
 	.btl {
 		width: 100%;
 	}
-	.head {
-		display: flex;
-		align-items: center;
-		gap: 1rem;
-		flex-wrap: wrap;
-	}
 	.toggle {
-		display: inline-flex;
+		display: flex;
+		margin-bottom: 0.7rem;
 		border: 1px solid var(--color-line);
 		border-radius: 999px;
 		overflow: hidden;
 		font-family: var(--font-mono);
-		font-size: 0.72rem;
+		font-size: 0.68rem;
 	}
 	.toggle button {
+		flex: 1;
 		border: 0;
 		background: transparent;
 		color: var(--color-muted);
-		padding: 0.5rem 1rem;
+		padding: 0.45rem 0.8rem;
 		cursor: pointer;
 		text-transform: uppercase;
 		letter-spacing: 0.04em;
@@ -453,11 +433,6 @@
 	.toggle button:focus-visible {
 		outline: 2px solid var(--accent);
 		outline-offset: 2px;
-	}
-	.cap {
-		margin: 0.55rem 0 0.8rem;
-		font-size: 0.85rem;
-		color: var(--color-muted);
 	}
 	.split {
 		display: grid;
@@ -533,6 +508,13 @@
 		stroke: var(--color-muted);
 		opacity: 0.75;
 	}
+	.origin-mark line {
+		stroke: var(--accent);
+	}
+	.origin-mark path {
+		fill: var(--accent);
+		stroke: none;
+	}
 	.n-dot {
 		stroke: var(--color-ink);
 		stroke-width: 3;
@@ -598,6 +580,21 @@
 		height: 12px;
 		border-radius: 50%;
 		border: 1.4px dashed var(--color-muted);
+	}
+	.lg .flag {
+		width: 0;
+		height: 12px;
+		border-left: 1.5px solid var(--accent);
+		position: relative;
+	}
+	.lg .flag::after {
+		content: '';
+		position: absolute;
+		left: 1px;
+		top: 0;
+		border-top: 3px solid transparent;
+		border-bottom: 3px solid transparent;
+		border-left: 6px solid var(--accent);
 	}
 	.lg .haz {
 		width: 0;
@@ -728,62 +725,26 @@
 		outline-offset: 2px;
 	}
 	.still {
+		display: block;
+		width: 100%;
+		padding: 0;
 		border-radius: 6px;
 		overflow: hidden;
 		margin-bottom: 0.7rem;
 		border: 1px solid var(--color-line);
+		background: transparent;
+		cursor: zoom-in;
 	}
 	.still img {
 		display: block;
 		width: 100%;
 		height: auto;
 	}
+	.still:focus-visible {
+		outline: 2px solid var(--accent);
+		outline-offset: 2px;
+	}
 	.badge.src {
 		--c: var(--accent);
-	}
-
-	.stills {
-		margin-top: 1.4rem;
-	}
-	.stills-h {
-		font-family: var(--font-mono);
-		font-size: 0.62rem;
-		letter-spacing: 0.14em;
-		text-transform: uppercase;
-		color: var(--color-muted);
-		margin: 0 0 0.6rem;
-	}
-	.stills-row {
-		display: flex;
-		gap: 0.6rem;
-		overflow-x: auto;
-		padding-bottom: 0.4rem;
-	}
-	.thumb {
-		flex: 0 0 auto;
-		width: 128px;
-		border: 1px solid var(--color-line);
-		border-radius: 6px;
-		overflow: hidden;
-		background: transparent;
-		padding: 0;
-		cursor: pointer;
-	}
-	.thumb.on {
-		border-color: var(--accent);
-	}
-	.thumb img {
-		display: block;
-		width: 100%;
-		height: 74px;
-		object-fit: cover;
-	}
-	.thumb span {
-		display: block;
-		font-family: var(--font-mono);
-		font-size: 0.58rem;
-		color: var(--color-muted);
-		padding: 0.25rem 0.4rem;
-		text-align: left;
 	}
 </style>

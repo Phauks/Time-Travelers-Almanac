@@ -109,20 +109,20 @@ export function ruleColorVar(rule: Rule): string {
 	return `var(--color-${rule})`;
 }
 
-/** Other entries in the same saga, in part order (the "same timeline" set). */
-export function sagaMates(entry: MediaEntry): MediaEntry[] {
-	if (!entry.saga) return [];
+/** Other entries in the same franchise, in part order (the "same timeline" set). */
+export function franchiseMates(entry: MediaEntry): MediaEntry[] {
+	if (!entry.franchise) return [];
 	return specimens
-		.filter((s) => s.slug !== entry.slug && s.saga === entry.saga)
+		.filter((s) => s.slug !== entry.slug && s.franchise === entry.franchise)
 		.sort((a, b) => (a.partOrder ?? 0) - (b.partOrder ?? 0));
 }
 
 /**
  * Related specimens, computed from shared traits (rule, mode, loop) rather than
- * hand-listed. Excludes saga-mates, which get their own section.
+ * hand-listed. Excludes franchise-mates, which get their own section.
  */
 export function relatedSpecimens(entry: MediaEntry, limit = 6): MediaEntry[] {
-	const mates = new Set(sagaMates(entry).map((s) => s.slug));
+	const mates = new Set(franchiseMates(entry).map((s) => s.slug));
 	return specimens
 		.filter((s) => s.slug !== entry.slug && !mates.has(s.slug))
 		.map((s) => {

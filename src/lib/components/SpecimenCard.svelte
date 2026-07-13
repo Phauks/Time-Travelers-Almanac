@@ -10,8 +10,6 @@
 	<div class="plate">
 		{#if specimen.poster}
 			<img src={specimen.poster} alt="{specimen.title} poster" loading="lazy" />
-		{:else}
-			<span class="src">{specimen.imageSource.split('→')[1]?.trim() ?? 'poster'}</span>
 		{/if}
 		<span class="medium">{MEDIUM_META[specimen.medium]}</span>
 	</div>
@@ -75,16 +73,6 @@
 		color: var(--color-ink);
 		padding: 3px 7px;
 		border-radius: 4px;
-	}
-	.src {
-		position: absolute;
-		bottom: 8px;
-		right: 8px;
-		font-family: var(--font-mono);
-		font-size: 0.58rem;
-		letter-spacing: 0.06em;
-		text-transform: uppercase;
-		color: var(--color-muted);
 	}
 	.body {
 		padding: 0.85rem 0.9rem 1rem;

@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { base } from '$app/paths';
-	import { Warning, MagnifyingGlassPlus, ArrowRight } from 'phosphor-svelte';
+	import { Warning, MagnifyingGlassPlus, ArrowRight, Play } from 'phosphor-svelte';
 	import BranchingTimeline from '$lib/components/BranchingTimeline.svelte';
 	import BrandLogo from '$lib/components/BrandLogo.svelte';
 	import SpecimenCard from '$lib/components/SpecimenCard.svelte';
@@ -13,20 +13,25 @@
 		MEDIUM_META,
 		ruleColorVar,
 		relatedSpecimens,
-		sagaMates
+		franchiseMates
 	} from '$lib/data';
 	import type { PageData } from './$types';
 
 	let { data }: { data: PageData } = $props();
 	let s = $derived(data.specimen);
 
-	// poster plus any timeline stills, for the lightbox gallery
+	// timeline events that carry a still, and the full lightbox set (poster first,
+	// then trailer is handled separately, then the stills)
+	let eventShots = $derived(s.timeline.filter((e) => e.image));
 	let gallery = $derived([
 		...(s.poster ? [{ src: s.poster, caption: `${s.title} poster`, credit: '' }] : []),
-		...s.timeline
-			.filter((e) => e.image)
-			.map((e) => ({ src: e.image!, caption: e.label, credit: e.imageCredit ?? '' }))
+		...eventShots.map((e) => ({ src: e.image!, caption: e.label, credit: e.imageCredit ?? '' }))
 	]);
+	const posterOffset = $derived(s.poster ? 1 : 0);
+	function openImageBySrc(src: string) {
+		const i = gallery.findIndex((g) => g.src === src);
+		if (i >= 0) openLightbox(i);
+	}
 	let lbOpen = $state(false);
 	let lbIndex = $state(0);
 	function openLightbox(i = 0) {
@@ -78,10 +83,10 @@
 		}
 		return out;
 	});
-	let mates = $derived(sagaMates(s));
+	let mates = $derived(franchiseMates(s));
 	let related = $derived(relatedSpecimens(s));
-	let sagaLabel = $derived(s.saga ? s.saga.replace(/-/g, ' ') : '');
-	// the saga parts immediately before and after this one, shown as the
+	let franchiseLabel = $derived(s.franchise ? s.franchise.replace(/-/g, ' ') : '');
+	// the franchise parts immediately before and after this one, shown as the
 	// incoming and outgoing connections at the ends of the timeline
 	let prevPart = $derived.by(() => {
 		if (s.partOrder == null) return null;
@@ -107,17 +112,37 @@
 	<header class="top">
 		<div class="lead">
 		<div class="col-img">
-			{#if gallery.length}
+			{#if s.poster}
 				<button class="plate" onclick={() => openLightbox(0)} aria-label="View {s.title} artwork larger">
-					{#if s.poster}
-						<img src={s.poster} alt="{s.title} poster" />
-					{:else}
-						<span class="src">{s.imageSource}</span>
-					{/if}
+					<img src={s.poster} alt="{s.title} poster" />
 					<span class="zoom"><MagnifyingGlassPlus size={16} weight="bold" /></span>
 				</button>
 			{:else}
-				<div class="plate"><span class="src">{s.imageSource}</span></div>
+				<div class="plate ph"><span>{MEDIUM_META[s.medium]}</span></div>
+			{/if}
+
+			{#if trailerId || eventShots.length}
+				<div class="media-strip">
+					{#if trailerId}
+						<button class="media-tile video" onclick={() => (videoOpen = true)} aria-label="Play trailer">
+							<img
+								src="https://img.youtube.com/vi/{trailerId}/mqdefault.jpg"
+								alt="Trailer thumbnail"
+								loading="lazy"
+							/>
+							<span class="play"><Play size={18} weight="fill" /></span>
+						</button>
+					{/if}
+					{#each eventShots as g, j (g.id)}
+						<button
+							class="media-tile"
+							onclick={() => openLightbox(posterOffset + j)}
+							aria-label="View {g.label}"
+						>
+							<img src={g.image} alt={g.label} loading="lazy" />
+						</button>
+					{/each}
+				</div>
 			{/if}
 		</div>
 
@@ -127,9 +152,9 @@
 				<a href="{base}/history#y{s.year}">{s.year}</a>
 				<span class="dot-sep"></span>
 				<a href="{base}/specimens/?medium={s.medium}">{MEDIUM_META[s.medium]}</a>
-				{#if s.saga}
+				{#if s.franchise}
 					<span class="dot-sep"></span>
-					<a href="{base}/specimens/?saga={s.saga}" class="cap">{sagaLabel} franchise</a>
+					<a href="{base}/specimens/?franchise={s.franchise}" class="cap">{franchiseLabel} franchise</a>
 				{/if}
 			</p>
 
@@ -186,13 +211,7 @@
 				<p class="v cap">{s.paradoxRisk}</p>
 				<span class="bar"><i style="width:{riskPct[s.paradoxRisk]}%"></i></span>
 			</div>
-			<div
-				class="tt rule tip-host"
-				style="--c:var(--color-{s.rules[0]})"
-				tabindex="0"
-				role="note"
-				aria-label="The Rule: {RULE_META[s.rules[0]].name}. {RULE_META[s.rules[0]].law}"
-			>
+			<div class="tt rule tip-host" style="--c:var(--color-{s.rules[0]})">
 				<p class="k">The Rule</p>
 				<p class="v">{RULE_META[s.rules[0]].name}</p>
 				<span class="tip">
@@ -205,12 +224,7 @@
 				<p class="k">The Mode</p>
 				<p class="v">{s.mode.map((m) => MODE_META[m]).join(', ')}</p>
 			</div>
-			<div
-				class="tt loop tip-host"
-				tabindex="0"
-				role="note"
-				aria-label="Loop status: {s.loop ? LOOP_META[s.loop] : 'None'}"
-			>
+			<div class="tt loop tip-host">
 				<p class="k">Loop status</p>
 				<p class="v">{s.loop ? LOOP_META[s.loop] : 'None'}</p>
 				<span class="tip">{s.loop ? 'A repeating condition applies.' : 'Linear jumps, no repetition.'}</span>
@@ -237,21 +251,9 @@
 			accent={ruleColorVar(s.rules[0])}
 			continuesFrom={prevPart}
 			continuesTo={nextPart}
+			onOpenImage={openImageBySrc}
 		/>
 	</section>
-
-	{#if gallery.length}
-		<section class="imagery">
-			<h2>Gallery</h2>
-			<div class="shots">
-				{#each gallery as g, i (g.src)}
-					<button class="shot" onclick={() => openLightbox(i)} aria-label="View {g.caption}">
-						<img src={g.src} alt={g.caption} loading="lazy" />
-					</button>
-				{/each}
-			</div>
-		</section>
-	{/if}
 
 	{#if mates.length}
 		<section class="gallery">
@@ -402,16 +404,6 @@
 		height: 100%;
 		object-fit: cover;
 	}
-	.plate .src {
-		font-family: var(--font-mono);
-		font-size: 0.62rem;
-		letter-spacing: 0.06em;
-		text-transform: uppercase;
-		color: var(--color-muted);
-		text-align: center;
-		padding: 0 12%;
-	}
-
 	h1 {
 		font-family: var(--font-serif);
 		font-weight: 600;
@@ -558,10 +550,12 @@
 	}
 	.tip-host .tip {
 		position: absolute;
-		left: 0;
+		/* these boxes sit in the right column, so open the popup leftward to keep
+		   it on-screen (it was overflowing the viewport and adding a scrollbar) */
+		right: 0;
 		bottom: calc(100% + 8px);
 		width: max-content;
-		max-width: 250px;
+		max-width: min(260px, 62vw);
 		background: var(--color-panel);
 		border: 1px solid var(--color-line);
 		border-radius: 6px;
@@ -622,7 +616,6 @@
 
 	.timeline h2,
 	.gallery h2,
-	.imagery h2,
 	.sources h2 {
 		font-family: var(--font-serif);
 		font-size: 1.25rem;
@@ -634,33 +627,61 @@
 		cursor: pointer;
 	}
 
-	.shots {
-		display: grid;
-		grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-		gap: 0.7rem;
+	/* placeholder plate shown when no poster art exists yet */
+	.plate.ph span {
+		font-family: var(--font-mono);
+		font-size: 0.62rem;
+		letter-spacing: 0.1em;
+		text-transform: uppercase;
+		color: var(--color-muted);
 	}
-	.shot {
+
+	/* the gallery strip that sits directly under the poster */
+	.media-strip {
+		display: grid;
+		grid-template-columns: repeat(auto-fill, minmax(64px, 1fr));
+		gap: 0.5rem;
+		margin-top: 0.7rem;
+	}
+	.media-tile {
+		position: relative;
 		padding: 0;
+		aspect-ratio: 16 / 10;
 		border: 1px solid var(--color-line);
-		border-radius: 8px;
+		border-radius: 6px;
 		overflow: hidden;
 		background: var(--color-panel);
-		cursor: zoom-in;
-		aspect-ratio: 16 / 10;
+		cursor: pointer;
 	}
-	.shot img {
+	.media-tile img {
 		width: 100%;
 		height: 100%;
 		object-fit: cover;
 		display: block;
 		transition: transform 0.2s;
 	}
-	.shot:hover img {
-		transform: scale(1.04);
+	.media-tile:hover img {
+		transform: scale(1.06);
 	}
-	.shot:focus-visible {
+	.media-tile:focus-visible {
 		outline: 2px solid var(--accent);
 		outline-offset: 2px;
+	}
+	.media-tile.video .play {
+		position: absolute;
+		inset: 0;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		color: #fff;
+		background: rgba(3, 5, 12, 0.35);
+	}
+	.media-tile.video::after {
+		content: '';
+		position: absolute;
+		inset: 0;
+		box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--color-jump) 70%, transparent);
+		border-radius: 6px;
 	}
 
 	.grid {

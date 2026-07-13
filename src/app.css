@@ -54,6 +54,9 @@ body {
 	color: var(--color-paper);
 	font-family: var(--font-sans);
 	-webkit-font-smoothing: antialiased;
+	/* never allow the page itself to scroll sideways; clip (not hidden) so
+	   position: sticky keeps working */
+	overflow-x: clip;
 }
 a {
 	color: inherit;

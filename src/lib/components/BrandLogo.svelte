@@ -7,7 +7,8 @@
 		siSteam,
 		siWikipedia,
 		siGoodreads,
-		siYoutube
+		siYoutube,
+		siThemoviedatabase
 	} from 'simple-icons';
 
 	let { kind, size = 15, color }: { kind: string; size?: number; color?: string } = $props();
@@ -27,6 +28,7 @@
 		wikipedia: siWikipedia,
 		goodreads: siGoodreads,
 		trailer: siYoutube,
+		tmdb: siThemoviedatabase,
 		watch: JUSTWATCH
 	};
 	// on a dark ground, pure-black brand hexes need lightening

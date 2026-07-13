@@ -20,7 +20,9 @@
  *   TMDB videos endpoint yields an official YouTube trailer key (free).
  *
  * Review scores:
- *   OMDb free tier gives IMDb rating, Metacritic, Rotten Tomatoes critics.
+ *   TMDB gives its own community score (out of 10), so one TMDB key alone can
+ *   supply posters, trailers, AND a rating. OMDb's free tier adds the scores
+ *   TMDB lacks: IMDb, Metacritic, Rotten Tomatoes critics.
  *   Rotten Tomatoes AUDIENCE has no free API, so it is never overwritten here.
  *
  * Every network call is guarded; on failure the authored data is used as-is.
@@ -32,6 +34,16 @@ const OMDB = process.env.OMDB_API_KEY;
 const SRC = 'src/lib/data/specimens.ts';
 const OUT = 'src/lib/data/enrichment.json';
 const UA = 'TimeTravellersAlmanac/1.0 (build enrichment; https://github.com)';
+
+// TMDB gives a short v3 API key or a long v4 Read Access Token (a JWT with
+// dots). Accept either: the JWT goes in a Bearer header, the key in the query.
+const TMDB_BEARER = !!TMDB && TMDB.includes('.');
+const tmdbAuth = TMDB_BEARER ? { Authorization: `Bearer ${TMDB}` } : {};
+function tmdbURL(path, params = '') {
+	const base = `https://api.themoviedb.org/3/${path}`;
+	if (TMDB_BEARER) return params ? `${base}?${params}` : base;
+	return `${base}?api_key=${TMDB}${params ? `&${params}` : ''}`;
+}
 
 // crude, dependency-free parse: pull the ids that live inside each slug's block
 const src = readFileSync(SRC, 'utf8');
@@ -52,8 +64,10 @@ const entries = marks.map((mk, i) => {
 	};
 });
 
-async function getJson(url) {
-	const r = await fetch(url, { headers: { 'User-Agent': UA, Accept: 'application/json' } });
+async function getJson(url, headers = {}) {
+	const r = await fetch(url, {
+		headers: { 'User-Agent': UA, Accept: 'application/json', ...headers }
+	});
 	if (!r.ok) throw new Error(`${r.status} ${url}`);
 	return r.json();
 }
@@ -76,21 +90,20 @@ async function omdb(id) {
 	}
 }
 
-// TMDB (free key): poster art and an official YouTube trailer in one lookup.
+// TMDB (free key): poster, community score, and a YouTube trailer in one lookup.
 async function tmdb(id) {
-	if (!TMDB || !id) return { poster: null, trailer: null };
+	if (!TMDB || !id) return { poster: null, trailer: null, score: null };
 	try {
-		const j = await getJson(
-			`https://api.themoviedb.org/3/find/${id}?api_key=${TMDB}&external_source=imdb_id`
-		);
+		const j = await getJson(tmdbURL(`find/${id}`, 'external_source=imdb_id'), tmdbAuth);
 		const movie = j.movie_results && j.movie_results[0];
 		const hit = movie || (j.tv_results && j.tv_results[0]);
-		if (!hit) return { poster: null, trailer: null };
+		if (!hit) return { poster: null, trailer: null, score: null };
 		const poster = hit.poster_path ? `https://image.tmdb.org/t/p/w500${hit.poster_path}` : null;
+		const score = hit.vote_average ? Math.round(hit.vote_average * 10) / 10 : null;
 		const type = movie ? 'movie' : 'tv';
 		let trailer = null;
 		try {
-			const v = await getJson(`https://api.themoviedb.org/3/${type}/${hit.id}/videos?api_key=${TMDB}`);
+			const v = await getJson(tmdbURL(`${type}/${hit.id}/videos`), tmdbAuth);
 			const vids = v.results || [];
 			const pick =
 				vids.find((x) => x.site === 'YouTube' && x.type === 'Trailer' && x.official) ||
@@ -100,10 +113,10 @@ async function tmdb(id) {
 		} catch (e) {
 			console.warn('tmdb videos failed for', id, e.message);
 		}
-		return { poster, trailer };
+		return { poster, trailer, score };
 	} catch (e) {
 		console.warn('tmdb failed for', id, e.message);
-		return { poster: null, trailer: null };
+		return { poster: null, trailer: null, score: null };
 	}
 }
 
@@ -140,17 +153,18 @@ async function openLibraryPoster(isbn) {
 
 const enrichment = {};
 for (const e of entries) {
-	const { poster: tmdbPoster, trailer } = await tmdb(e.imdb);
-	const ratings = await omdb(e.imdb);
+	const { poster: tmdbPoster, trailer, score } = await tmdb(e.imdb);
+	const omdbRatings = await omdb(e.imdb);
 	const poster =
 		tmdbPoster || (await wikidataPoster(e.qid)) || (await openLibraryPoster(e.isbn));
+	const ratings = { ...(score != null ? { tmdb: score } : {}), ...(omdbRatings ?? {}) };
 	const rec = {};
 	if (poster) rec.poster = poster;
-	if (ratings) rec.ratings = ratings;
+	if (Object.keys(ratings).length) rec.ratings = ratings;
 	if (trailer) rec.trailer = trailer;
 	if (Object.keys(rec).length) enrichment[e.slug] = rec;
 	console.log(
-		`enrich: ${e.slug} ${poster ? 'poster' : '-'} ${ratings ? 'ratings' : '-'} ${trailer ? 'trailer' : '-'}`
+		`enrich: ${e.slug} ${poster ? 'poster' : '-'} ${Object.keys(ratings).length ? 'ratings' : '-'} ${trailer ? 'trailer' : '-'}`
 	);
 }
 

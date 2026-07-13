@@ -36,12 +36,14 @@ every screen entry still has a working "Trailer" button.
 
 | Source | Gives | Key needed |
 | --- | --- | --- |
+| **TMDB** | TMDB community score (out of 10) | `TMDB_API_KEY` (free) |
 | **OMDb** free tier | IMDb rating, Metacritic, Rotten Tomatoes critics | `OMDB_API_KEY` (free) |
 | Rotten Tomatoes audience | audience score | no public API, entered by hand |
 
-Scores are the one place TMDB falls short (it only has its own vote average), so
-OMDb's free tier fills them in. The RT audience score has no open API anywhere,
-so it stays authored.
+TMDB carries its own community rating, so a single TMDB key already gives a
+score alongside the poster and trailer. OMDb's free tier adds the scores TMDB
+does not have (IMDb, Metacritic, RT critics). The RT audience score has no open
+API anywhere, so it stays authored.
 
 ## Other media, if the catalogue grows
 

@@ -104,6 +104,16 @@
 						<BrandLogo kind="imdb" size={16} /> <b>{s.ratings.imdb.toFixed(1)}</b><span class="unit">/10</span>
 					</a>
 				{/if}
+				{#if s.ratings?.tmdb != null}
+					<a
+						class="chip rt"
+						href={`https://www.themoviedb.org/search?query=${encodeURIComponent(s.title)}`}
+						target="_blank"
+						rel="noreferrer noopener"
+					>
+						<BrandLogo kind="tmdb" size={16} /> <b>{s.ratings.tmdb.toFixed(1)}</b><span class="unit">/10</span>
+					</a>
+				{/if}
 				{#if s.ratings?.rtCritic != null}
 					<a class="chip rt" href={linkMap.rottentomatoes} target="_blank" rel="noreferrer noopener">
 						<BrandLogo kind="rottentomatoes" size={16} /> <b>{s.ratings.rtCritic}%</b><span class="unit">Critics</span>

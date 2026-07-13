@@ -13,7 +13,13 @@
 	let active = $state<Set<Rule>>(new Set(rules));
 	let activeMedia = $state<Set<Medium>>(new Set(media));
 	let loopOnly = $state(false);
-	let sort = $state<'title' | 'newest' | 'oldest'>('oldest');
+	let sort = $state<'title' | 'newest' | 'oldest'>('title');
+
+	// alphabetical by title, but keep saga parts in their real order (I, II, III)
+	const byTitle = (a: (typeof specimens)[number], b: (typeof specimens)[number]) =>
+		a.saga && a.saga === b.saga
+			? (a.partOrder ?? 0) - (b.partOrder ?? 0)
+			: a.title.localeCompare(b.title);
 
 	// precise sortable date: parse the full release date, else fall back to the year
 	const dateKey = (s: (typeof specimens)[number]) => {
@@ -51,9 +57,9 @@
 				(!loopOnly || s.loop !== null) &&
 				(!sagaFilter || s.saga === sagaFilter)
 		);
-		if (sort === 'title') return list.sort((a, b) => a.title.localeCompare(b.title));
+		if (sort === 'title') return list.sort(byTitle);
 		const dir = sort === 'newest' ? -1 : 1;
-		return list.sort((a, b) => dir * (dateKey(a) - dateKey(b)) || a.title.localeCompare(b.title));
+		return list.sort((a, b) => dir * (dateKey(a) - dateKey(b)) || byTitle(a, b));
 	});
 </script>
 
@@ -117,7 +123,7 @@
 
 		<div class="fgroup" role="group" aria-label="Sort order">
 			<span class="flabel">Sort</span>
-			{#each [['oldest', 'Oldest'], ['newest', 'Newest'], ['title', 'A to Z']] as [key, label] (key)}
+			{#each [['title', 'A to Z'], ['newest', 'Newest'], ['oldest', 'Oldest']] as [key, label] (key)}
 				<button
 					class="chip sort"
 					class:on={sort === key}

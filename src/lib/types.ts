@@ -53,6 +53,8 @@ export interface LinkRef {
 export interface Ratings {
 	/** IMDb, out of 10 */
 	imdb?: number;
+	/** TMDB community score, out of 10 */
+	tmdb?: number;
 	/** Metacritic metascore, out of 100 */
 	metacritic?: number;
 	/** Rotten Tomatoes critics (Tomatometer), percent */

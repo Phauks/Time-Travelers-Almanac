@@ -3,7 +3,15 @@
 // (an optional special condition), and may carry its own branching timeline.
 
 export type Rule = 'fixed' | 'mutable' | 'branching';
-export type Mode = 'contraption' | 'anomaly' | 'relic' | 'relativistic' | 'sleep' | 'mind';
+export type Mode =
+	| 'contraption'
+	| 'anomaly'
+	| 'relic'
+	| 'relativistic'
+	| 'sleep'
+	| 'mind'
+	| 'inverted' // inverted entropy / unstuck in time (Tenet, Primer)
+	| 'precognition'; // a vision of fate rather than bodily travel (Arrival)
 export type Loop = 'groundhog' | 'deathloop' | 'causal';
 export type Medium = 'film' | 'tv' | 'book' | 'game' | 'stage' | 'comic';
 export type ParadoxRisk = 'low' | 'medium' | 'high';

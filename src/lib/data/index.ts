@@ -86,7 +86,9 @@ export const MODE_META: Record<Mode, string> = {
 	relic: 'Relic & ritual',
 	relativistic: 'Relativistic',
 	sleep: 'The long sleep',
-	mind: 'Mind over time'
+	mind: 'Mind over time',
+	inverted: 'Inverted entropy',
+	precognition: 'Vision of fate'
 };
 
 export const LOOP_META: Record<Loop, string> = {

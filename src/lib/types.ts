@@ -122,6 +122,12 @@ export interface MediaEntry {
 	slug: string;
 	title: string;
 	year: number;
+	/**
+	 * Full real-world date: theatrical release for films, first-air date for
+	 * TV, publication date for books/comics, launch for games. Falls back to
+	 * `year` where a precise day is not meaningful.
+	 */
+	released?: string;
 	medium: Medium;
 	/** franchise grouping, e.g. "back-to-the-future" */
 	saga?: string;

@@ -6,7 +6,14 @@
 	import SpecimenCard from '$lib/components/SpecimenCard.svelte';
 
 	const rules: Rule[] = ['fixed', 'mutable', 'branching'];
+	// only offer medium chips for media that actually appear in the catalogue
+	const media: Medium[] = [...new Set(specimens.map((s) => s.medium))].sort();
+
+	const initialMedium = page.url.searchParams.get('medium') as Medium | null;
 	let active = $state<Set<Rule>>(new Set(rules));
+	let activeMedia = $state<Set<Medium>>(
+		new Set(initialMedium && media.includes(initialMedium) ? [initialMedium] : media)
+	);
 	let loopOnly = $state(false);
 
 	function toggle(r: Rule) {
@@ -15,17 +22,22 @@
 		else next.add(r);
 		active = next;
 	}
+	function toggleMedium(m: Medium) {
+		const next = new Set(activeMedia);
+		if (next.has(m)) next.delete(m);
+		else next.add(m);
+		activeMedia = next;
+	}
 
 	let sagaFilter = $derived(page.url.searchParams.get('saga'));
-	let mediumFilter = $derived(page.url.searchParams.get('medium') as Medium | null);
 
 	let shown = $derived(
 		specimens.filter(
 			(s) =>
 				s.rules.some((r) => active.has(r)) &&
+				activeMedia.has(s.medium) &&
 				(!loopOnly || s.loop !== null) &&
-				(!sagaFilter || s.saga === sagaFilter) &&
-				(!mediumFilter || s.medium === mediumFilter)
+				(!sagaFilter || s.saga === sagaFilter)
 		)
 	);
 </script>
@@ -42,36 +54,51 @@
 		each edition.
 	</p>
 
-	{#if sagaFilter || mediumFilter}
+	{#if sagaFilter}
 		<p class="scope">
-			Showing{#if mediumFilter}
-				{MEDIUM_META[mediumFilter]}{/if}{#if sagaFilter}
-				the {sagaFilter.replace(/-/g, ' ')} saga{/if}
+			Showing the {sagaFilter.replace(/-/g, ' ')} saga
 			<a href="{base}/specimens/">clear filter</a>
 		</p>
 	{/if}
 
-	<div class="filters" role="group" aria-label="Filter by rule">
-		{#each rules as r (r)}
+	<div class="filterbar">
+		<div class="fgroup" role="group" aria-label="Filter by rule">
+			<span class="flabel">Rule</span>
+			{#each rules as r (r)}
+				<button
+					class="chip"
+					class:on={active.has(r)}
+					style="--c:var(--color-{r})"
+					aria-pressed={active.has(r)}
+					onclick={() => toggle(r)}
+				>
+					<i class="dot"></i>{RULE_META[r].name}
+				</button>
+			{/each}
 			<button
-				class="chip"
-				class:on={active.has(r)}
-				style="--c:var(--color-{r})"
-				aria-pressed={active.has(r)}
-				onclick={() => toggle(r)}
+				class="chip loop"
+				class:on={loopOnly}
+				style="--c:var(--color-loop)"
+				aria-pressed={loopOnly}
+				onclick={() => (loopOnly = !loopOnly)}
 			>
-				<i class="dot"></i>{RULE_META[r].name}
+				<i class="dot"></i>Loops only
 			</button>
-		{/each}
-		<button
-			class="chip loop"
-			class:on={loopOnly}
-			style="--c:var(--color-loop)"
-			aria-pressed={loopOnly}
-			onclick={() => (loopOnly = !loopOnly)}
-		>
-			<i class="dot"></i>Loops only
-		</button>
+		</div>
+
+		<div class="fgroup" role="group" aria-label="Filter by medium">
+			<span class="flabel">Medium</span>
+			{#each media as m (m)}
+				<button
+					class="chip med"
+					class:on={activeMedia.has(m)}
+					aria-pressed={activeMedia.has(m)}
+					onclick={() => toggleMedium(m)}
+				>
+					<i class="dot"></i>{MEDIUM_META[m]}
+				</button>
+			{/each}
+		</div>
 	</div>
 
 	<div class="grid">
@@ -123,11 +150,28 @@
 	.scope a:hover {
 		color: var(--color-paper);
 	}
-	.filters {
+	.filterbar {
 		display: flex;
 		flex-wrap: wrap;
-		gap: 0.5rem;
+		gap: 1.4rem 2rem;
 		margin-bottom: 2rem;
+	}
+	.fgroup {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 0.5rem;
+	}
+	.flabel {
+		font-family: var(--font-mono);
+		font-size: 0.6rem;
+		letter-spacing: 0.14em;
+		text-transform: uppercase;
+		color: var(--color-muted);
+		margin-right: 0.15rem;
+	}
+	.chip.med {
+		--c: var(--color-jump);
 	}
 	.chip {
 		display: inline-flex;

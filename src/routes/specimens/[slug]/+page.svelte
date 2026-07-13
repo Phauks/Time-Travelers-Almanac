@@ -50,6 +50,10 @@
 					<span class="src">{s.imageSource}</span>
 				{/if}
 			</div>
+			<section class="mech">
+				<h2>Mechanism</h2>
+				<p>{s.mechanism}</p>
+			</section>
 		</div>
 
 		<div class="col-main">
@@ -96,6 +100,14 @@
 		</div>
 
 		<aside class="col-tt">
+			<div class="tt para" style="--c:var(--color-mutable)">
+				<p class="k"><Warning size={12} weight="fill" /> Paradox exposure</p>
+				<p class="v cap">{s.paradoxRisk}</p>
+				<span class="bar"><i style="width:{riskPct[s.paradoxRisk]}%"></i></span>
+				{#if s.paradoxes.length}
+					<p class="d">Documented: {#each s.paradoxes as p, i (p)}<span>{p}</span>{i < s.paradoxes.length - 1 ? ', ' : ''}{/each}</p>
+				{/if}
+			</div>
 			<div class="tt" style="--c:var(--color-{s.rules[0]})">
 				<p class="k">The Rule</p>
 				<p class="v">{RULE_META[s.rules[0]].name}</p>
@@ -104,37 +116,23 @@
 			<div class="tt mode">
 				<p class="k">The Mode</p>
 				<p class="v">{s.mode.map((m) => MODE_META[m]).join(', ')}</p>
-				<div class="method">method of travel</div>
 			</div>
 			<div class="tt loop">
 				<p class="k">Loop status</p>
 				<p class="v">{s.loop ? LOOP_META[s.loop] : 'None'}</p>
 				<p class="d">{s.loop ? 'A repeating condition applies.' : 'Linear jumps, no repetition.'}</p>
 			</div>
+			{#if s.fieldNote}
+				<div class="tt note">
+					<p class="k">Field note</p>
+					<p class="fn">{s.fieldNote}</p>
+				</div>
+			{/if}
 		</aside>
 	</header>
 
-	<section class="prose">
-		<h2>Mechanism</h2>
-		<p>{s.mechanism}</p>
-
-		<div class="meter" title="Paradox exposure">
-			<span class="lab"><Warning size={13} weight="fill" /> Paradox exposure</span>
-			<span class="bar"><i style="width:{riskPct[s.paradoxRisk]}%"></i></span>
-			<span class="lab val">{s.paradoxRisk}</span>
-		</div>
-		{#if s.paradoxes.length}
-			<p class="paradoxes">
-				Documented paradoxes: {#each s.paradoxes as p, i (p)}<span>{p}</span>{i < s.paradoxes.length - 1 ? ', ' : ''}{/each}
-			</p>
-		{/if}
-		{#if s.fieldNote}
-			<p class="fieldnote">Field note. {s.fieldNote}</p>
-		{/if}
-	</section>
-
 	<section class="timeline">
-		<h2>Walk the timeline</h2>
+		<h2>Timeline</h2>
 		<BranchingTimeline events={s.timeline} branches={s.branches ?? []} accent={ruleColorVar(s.rules[0])} />
 	</section>
 
@@ -178,13 +176,13 @@
 	.top {
 		display: grid;
 		gap: clamp(1.4rem, 3vw, 2.5rem);
-		grid-template-columns: 230px minmax(0, 1fr) 300px;
+		grid-template-columns: 280px minmax(0, 1fr) 300px;
 		grid-template-areas: 'img main tt';
 		align-items: start;
 	}
 	@media (max-width: 1040px) {
 		.top {
-			grid-template-columns: 200px minmax(0, 1fr);
+			grid-template-columns: 240px minmax(0, 1fr);
 			grid-template-areas: 'img main' 'tt tt';
 		}
 	}
@@ -196,6 +194,20 @@
 	}
 	.col-img {
 		grid-area: img;
+	}
+	.mech {
+		margin-top: 1.2rem;
+	}
+	.mech h2 {
+		font-family: var(--font-serif);
+		font-size: 1.25rem;
+		margin: 0 0 0.5rem;
+	}
+	.mech p {
+		margin: 0;
+		font-size: 0.95rem;
+		line-height: 1.6;
+		color: color-mix(in srgb, var(--color-paper) 90%, var(--color-muted));
 	}
 	.col-main {
 		grid-area: main;
@@ -363,84 +375,52 @@
 		line-height: 1.4;
 		margin: 0.3rem 0 0;
 	}
-	.method {
-		margin-top: 0.6rem;
-		aspect-ratio: 16 / 9;
-		border: 1px dashed var(--color-line);
-		border-radius: 4px;
-		display: flex;
+	.tt .k {
+		display: inline-flex;
 		align-items: center;
-		justify-content: center;
-		font-family: var(--font-mono);
-		font-size: 0.58rem;
-		letter-spacing: 0.1em;
-		text-transform: uppercase;
-		color: color-mix(in srgb, var(--color-muted) 70%, transparent);
+		gap: 0.3rem;
+	}
+	.tt.para .v.cap {
+		text-transform: capitalize;
+	}
+	.tt.para {
+		--c: var(--color-mutable);
+	}
+	.tt.para .bar {
+		display: block;
+		height: 7px;
+		margin-top: 0.5rem;
+		border-radius: 999px;
+		background: var(--color-panel);
+		border: 1px solid var(--color-line);
+		overflow: hidden;
+	}
+	.tt.para .bar i {
+		display: block;
+		height: 100%;
+		background: linear-gradient(90deg, var(--color-loop), var(--color-mutable), var(--color-fixed));
+	}
+	.tt.para .d span {
+		color: var(--color-paper);
+	}
+	.tt.note {
+		--c: var(--accent);
+	}
+	.tt.note .fn {
+		margin: 0.3rem 0 0;
+		font-family: var(--font-serif);
+		font-style: italic;
+		font-size: 0.86rem;
+		line-height: 1.5;
+		color: color-mix(in srgb, var(--color-paper) 82%, var(--color-muted));
 	}
 
-	.prose h2,
 	.timeline h2,
 	.gallery h2,
 	.sources h2 {
 		font-family: var(--font-serif);
 		font-size: 1.25rem;
 		margin: 2.4rem 0 0.8rem;
-	}
-	.prose {
-		margin-top: 2.4rem;
-	}
-	.prose p {
-		margin: 0 0 0.9rem;
-		font-size: 1rem;
-		line-height: 1.6;
-		color: color-mix(in srgb, var(--color-paper) 90%, var(--color-muted));
-	}
-	.meter {
-		display: flex;
-		align-items: center;
-		gap: 0.75rem;
-		margin: 1rem 0 0.5rem;
-		max-width: 520px;
-	}
-	.meter .bar {
-		flex: 1;
-		height: 8px;
-		border-radius: 999px;
-		background: var(--color-panel);
-		border: 1px solid var(--color-line);
-		overflow: hidden;
-	}
-	.meter .bar i {
-		display: block;
-		height: 100%;
-		background: linear-gradient(90deg, var(--color-loop), var(--color-mutable), var(--color-fixed));
-	}
-	.meter .lab {
-		display: inline-flex;
-		align-items: center;
-		gap: 0.3rem;
-		font-family: var(--font-mono);
-		font-size: 0.66rem;
-		letter-spacing: 0.08em;
-		text-transform: uppercase;
-		color: var(--color-muted);
-	}
-	.meter .val {
-		color: var(--color-paper);
-	}
-	.paradoxes {
-		font-size: 0.85rem;
-		color: var(--color-muted);
-	}
-	.paradoxes span {
-		color: var(--color-paper);
-	}
-	.fieldnote {
-		border-left: 2px solid var(--accent);
-		padding-left: 0.9rem;
-		font-family: var(--font-serif);
-		font-style: italic;
-		color: color-mix(in srgb, var(--color-paper) 82%, var(--color-muted));
 	}
 
 	.grid {

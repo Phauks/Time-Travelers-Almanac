@@ -5,6 +5,9 @@ on:
     branches:
       - main
   workflow_dispatch:
+  # Weekly rebuild so posters and aggregator scores stay fresh (Mondays 06:00 UTC)
+  schedule:
+    - cron: '0 6 * * 1'
 
 permissions:
   contents: read

@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { base } from '$app/paths';
-	import { specimens, MEDIUM_META } from '$lib/data';
+	import { specimens, MEDIUM_META, RULE_META, MODE_META, ruleColorVar } from '$lib/data';
 	import type { MediaEntry } from '$lib/types';
 
 	// group specimens by real-world release year
@@ -14,18 +14,26 @@
 			.sort((a, b) => a[0] - b[0])
 			.map(([year, items]) => ({ year, items: items.sort((a, b) => a.title.localeCompare(b.title)) }));
 	})();
+
+	const dateLabel = (s: MediaEntry) => s.released ?? String(s.year);
+	const shortSynopsis = (s: MediaEntry) => {
+		const text = s.synopsis ?? s.logline;
+		const firstStop = text.indexOf('. ');
+		if (firstStop > 40 && firstStop < 220) return text.slice(0, firstStop + 1);
+		return text.length > 220 ? text.slice(0, 217).trimEnd() + '...' : text;
+	};
 </script>
 
 <svelte:head>
-	<title>History, The Time Traveller's Almanac</title>
+	<title>A History of Time Travel, The Time Traveller's Almanac</title>
 </svelte:head>
 
 <section class="page">
 	<p class="eyebrow">The record</p>
-	<h1>A history of time travel, as released</h1>
+	<h1>A History of Time Travel</h1>
 	<p class="lede">
-		Not the fictional timelines, but the real one: when each specimen arrived in our world. Every
-		entry links back to its dossier.
+		Not the fictional timelines, but the real one: the order in which humankind imagined its ways
+		out of time, from the page to the screen to the console. Every entry links back to its dossier.
 	</p>
 
 	<ol class="tl">
@@ -34,9 +42,33 @@
 				<div class="year">{g.year}</div>
 				<div class="items">
 					{#each g.items as s (s.slug)}
-						<a class="item" href="{base}/specimens/{s.slug}/">
-							<span class="title">{s.title}</span>
-							<span class="medium">{MEDIUM_META[s.medium]}</span>
+						<a
+							class="card"
+							href="{base}/specimens/{s.slug}/"
+							style="--accent:{ruleColorVar(s.rules[0])}"
+						>
+							<div class="thumb">
+								{#if s.poster}
+									<img src={s.poster} alt="{s.title} poster" loading="lazy" />
+								{:else}
+									<span class="ph">{MEDIUM_META[s.medium]}</span>
+								{/if}
+							</div>
+							<div class="body">
+								<div class="line1">
+									<span class="title">{s.title}</span>
+									<span class="medium">{MEDIUM_META[s.medium]}</span>
+								</div>
+								<p class="date">{dateLabel(s)}</p>
+								<p class="syn">{shortSynopsis(s)}</p>
+								<div class="tags">
+									<span class="tag rule">{RULE_META[s.rules[0]].name}</span>
+									{#each s.mode as m (m)}
+										<span class="tag">{MODE_META[m]}</span>
+									{/each}
+									{#if s.loop}<span class="tag loop">Loop</span>{/if}
+								</div>
+							</div>
 						</a>
 					{/each}
 				</div>
@@ -47,9 +79,17 @@
 
 <style>
 	.page {
-		max-width: 940px;
+		max-width: 1040px;
 		margin: 0 auto;
 		padding: clamp(1.5rem, 5vw, 3.5rem) clamp(1rem, 4vw, 3rem) 6rem;
+	}
+	.eyebrow {
+		font-family: var(--font-mono);
+		font-size: 0.68rem;
+		letter-spacing: 0.18em;
+		text-transform: uppercase;
+		color: var(--color-muted);
+		margin: 0;
 	}
 	h1 {
 		font-family: var(--font-serif);
@@ -60,8 +100,9 @@
 	}
 	.lede {
 		color: var(--color-muted);
-		max-width: 56ch;
+		max-width: 60ch;
 		margin: 0 0 2.6rem;
+		line-height: 1.6;
 	}
 	.tl {
 		list-style: none;
@@ -72,7 +113,7 @@
 	.tl::before {
 		content: '';
 		position: absolute;
-		left: 92px;
+		left: 78px;
 		top: 6px;
 		bottom: 6px;
 		width: 2px;
@@ -80,9 +121,9 @@
 	}
 	.row {
 		display: grid;
-		grid-template-columns: 92px 1fr;
-		gap: 1.5rem;
-		padding: 0.7rem 0;
+		grid-template-columns: 78px 1fr;
+		gap: 1.6rem;
+		padding: 0.7rem 0 1.4rem;
 		scroll-margin-top: 90px;
 	}
 	.year {
@@ -91,12 +132,13 @@
 		color: var(--color-paper);
 		text-align: right;
 		position: relative;
+		padding-top: 0.2rem;
 	}
 	.year::after {
 		content: '';
 		position: absolute;
-		right: -18px;
-		top: 0.35em;
+		right: -22px;
+		top: 0.5em;
 		width: 9px;
 		height: 9px;
 		border-radius: 50%;
@@ -106,30 +148,116 @@
 	.items {
 		display: flex;
 		flex-direction: column;
-		gap: 0.4rem;
+		gap: 0.9rem;
+		min-width: 0;
 	}
-	.item {
+	.card {
+		display: grid;
+		grid-template-columns: 78px 1fr;
+		gap: 1rem;
+		padding: 0.7rem;
+		border: 1px solid var(--color-line);
+		border-left: 3px solid var(--accent);
+		border-radius: 8px;
+		background: color-mix(in srgb, var(--color-panel) 45%, transparent);
+		transition:
+			border-color 0.15s,
+			background 0.15s;
+	}
+	.card:hover {
+		background: color-mix(in srgb, var(--color-panel) 70%, transparent);
+		border-color: color-mix(in srgb, var(--color-paper) 30%, var(--color-line));
+	}
+	.thumb {
+		aspect-ratio: 2 / 3;
+		border-radius: 4px;
+		overflow: hidden;
+		background: radial-gradient(120% 120% at 30% 20%, #10152a, #05070e);
+		display: flex;
+		align-items: center;
+		justify-content: center;
+	}
+	.thumb img {
+		width: 100%;
+		height: 100%;
+		object-fit: cover;
+	}
+	.thumb .ph {
+		font-family: var(--font-mono);
+		font-size: 0.55rem;
+		letter-spacing: 0.08em;
+		text-transform: uppercase;
+		color: var(--color-muted);
+	}
+	.body {
+		min-width: 0;
+	}
+	.line1 {
 		display: flex;
 		align-items: baseline;
-		justify-content: space-between;
-		gap: 1rem;
-		padding: 0.35rem 0;
-		border-bottom: 1px solid color-mix(in srgb, var(--color-line) 60%, transparent);
-	}
-	.item:hover .title {
-		color: var(--color-paper);
+		gap: 0.7rem;
+		flex-wrap: wrap;
 	}
 	.title {
 		font-family: var(--font-serif);
-		font-size: 1.05rem;
-		color: color-mix(in srgb, var(--color-paper) 85%, var(--color-muted));
+		font-size: 1.15rem;
+		color: var(--color-paper);
 	}
 	.medium {
 		font-family: var(--font-mono);
-		font-size: 0.62rem;
+		font-size: 0.6rem;
 		letter-spacing: 0.1em;
 		text-transform: uppercase;
 		color: var(--color-muted);
 		white-space: nowrap;
+	}
+	.date {
+		font-family: var(--font-mono);
+		font-size: 0.72rem;
+		color: var(--accent);
+		margin: 0.2rem 0 0.5rem;
+	}
+	.syn {
+		margin: 0 0 0.7rem;
+		font-size: 0.9rem;
+		line-height: 1.55;
+		color: color-mix(in srgb, var(--color-paper) 82%, var(--color-muted));
+	}
+	.tags {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.35rem;
+	}
+	.tag {
+		font-family: var(--font-mono);
+		font-size: 0.58rem;
+		letter-spacing: 0.06em;
+		text-transform: uppercase;
+		padding: 2px 7px;
+		border-radius: 999px;
+		border: 1px solid var(--color-line);
+		color: var(--color-muted);
+	}
+	.tag.rule {
+		color: var(--accent);
+		border-color: color-mix(in srgb, var(--accent) 45%, transparent);
+	}
+	@media (max-width: 560px) {
+		.tl::before {
+			display: none;
+		}
+		.row {
+			grid-template-columns: 1fr;
+			gap: 0.5rem;
+		}
+		.year {
+			text-align: left;
+		}
+		.year::after {
+			display: none;
+		}
+		.card {
+			grid-template-columns: 64px 1fr;
+		}
 	}
 </style>

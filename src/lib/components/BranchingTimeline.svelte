@@ -81,7 +81,7 @@
 				parts.push({
 					x1: a.x, x2: z.x, y: laneY(laneOf(b.id)),
 					color: branchColor(b.id),
-					dashed: b.status === 'endangered' || bigGap(a.e.chrono, z.e.chrono)
+					dashed: bigGap(a.e.chrono, z.e.chrono)
 				});
 			}
 		}
@@ -167,6 +167,8 @@
 		{order === 'told' ? 'The order you experience the story.' : 'The order the events truly occur in time.'}
 	</p>
 
+	<div class="split">
+	<div class="board-col">
 	<div class="board">
 		<svg viewBox="0 0 {W} {H}" role="img" aria-label="Branching timeline" preserveAspectRatio="none">
 			{#each branches as b, i (b.id)}
@@ -248,7 +250,9 @@
 		<span class="lg"><i class="line"></i>time jump (dashed = distance in time)</span>
 		<span class="lg"><i class="haz"></i>paradox / continuity risk</span>
 	</div>
+	</div>
 
+	<div class="side">
 	{#if selected}
 		{@const M = kmeta(selected)}
 		{@const b = branchById.get(curBranch(selected.id))}
@@ -275,6 +279,8 @@
 			{/if}
 		</div>
 	{/if}
+	</div>
+	</div>
 </div>
 
 <style>
@@ -317,16 +323,42 @@
 		font-size: 0.85rem;
 		color: var(--color-muted);
 	}
+	.split {
+		display: grid;
+		grid-template-columns: minmax(0, 1fr) 340px;
+		gap: 1rem;
+		align-items: start;
+	}
+	.board-col {
+		min-width: 0;
+	}
+	.side {
+		position: sticky;
+		top: 1rem;
+		max-height: calc(100vh - 2rem);
+		overflow-y: auto;
+	}
 	.board {
 		border: 1px solid var(--color-line);
 		border-radius: 10px;
 		background: color-mix(in srgb, var(--color-panel) 45%, transparent);
 		padding: 0.35rem 0.5rem;
+		overflow-x: auto;
 	}
 	svg {
 		display: block;
 		width: 100%;
+		min-width: 560px;
 		height: auto;
+	}
+	@media (max-width: 860px) {
+		.split {
+			grid-template-columns: 1fr;
+		}
+		.side {
+			position: static;
+			max-height: none;
+		}
 	}
 	.lane-lbl {
 		font-family: var(--font-mono);
@@ -352,6 +384,7 @@
 	.node {
 		cursor: pointer;
 	}
+	.node:focus,
 	.node:focus-visible {
 		outline: none;
 	}
@@ -419,7 +452,6 @@
 	}
 
 	.detail {
-		margin-top: 0.9rem;
 		border: 1px solid var(--color-line);
 		border-left: 3px solid var(--accent);
 		border-radius: 6px;

@@ -9,6 +9,7 @@ export const specimens: MediaEntry[] = [
 		slug: 'a-connecticut-yankee',
 		title: "A Connecticut Yankee in King Arthur's Court",
 		year: 1889,
+		released: 'December 10, 1889',
 		medium: 'book',
 		rules: ['mutable'],
 		mode: ['anomaly'],
@@ -35,6 +36,7 @@ export const specimens: MediaEntry[] = [
 		slug: 'the-terminator',
 		title: 'The Terminator',
 		year: 1984,
+		released: 'October 26, 1984',
 		medium: 'film',
 		saga: 'terminator',
 		rules: ['fixed'],
@@ -62,6 +64,7 @@ export const specimens: MediaEntry[] = [
 		slug: 'back-to-the-future',
 		title: 'Back to the Future',
 		year: 1985,
+		released: 'July 3, 1985',
 		medium: 'film',
 		saga: 'back-to-the-future',
 		continuity: 'film',
@@ -142,10 +145,23 @@ export const specimens: MediaEntry[] = [
 				chrono: 1985.82,
 				chronoLabel: 'Oct 26, 1985, 1:15 AM',
 				location: 'Twin Pines Mall, Hill Valley',
-				kind: 'origin',
+				kind: 'departure',
+				jumpTo: 'einstein',
 				variant: 'prime-1985',
 				description:
 					'Doc Brown demonstrates the time machine, sending Einstein the dog one minute into the future  -  the first time travel on the timeline.'
+			},
+			{
+				id: 'einstein',
+				label: 'Einstein arrives, one minute on',
+				narrative: 0.5,
+				chrono: 1985.8201,
+				chronoLabel: 'Oct 26, 1985, 1:16 AM',
+				location: 'Twin Pines Mall, Hill Valley',
+				kind: 'arrival',
+				variant: 'prime-1985',
+				description:
+					'The DeLorean reappears with its clock exactly one minute behind. Einstein becomes the first time traveller, and Doc proves the machine works.'
 			},
 			{
 				id: 'flee',
@@ -271,11 +287,12 @@ export const specimens: MediaEntry[] = [
 		slug: 'back-to-the-future-part-ii',
 		title: 'Back to the Future Part II',
 		year: 1989,
+		released: 'November 22, 1989',
 		medium: 'film',
 		saga: 'back-to-the-future',
 		continuity: 'film',
 		partOrder: 2,
-		rules: ['mutable', 'branching'],
+		rules: ['mutable'],
 		mode: ['contraption'],
 		loop: null,
 		destEra: 0.72,
@@ -303,22 +320,11 @@ export const specimens: MediaEntry[] = [
 		],
 		ratings: { imdb: 7.8, rtCritic: 63, rtAudience: 86, metacritic: 57 },
 		branches: [
-			{ id: 'prime', label: 'Timeline 1', status: 'original', note: 'the 1985 and 2015 they set out from' },
 			{
-				id: 'dystopia',
-				label: 'Timeline 2',
-				parent: 'prime',
-				branchAt: 'biff-gives',
-				status: 'endangered',
-				note: "Biff's corrupt alternate 1985"
-			},
-			{
-				id: 'restored',
-				label: 'Timeline 3',
-				parent: 'dystopia',
-				branchAt: 'retrieve',
-				status: 'restored',
-				note: 'the timeline set right again'
+				id: 'prime',
+				label: 'Timeline 1',
+				status: 'original',
+				note: 'one line, overwritten by the almanac and then set right'
 			}
 		],
 		timeline: [
@@ -372,6 +378,7 @@ export const specimens: MediaEntry[] = [
 				chronoLabel: 'Nov 12, 1955',
 				location: 'Hill Valley',
 				kind: 'arrival',
+				jumpTo: 'biff-return',
 				description: 'Old Biff hands the almanac to the teenage Biff, seeding a fortune built on rigged bets.'
 			},
 			{
@@ -385,6 +392,17 @@ export const specimens: MediaEntry[] = [
 				paradox:
 					"Having just changed 1955, Old Biff drives the DeLorean back to the very 2015 he left. By the film's own rules that future should have been rewritten around him, or erased him entirely. It is the saga's best known continuity error.",
 				description: 'Old Biff returns the machine and staggers off, apparently unaffected.'
+			},
+			{
+				id: 'marty-home',
+				label: 'The group flies home',
+				narrative: 5.5,
+				chrono: 2015.835,
+				chronoLabel: 'Oct 21, 2015',
+				location: 'Hill Valley',
+				kind: 'departure',
+				jumpTo: 'arrive-a',
+				description: 'Unaware of the swap, Doc flies Marty and Jennifer back toward their own 1985.'
 			},
 			{
 				id: 'arrive-a',
@@ -411,11 +429,11 @@ export const specimens: MediaEntry[] = [
 				label: 'Back to 1955 again',
 				narrative: 8,
 				chrono: 1985.86,
-				chronoLabel: 'Nov 12, 1955',
+				chronoLabel: 'Oct 1985 (altered)',
 				location: 'Hill Valley',
 				kind: 'departure',
 				jumpTo: 'retrieve',
-				description: 'They trace the change to the day of the Enchantment Under the Sea dance.'
+				description: 'They trace the change to the day of the Enchantment Under the Sea dance and set off to undo it.'
 			},
 			{
 				id: 'retrieve',
@@ -444,6 +462,7 @@ export const specimens: MediaEntry[] = [
 		slug: 'back-to-the-future-part-iii',
 		title: 'Back to the Future Part III',
 		year: 1990,
+		released: 'May 25, 1990',
 		medium: 'film',
 		saga: 'back-to-the-future',
 		continuity: 'film',
@@ -484,21 +503,31 @@ export const specimens: MediaEntry[] = [
 				label: 'A letter from 1885',
 				narrative: 0,
 				chrono: 1955.95,
-				chronoLabel: 'Nov 1955',
+				chronoLabel: 'Nov 15, 1955',
 				location: 'Hill Valley',
 				kind: 'origin',
-				description: "Marty, still in 1955, receives Doc's seventy-year-old letter and learns Doc will soon be killed."
+				description: "Marty, still in 1955, receives Doc's seventy-year-old letter. Doc is alive and well in 1885, having been sent there by lightning."
+			},
+			{
+				id: 'grave',
+				label: 'The tombstone',
+				narrative: 0.5,
+				chrono: 1955.955,
+				chronoLabel: 'Nov 1955',
+				location: 'Boot Hill, Hill Valley',
+				kind: 'event',
+				description: "The 1955 Doc and Marty find a photograph of Doc's headstone: he is shot in the back by Buford Tannen days after the letter was written."
 			},
 			{
 				id: 'depart55',
 				label: 'Off to the Old West',
 				narrative: 1,
 				chrono: 1955.96,
-				chronoLabel: 'Nov 1955',
-				location: 'Hill Valley',
+				chronoLabel: 'Nov 16, 1955',
+				location: 'Pohatchee Drive-In, Hill Valley',
 				kind: 'departure',
 				jumpTo: 'arrive85',
-				description: 'The 1955 Doc helps send Marty back to save his friend.'
+				description: 'The 1955 Doc repairs the mine-stored DeLorean and sends Marty back to save his friend.'
 			},
 			{
 				id: 'arrive85',
@@ -508,38 +537,48 @@ export const specimens: MediaEntry[] = [
 				chronoLabel: 'Sep 2, 1885, 8:00 AM',
 				location: 'Hill Valley',
 				kind: 'arrival',
-				description: 'Marty lands in the frontier town, one week before Doc is due to die.'
+				description: 'Marty lands in the frontier, tears the DeLorean fuel line on arrival, and finds Doc with five days to live.'
 			},
 			{
 				id: 'clara',
 				label: 'Doc meets Clara',
 				narrative: 3,
 				chrono: 1885.68,
-				chronoLabel: 'Sep 1885',
+				chronoLabel: 'Sep 4, 1885',
 				location: 'Hill Valley',
 				kind: 'event',
-				description: 'Doc saves and falls for the new schoolteacher, Clara Clayton, complicating the escape plan.'
+				description: 'Doc catches the new schoolteacher, Clara Clayton, from a fall into the ravine and falls in love, complicating the escape.'
+			},
+			{
+				id: 'fuel',
+				label: 'No fuel, one plan',
+				narrative: 3.5,
+				chrono: 1885.69,
+				chronoLabel: 'Sep 5, 1885',
+				location: 'Hill Valley',
+				kind: 'event',
+				description: 'With no gasoline in 1885, the two plot to push the DeLorean to 88 mph using a stolen steam locomotive.'
 			},
 			{
 				id: 'tannen',
 				label: 'Mad Dog Tannen',
 				narrative: 4,
 				chrono: 1885.7,
-				chronoLabel: 'Sep 1885',
+				chronoLabel: 'Sep 6, 1885',
 				location: 'Hill Valley',
 				kind: 'event',
-				description: 'Marty, going by "Clint Eastwood", is drawn into a feud with the gunman Buford Tannen.'
+				description: 'Marty, going by "Clint Eastwood", is goaded into a pistol duel with the gunman Buford Tannen.'
 			},
 			{
 				id: 'showdown',
 				label: 'The showdown and the train',
 				narrative: 5,
 				chrono: 1885.71,
-				chronoLabel: 'Sep 7, 1885',
+				chronoLabel: 'Sep 7, 1885, 8:00 AM',
 				location: 'Hill Valley',
 				kind: 'departure',
 				jumpTo: 'return85',
-				description: 'After facing Tannen, Marty rides a driven locomotive to push the DeLorean to 88 mph.'
+				description: 'Marty survives the showdown, then rides a hijacked locomotive that drives the DeLorean to 88 mph. Doc stays behind for Clara.'
 			},
 			{
 				id: 'return85',
@@ -549,7 +588,17 @@ export const specimens: MediaEntry[] = [
 				chronoLabel: 'Oct 27, 1985',
 				location: 'Hill Valley',
 				kind: 'return',
-				description: 'Marty returns to 1985 and the DeLorean is destroyed by a train. Doc later reappears in a time machine of his own.'
+				description: 'Marty arrives in 1985, and a freight train smashes the empty DeLorean to pieces on the tracks.'
+			},
+			{
+				id: 'doc-train',
+				label: 'Doc returns by rail',
+				narrative: 7,
+				chrono: 1985.84,
+				chronoLabel: 'Oct 27, 1985',
+				location: 'Hill Valley',
+				kind: 'event',
+				description: 'Doc reappears in a flying steam time machine with Clara and their sons, proving the future is whatever you make it.'
 			}
 		]
 	},
@@ -557,6 +606,7 @@ export const specimens: MediaEntry[] = [
 		slug: 'twelve-monkeys',
 		title: '12 Monkeys',
 		year: 1995,
+		released: 'December 29, 1995',
 		medium: 'film',
 		rules: ['fixed'],
 		mode: ['contraption'],
@@ -609,6 +659,7 @@ export const specimens: MediaEntry[] = [
 		slug: 'primer',
 		title: 'Primer',
 		year: 2004,
+		released: 'October 8, 2004',
 		medium: 'film',
 		rules: ['branching'],
 		mode: ['contraption'],
@@ -635,6 +686,7 @@ export const specimens: MediaEntry[] = [
 		slug: 'edge-of-tomorrow',
 		title: 'Edge of Tomorrow',
 		year: 2014,
+		released: 'June 6, 2014',
 		medium: 'film',
 		rules: ['fixed'],
 		mode: ['relic'],
@@ -661,6 +713,7 @@ export const specimens: MediaEntry[] = [
 		slug: 'groundhog-day',
 		title: 'Groundhog Day',
 		year: 1993,
+		released: 'February 12, 1993',
 		medium: 'film',
 		rules: ['fixed'],
 		mode: ['anomaly'],
@@ -687,6 +740,7 @@ export const specimens: MediaEntry[] = [
 		slug: 'interstellar',
 		title: 'Interstellar',
 		year: 2014,
+		released: 'November 7, 2014',
 		medium: 'film',
 		rules: ['fixed'],
 		mode: ['relativistic', 'anomaly'],

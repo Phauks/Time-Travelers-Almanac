@@ -1,0 +1,333 @@
+<title>Timeline Lab — Back to the Future</title>
+<style>
+	*,*::before,*::after{box-sizing:border-box}
+	:root{
+		--ink:#05060c; --ink2:#0a0d18; --panel:#0d1120; --paper:#eef1f8; --muted:#8b93a8; --line:#1c2233;
+		--fixed:#4f9cff; --mutable:#ffa24a; --branching:#b57cff; --loop:#35d6a4; --warn:#ff5c66;
+		--shared:#cdd6e6; --prime:#8b93a8; --altered:#ffa24a;
+		--serif:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;
+		--sans:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
+		--mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+	}
+	body{margin:0;background:radial-gradient(120% 90% at 22% 12%,var(--ink2),var(--ink) 70%);color:var(--paper);
+		font-family:var(--sans);-webkit-font-smoothing:antialiased;min-height:100vh}
+	a{color:inherit}
+	.wrap{max-width:1120px;margin:0 auto;padding:clamp(20px,4vw,48px)}
+	.eyebrow{font-family:var(--mono);font-size:11.5px;letter-spacing:.28em;text-transform:uppercase;color:var(--muted);margin:0 0 10px}
+	h1{font-family:var(--serif);font-weight:600;font-size:clamp(28px,4.4vw,44px);margin:0 0 8px;letter-spacing:-.01em}
+	.lede{color:#c2c9d8;max-width:64ch;line-height:1.55;margin:0 0 26px}
+	.lede b{color:var(--paper)}
+
+	.controls{display:flex;flex-wrap:wrap;gap:14px 24px;align-items:center;margin-bottom:8px}
+	.seg{display:inline-flex;border:1px solid var(--line);border-radius:999px;overflow:hidden;font-family:var(--mono);font-size:12px}
+	.seg button{border:0;background:transparent;color:var(--muted);padding:9px 16px;cursor:pointer;letter-spacing:.03em;text-transform:uppercase}
+	.seg button[aria-pressed="true"]{background:var(--mutable);color:#06070c}
+	.seg button:focus-visible{outline:2px solid var(--mutable);outline-offset:2px}
+	.seg.small button{padding:7px 13px;font-size:11px}
+	.lbl{font-family:var(--mono);font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted)}
+
+	.stage{margin-top:20px;border:1px solid var(--line);border-radius:12px;background:color-mix(in srgb,var(--panel) 55%,transparent);
+		padding:clamp(16px,3vw,30px);overflow:hidden}
+	.stage svg{display:block;width:100%;height:auto}
+
+	.pitch{display:flex;gap:12px;align-items:flex-start;margin-top:14px;color:var(--muted);font-size:13.5px;line-height:1.5}
+	.pitch b{color:var(--paper)}
+	.pitch .tag{font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;border:1px solid var(--line);
+		padding:4px 8px;border-radius:6px;white-space:nowrap;color:var(--muted)}
+
+	/* legend */
+	.legend{display:flex;flex-wrap:wrap;gap:8px 20px;margin-top:22px;padding-top:16px;border-top:1px solid var(--line)}
+	.legend .it{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--muted)}
+	.legend .sw{width:11px;height:11px;border-radius:50%;box-shadow:0 0 8px currentColor}
+	.legend .bar{width:16px;height:3px;border-radius:2px}
+
+	/* shared node/detail bits */
+	.detail{margin-top:16px;border:1px solid var(--line);border-left:3px solid var(--mutable);border-radius:6px;
+		background:color-mix(in srgb,var(--panel) 70%,transparent);padding:12px 15px;min-height:76px}
+	.detail .b{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px}
+	.chip{font-family:var(--mono);font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;padding:3px 8px;border-radius:999px;border:1px solid}
+	.detail h4{font-family:var(--serif);font-size:18px;margin:0 0 3px}
+	.detail .when{font-family:var(--mono);font-size:11px;color:var(--muted);margin:0 0 6px}
+	.detail p.d{margin:0;font-size:14px;line-height:1.55;color:#cfd6e6;max-width:64ch}
+	.detail .para{margin:8px 0 0;font-size:13px;color:var(--warn);display:flex;gap:7px;align-items:flex-start}
+
+	/* vertical layout */
+	.vert{position:relative}
+	.vrow{display:grid;grid-template-columns:118px 1fr;gap:0;position:relative}
+	.vrow .when{font-family:var(--mono);font-size:11px;color:var(--muted);text-align:right;padding:14px 16px 0 0;white-space:nowrap}
+	.vrail{position:relative}
+	.vcontent{padding:10px 0 18px 0}
+	.vcard{border:1px solid var(--line);border-radius:8px;padding:11px 14px;background:color-mix(in srgb,var(--panel) 60%,transparent)}
+	.vcard h4{font-family:var(--serif);font-size:16.5px;margin:0 0 3px}
+	.vcard .loc{font-family:var(--mono);font-size:10.5px;color:var(--muted);margin:0 0 7px}
+	.vcard p{margin:0;font-size:13.5px;line-height:1.5;color:#cfd6e6}
+	.vcard .b{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:7px}
+	.vcard .para{margin-top:9px;font-size:12.5px;color:var(--warn);display:flex;gap:7px;align-items:flex-start;
+		border-top:1px dashed color-mix(in srgb,var(--warn) 40%,transparent);padding-top:8px}
+	.cap{display:grid;grid-template-columns:118px 1fr;align-items:center}
+	.cap .when{font-family:var(--mono);font-size:11px;color:var(--muted);text-align:right;padding-right:16px}
+	.cap .capbar{font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--paper);
+		padding:9px 0;display:flex;align-items:center;gap:10px}
+	.cap .capbar::before{content:"";width:22px;height:22px;border:2px solid var(--mutable);border-radius:4px;display:inline-block;
+		background:color-mix(in srgb,var(--mutable) 22%,transparent)}
+	.diverge{display:grid;grid-template-columns:118px 1fr}
+	.diverge .band{margin:6px 0;padding:9px 13px;border-radius:7px;border:1px dashed color-mix(in srgb,var(--altered) 55%,transparent);
+		background:color-mix(in srgb,var(--altered) 10%,transparent);color:#f2d9b6;font-size:13px;display:flex;gap:9px;align-items:flex-start}
+	.diverge .band b{color:var(--altered)}
+</style>
+
+<div class="wrap">
+	<p class="eyebrow">Timeline Lab · design exploration</p>
+	<h1>How should we draw a timeline?</h1>
+	<p class="lede">Three candidates, all showing the <b>same real data</b> — <i>Back to the Future</i> Part I —
+		with its jump to 1955, the <b>branch</b> where the past is rewritten, the story's <b>start &amp; stop</b>,
+		and a flagged <b>paradox</b>. Pick the one that feels right and I'll build it for real.</p>
+
+	<div class="controls">
+		<div>
+			<div class="lbl" style="margin-bottom:6px">Layout</div>
+			<div class="seg" role="group" aria-label="Layout">
+				<button data-layout="horizontal" aria-pressed="true">Horizontal branch</button>
+				<button data-layout="vertical" aria-pressed="false">Vertical branch</button>
+				<button data-layout="swimlanes" aria-pressed="false">Swimlanes</button>
+			</div>
+		</div>
+		<div>
+			<div class="lbl" style="margin-bottom:6px">Ordering</div>
+			<div class="seg small" role="group" aria-label="Ordering">
+				<button data-order="told" aria-pressed="true">As Told</button>
+				<button data-order="happened" aria-pressed="false">As Happened</button>
+			</div>
+		</div>
+	</div>
+
+	<div class="stage" id="stage"></div>
+	<div id="detailWrap"></div>
+	<div class="pitch" id="pitch"></div>
+
+	<div class="legend">
+		<span class="it"><span class="sw" style="color:var(--shared);background:var(--shared)"></span>Shared past (lived once)</span>
+		<span class="it"><span class="sw" style="color:var(--prime);background:var(--prime)"></span>Prime 1985 (left behind)</span>
+		<span class="it"><span class="sw" style="color:var(--altered);background:var(--altered)"></span>Altered 1985 (returned to)</span>
+		<span class="it"><span class="bar" style="background:var(--mutable);border-top:2px dashed var(--mutable);height:0"></span>Time jump</span>
+		<span class="it"><span class="sw" style="color:var(--warn);background:var(--warn)"></span>Paradox / continuity error</span>
+	</div>
+</div>
+
+<script>
+// hex palette — SVG presentation attributes do not resolve CSS var()
+const C = {
+	shared:'#cdd6e6', prime:'#8b93a8', altered:'#ffa24a', line:'#2a3348',
+	lineFaint:'rgba(238,241,248,.07)', mutable:'#ffa24a', warn:'#ff5c66',
+	paper:'#eef1f8', ink:'#05060c', muted:'#8b93a8',
+	altered10:'rgba(255,162,74,.10)', altered22:'rgba(255,162,74,.22)', altered55:'rgba(255,162,74,.55)'
+};
+const V = {
+	'shared':  {label:'Shared past', color:C.shared, lane:0},
+	'prime-1985':   {label:'Prime 1985', color:C.prime, lane:0},
+	'altered-1985': {label:'Altered 1985', color:C.altered, lane:1}
+};
+const KIND = {
+	origin:{t:'Origin'}, departure:{t:'Time jump'}, arrival:{t:'Arrival'},
+	return:{t:'Return'}, event:{t:'Event'}, loop:{t:'Loop'}
+};
+// Back to the Future — Part I
+const DATA = [
+	{id:'demo', n:0, c:1985.820, label:'The DeLorean revealed', short:'Oct 26 1985 · 1:15 AM', loc:'Twin Pines Mall', kind:'origin', v:'prime-1985',
+		desc:'Doc demonstrates the time machine — the first time travel on the timeline.'},
+	{id:'flee', n:1, c:1985.8205, label:'Libyans attack — Marty flees', short:'Oct 26 1985 · 1:20 AM', loc:'Twin Pines Mall', kind:'departure', v:'prime-1985', jumpTo:'arrive55',
+		desc:'Doc is shot; Marty escapes at 88 mph and is thrown to the date on the time circuits.'},
+	{id:'arrive55', n:2, c:1955.845, label:'Arrival in 1955', short:'Nov 5 1955 · 6:00 AM', loc:'Peabody Ranch', kind:'arrival', v:'shared',
+		desc:'Marty flattens one of a pair of pines — the mall will be renamed "Lone Pine".'},
+	{id:'interfere', n:3, c:1955.847, label:'The meeting is disrupted', short:'Nov 5 1955', loc:'Downtown Hill Valley', kind:'event', v:'shared',
+		desc:'Marty stops his parents from meeting; Lorraine fixates on him instead.',
+		paradox:'Ontological risk — Marty now threatens his own existence; the family photo begins to fade.'},
+	{id:'finddoc', n:4, c:1955.848, label:'Finds the young Doc', short:'Nov 5 1955', loc:"Doc's mansion", kind:'event', v:'shared',
+		desc:'The only power source big enough is the lightning due to strike the clock tower.'},
+	{id:'plan', n:5, c:1955.855, label:'Engineering the romance', short:'Nov 6–11 1955', loc:'Hill Valley High', kind:'event', v:'shared',
+		desc:'Marty schemes to get his parents together at the dance and repair the damage.'},
+	{id:'dance', n:6, c:1955.864, label:'Enchantment Under the Sea', short:'Nov 12 1955 · night', loc:'Hill Valley High gym', kind:'event', v:'shared',
+		desc:'George decks Biff and kisses Lorraine — the timeline is set on a new course.'},
+	{id:'depart55', n:7, c:1955.866, label:'The clock-tower lightning', short:'Nov 12 1955 · 10:04 PM', loc:'Courthouse Square', kind:'departure', v:'shared', jumpTo:'return85',
+		desc:'Lightning strikes as the DeLorean hits 88 mph, sending Marty home.'},
+	{id:'return85', n:8, c:1985.821, label:'Back to 1985', short:'Oct 26 1985 · 1:24 AM', loc:'Lone Pine Mall', kind:'return', v:'altered-1985',
+		desc:'Marty returns ten minutes before he left — but into a rewritten present.'},
+	{id:'altered', n:9, c:1985.822, label:'A better 1985', short:'Oct 26 1985 · morning', loc:'The McFly home', kind:'event', v:'altered-1985',
+		desc:'George is a confident author, Lorraine is happy, and Biff is now their meek valet.'},
+	{id:'hook', n:10, c:1985.823, label:'“…we don’t need roads.”', short:'Oct 26 1985 · later', loc:'The McFly home', kind:'departure', v:'altered-1985',
+		desc:'Doc returns from 2015 and pulls them into the future — the thread Part II picks up.'}
+];
+
+let order = 'told';
+let layout = 'horizontal';
+let selected = 'demo';
+
+const stage = document.getElementById('stage');
+const detailWrap = document.getElementById('detailWrap');
+const pitch = document.getElementById('pitch');
+
+function ordered(){
+	return [...DATA].sort((a,b)=> order==='told' ? a.n-b.n : a.c-b.c);
+}
+function colorOf(e){ return V[e.v].color; }
+function esc(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;'); }
+
+const PITCH = {
+	horizontal:['Time flows left→right, as it feels — the rewritten 1985 drops to a lower branch, and the jump arc lands on it.','Matches intuition · branch = second track · long text needs the detail box'],
+	vertical:['Everything visible in one column with full descriptions inline; the rewrite forks to an indented branch.','All detail at once · scales to many beats · time reads top→down not left→right'],
+	swimlanes:['Time left→right; each version of the timeline is its own horizontal lane, so the two 1985s sit stacked at the same moment.','Best for the master saga (a lane per media/timeline) · needs vertical room']
+};
+
+function renderDetail(){
+	if(layout==='vertical'){ detailWrap.innerHTML=''; return; }
+	const e = DATA.find(x=>x.id===selected) || DATA[0];
+	const col = colorOf(e);
+	detailWrap.innerHTML = '<div class="detail" style="border-left-color:'+col+'">'
+		+'<div class="b">'
+		+'<span class="chip" style="color:'+col+';border-color:'+col+'">'+(KIND[e.kind]?.t||'Event')+'</span>'
+		+'<span class="chip" style="color:var(--muted);border-color:var(--line)">'+V[e.v].label+'</span>'
+		+(e.jumpTo?'<span class="chip" style="color:var(--muted);border-color:var(--line)">→ '+esc(DATA.find(x=>x.id===e.jumpTo).label)+'</span>':'')
+		+'</div>'
+		+'<h4>'+esc(e.label)+'</h4>'
+		+'<p class="when">'+esc(e.short)+' — '+esc(e.loc)+'</p>'
+		+'<p class="d">'+esc(e.desc)+'</p>'
+		+(e.paradox?'<p class="para">⚠ '+esc(e.paradox)+'</p>':'')
+		+'</div>';
+}
+function renderPitch(){
+	pitch.innerHTML = '<span class="tag">'+layout+'</span><div><b>'+PITCH[layout][0]+'</b><br><span style="color:var(--muted)">'+PITCH[layout][1]+'</span></div>';
+}
+
+/* ---------------- HORIZONTAL BRANCH ---------------- */
+function renderHorizontal(){
+	const evs = ordered();
+	const W=1000, H=300, mL=70, mR=70, mainY=140, branchY=232;
+	const n=evs.length, span=W-mL-mR;
+	const xById={}, laneY={};
+	evs.forEach((e,i)=>{ xById[e.id]=mL + (n===1?0:(i/(n-1))*span); laneY[e.id]= V[e.v].lane===1?branchY:mainY; });
+	const MONO='ui-monospace,Menlo,Consolas,monospace';
+	let s='<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Horizontal branching timeline">';
+	const mainXs=evs.filter(e=>V[e.v].lane===0).map(e=>xById[e.id]);
+	const brXs=evs.filter(e=>V[e.v].lane===1).map(e=>xById[e.id]);
+	if(mainXs.length){ s+='<line x1="'+(Math.min(...mainXs))+'" y1="'+mainY+'" x2="'+(Math.max(...mainXs))+'" y2="'+mainY+'" stroke="'+C.line+'" stroke-width="3"/>'; }
+	if(brXs.length){ s+='<line x1="'+(Math.min(...brXs))+'" y1="'+branchY+'" x2="'+(Math.max(...brXs))+'" y2="'+branchY+'" stroke="'+C.altered55+'" stroke-width="3"/>'; }
+	// caps
+	s+='<g font-family="'+MONO+'" font-size="10" fill="'+C.muted+'">';
+	s+='<rect x="'+(mL-40)+'" y="'+(mainY-11)+'" width="22" height="22" rx="4" fill="'+C.altered22+'" stroke="'+C.mutable+'"/>';
+	s+='<text x="'+(mL-29)+'" y="'+(mainY-18)+'" text-anchor="middle">OPENS</text>';
+	const lastX=Math.max(...evs.map(e=>xById[e.id])), lastY=laneY[evs[evs.length-1].id];
+	s+='<rect x="'+(lastX+18)+'" y="'+(lastY-11)+'" width="22" height="22" rx="4" fill="'+C.altered22+'" stroke="'+C.altered+'"/>';
+	s+='<text x="'+(lastX+29)+'" y="'+(lastY-18)+'" text-anchor="middle">CLOSES</text>';
+	s+='</g>';
+	// jump arcs
+	evs.forEach(e=>{ if(!e.jumpTo||!(e.jumpTo in xById))return;
+		const x1=xById[e.id],y1=laneY[e.id],x2=xById[e.jumpTo],y2=laneY[e.jumpTo];
+		const top=Math.min(y1,y2)-46;
+		s+='<path d="M '+x1+' '+y1+' C '+x1+' '+top+', '+x2+' '+top+', '+x2+' '+y2+'" fill="none" stroke="'+C.mutable+'" stroke-width="2" stroke-dasharray="5 5" opacity=".85"/>';
+		s+='<text x="'+((x1+x2)/2)+'" y="'+(top+2)+'" text-anchor="middle" font-family="'+MONO+'" font-size="9.5" fill="'+C.mutable+'">jump</text>';
+	});
+	// nodes
+	evs.forEach(e=>{ const x=xById[e.id],y=laneY[e.id],col=colorOf(e),sel=e.id===selected;
+		s+='<g class="hnode" data-id="'+e.id+'" style="cursor:pointer">';
+		if(e.paradox) s+='<circle cx="'+x+'" cy="'+y+'" r="12" fill="none" stroke="'+C.warn+'" stroke-width="1.5" stroke-dasharray="3 3"/>';
+		s+='<circle cx="'+x+'" cy="'+y+'" r="'+(sel?8:6)+'" fill="'+col+'" stroke="'+C.ink+'" stroke-width="3"/>';
+		if(sel) s+='<circle cx="'+x+'" cy="'+y+'" r="12" fill="none" stroke="'+C.paper+'" stroke-width="1.2"/>';
+		const ly = y===branchY? y+30 : y-20;
+		s+='<text x="'+x+'" y="'+ly+'" text-anchor="middle" font-family="'+MONO+'" font-size="9.5" fill="'+C.muted+'">'+esc(e.short.split('·')[0].trim())+'</text>';
+		s+='</g>';
+	});
+	if(brXs.length) s+='<text x="'+(Math.min(...brXs))+'" y="'+(branchY+48)+'" font-family="'+MONO+'" font-size="10" fill="'+C.altered+'">rewritten timeline</text>';
+	s+='</svg>';
+	stage.innerHTML=s;
+	stage.querySelectorAll('.hnode').forEach(g=>g.addEventListener('click',()=>{selected=g.dataset.id;render();}));
+}
+
+/* ---------------- VERTICAL BRANCH ---------------- */
+function renderVertical(){
+	const evs=ordered();
+	let html='<div class="vert">';
+	// opens cap
+	html+='<div class="cap"><div class="when">'+esc(evs[0].short)+'</div><div class="capbar">Story opens</div></div>';
+	let openedBranch=false;
+	evs.forEach(e=>{
+		const lane=V[e.v].lane, col=colorOf(e);
+		if(lane===1 && !openedBranch){ openedBranch=true;
+			html+='<div class="diverge"><div></div><div class="band">⎇ <div><b>The past is rewritten.</b> Marty returns to a <b>new 1985</b> — the timeline branches here; the world he left no longer exists.</div></div></div>';
+		}
+		const indent = lane===1? 'margin-left:26px;border-left:2px solid color-mix(in srgb,var(--altered) 45%,transparent);padding-left:16px' : '';
+		html+='<div class="vrow"><div class="when">'+esc(e.short)+'</div>'
+			+'<div class="vcontent" style="'+indent+'"><div class="vcard">'
+			+'<div class="b">'
+			+'<span class="chip" style="color:'+col+';border-color:'+col+'">'+(KIND[e.kind]?.t||'Event')+'</span>'
+			+'<span class="chip" style="color:var(--muted);border-color:var(--line)">'+V[e.v].label+'</span>'
+			+(e.jumpTo?'<span class="chip" style="color:var(--muted);border-color:var(--line)">→ '+esc(DATA.find(x=>x.id===e.jumpTo).label)+'</span>':'')
+			+'</div>'
+			+'<h4>'+esc(e.label)+'</h4><p class="loc">'+esc(e.loc)+'</p><p>'+esc(e.desc)+'</p>'
+			+(e.paradox?'<p class="para">⚠ '+esc(e.paradox)+'</p>':'')
+			+'</div></div></div>';
+	});
+	html+='<div class="cap"><div class="when">'+esc(evs[evs.length-1].short)+'</div><div class="capbar" style="color:var(--altered)">Story closes</div></div>';
+	html+='</div>';
+	stage.innerHTML=html;
+}
+
+/* ---------------- SWIMLANES ---------------- */
+function renderSwimlanes(){
+	const evs=ordered();
+	const W=1000,H=340,mL=150,mR=60;
+	const rows=[{key:'prime-1985',label:'Prime 1985',y:80},{key:'shared',label:'Shared 1955',y:180},{key:'altered-1985',label:'Altered 1985',y:280}];
+	const cmin=Math.min(...DATA.map(e=>e.c)), cmax=Math.max(...DATA.map(e=>e.c));
+	const span=W-mL-mR;
+	const xOf=c=> mL + ((c-cmin)/(cmax-cmin))*span;
+	const yOf=v=> rows.find(r=>r.key===v).y;
+	const MONO='ui-monospace,Menlo,Consolas,monospace';
+	let s='<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Swimlane timeline">';
+	// lanes
+	rows.forEach(r=>{
+		s+='<line x1="'+mL+'" y1="'+r.y+'" x2="'+(W-mR)+'" y2="'+r.y+'" stroke="'+C.line+'" stroke-width="2"/>';
+		s+='<text x="'+(mL-16)+'" y="'+(r.y-8)+'" text-anchor="end" font-family="'+MONO+'" font-size="10.5" fill="'+(V[r.key]?V[r.key].color:C.muted)+'">'+r.label+'</text>';
+		s+='<text x="'+(mL-16)+'" y="'+(r.y+9)+'" text-anchor="end" font-family="'+MONO+'" font-size="8.5" fill="'+C.muted+'">'+(V[r.key].note||'')+'</text>';
+	});
+	// era ticks
+	[['1955',1955.85],['1985',1985.82]].forEach(t=>{ const x=xOf(t[1]);
+		s+='<line x1="'+x+'" y1="40" x2="'+x+'" y2="'+(H-30)+'" stroke="'+C.lineFaint+'" stroke-width="1"/>';
+		s+='<text x="'+x+'" y="30" text-anchor="middle" font-family="'+MONO+'" font-size="10" fill="'+C.muted+'">'+t[0]+'</text>';
+	});
+	// jumps across lanes
+	evs.forEach(e=>{ if(!e.jumpTo)return; const t=DATA.find(x=>x.id===e.jumpTo);
+		const x1=xOf(e.c),y1=yOf(e.v),x2=xOf(t.c),y2=yOf(t.v),mx=(x1+x2)/2,my=Math.min(y1,y2)-34;
+		s+='<path d="M '+x1+' '+y1+' Q '+mx+' '+my+' '+x2+' '+y2+'" fill="none" stroke="'+C.mutable+'" stroke-width="2" stroke-dasharray="5 5" opacity=".8"/>';
+	});
+	// nodes
+	evs.forEach(e=>{ const x=xOf(e.c),y=yOf(e.v),col=colorOf(e),sel=e.id===selected;
+		s+='<g class="hnode" data-id="'+e.id+'" style="cursor:pointer">';
+		if(e.paradox) s+='<circle cx="'+x+'" cy="'+y+'" r="12" fill="none" stroke="'+C.warn+'" stroke-width="1.5" stroke-dasharray="3 3"/>';
+		s+='<circle cx="'+x+'" cy="'+y+'" r="'+(sel?8:6)+'" fill="'+col+'" stroke="'+C.ink+'" stroke-width="3"/>';
+		if(sel) s+='<circle cx="'+x+'" cy="'+y+'" r="12" fill="none" stroke="'+C.paper+'" stroke-width="1.2"/>';
+		s+='</g>';
+	});
+	s+='</svg>';
+	stage.innerHTML=s;
+	stage.querySelectorAll('.hnode').forEach(g=>g.addEventListener('click',()=>{selected=g.dataset.id;render();}));
+}
+
+function render(){
+	if(layout==='horizontal') renderHorizontal();
+	else if(layout==='vertical') renderVertical();
+	else renderSwimlanes();
+	renderDetail(); renderPitch();
+}
+document.querySelectorAll('[data-layout]').forEach(b=>b.addEventListener('click',()=>{
+	layout=b.dataset.layout;
+	document.querySelectorAll('[data-layout]').forEach(x=>x.setAttribute('aria-pressed',x===b?'true':'false'));
+	render();
+}));
+document.querySelectorAll('[data-order]').forEach(b=>b.addEventListener('click',()=>{
+	order=b.dataset.order;
+	document.querySelectorAll('[data-order]').forEach(x=>x.setAttribute('aria-pressed',x===b?'true':'false'));
+	render();
+}));
+// note text on V for swimlane sublabels
+V['shared'].note='lived once'; V['prime-1985'].note='left behind'; V['altered-1985'].note='returned to';
+render();
+</script>

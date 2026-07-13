@@ -5,7 +5,7 @@
 
 	const rules: Rule[] = ['fixed', 'mutable', 'branching'];
 
-	// active filters — start with all on; "loop" is a separate toggle
+	// active filters  -  start with all on; "loop" is a separate toggle
 	let active = $state<Set<Rule>>(new Set(rules));
 	let loopOnly = $state(false);
 
@@ -65,7 +65,7 @@
 	</div>
 
 	{#if shown.length === 0}
-		<p class="empty">No specimens match. Widen the filters — time is generous like that.</p>
+		<p class="empty">No specimens match. Widen the filters  -  time is generous like that.</p>
 	{/if}
 </section>
 

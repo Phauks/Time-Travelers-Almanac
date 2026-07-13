@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { base } from '$app/paths';
-	import { ArrowLeft, Warning } from 'phosphor-svelte';
+	import { ArrowLeft, Warning, ArrowSquareOut } from 'phosphor-svelte';
 	import Timeline from '$lib/components/Timeline.svelte';
 	import {
 		RULE_META,
@@ -16,6 +16,17 @@
 	let s = $derived(data.specimen);
 
 	const riskPct = { low: 33, medium: 66, high: 100 } as const;
+
+	const LINK_META: Record<string, string> = {
+		imdb: 'IMDb',
+		rottentomatoes: 'Rotten Tomatoes',
+		metacritic: 'Metacritic',
+		steam: 'Steam',
+		watch: 'Where to watch',
+		wikipedia: 'Wikipedia',
+		official: 'Official site',
+		other: 'Link'
+	};
 
 	let related = $derived(
 		(s.related ?? []).map((slug) => getSpecimen(slug)).filter((x) => x !== undefined)
@@ -41,6 +52,16 @@
 				{s.year} · {MEDIUM_META[s.medium]}{s.saga ? ` · ${s.saga.replace(/-/g, ' ')} saga` : ''}
 			</p>
 			<p class="logline">{s.logline}</p>
+			{#if s.links?.length}
+				<div class="links">
+					{#each s.links as link (link.url)}
+						<a class="lk" href={link.url} target="_blank" rel="noreferrer noopener">
+							<ArrowSquareOut size={13} weight="bold" />
+							{link.label ?? LINK_META[link.kind] ?? 'Link'}
+						</a>
+					{/each}
+				</div>
+			{/if}
 		</div>
 	</header>
 
@@ -49,7 +70,7 @@
 			<p class="k">The Rule</p>
 			<p class="v">
 				{RULE_META[s.rules[0]].name}
-				<small>{RULE_META[s.rules[0]].nickname} — {RULE_META[s.rules[0]].law}</small>
+				<small>{RULE_META[s.rules[0]].nickname}  -  {RULE_META[s.rules[0]].law}</small>
 			</p>
 		</div>
 		<div class="cell mode">
@@ -84,7 +105,7 @@
 		{/if}
 
 		{#if s.fieldNote}
-			<p class="fieldnote">Field note — {s.fieldNote}</p>
+			<p class="fieldnote">Field note  -  {s.fieldNote}</p>
 		{/if}
 	</section>
 
@@ -248,8 +269,31 @@
 		line-height: 1.35;
 	}
 
-	.prose {
-		max-width: 62ch;
+	.links {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.5rem;
+		margin-top: 1rem;
+	}
+	.lk {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.4rem;
+		font-family: var(--font-mono);
+		font-size: 0.68rem;
+		letter-spacing: 0.03em;
+		text-transform: uppercase;
+		padding: 0.5rem 0.8rem;
+		border: 1px solid var(--color-line);
+		border-radius: 999px;
+		color: var(--color-muted);
+		transition:
+			color 0.15s,
+			border-color 0.15s;
+	}
+	.lk:hover {
+		color: var(--color-paper);
+		border-color: color-mix(in srgb, var(--color-paper) 35%, var(--color-line));
 	}
 	.prose h2,
 	.timeline h2,

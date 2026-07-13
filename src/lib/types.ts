@@ -1,6 +1,6 @@
 // The Almanac's content model. Every specimen is tagged on three independent
-// axes — Rule (what happens when you meddle), Mode (how you travel), and Loop
-// (an optional special condition) — and may carry its own timeline.
+// axes: Rule (what happens when you meddle), Mode (how you travel), and Loop
+// (an optional special condition), and may carry its own branching timeline.
 
 export type Rule = 'fixed' | 'mutable' | 'branching';
 export type Mode = 'contraption' | 'anomaly' | 'relic' | 'relativistic' | 'sleep' | 'mind';
@@ -29,6 +29,24 @@ export interface SourceRef {
 	url: string;
 }
 
+/** An outbound link (IMDb, Rotten Tomatoes, Steam, where-to-watch, etc.). */
+export type LinkKind =
+	| 'imdb'
+	| 'rottentomatoes'
+	| 'metacritic'
+	| 'steam'
+	| 'watch'
+	| 'wikipedia'
+	| 'official'
+	| 'other';
+
+export interface LinkRef {
+	kind: LinkKind;
+	url: string;
+	/** overrides the default label for the kind */
+	label?: string;
+}
+
 export type EventKind =
 	| 'origin' // the story's starting point in time
 	| 'event' // an ordinary beat
@@ -45,7 +63,7 @@ export interface TimelineEvent {
 	label: string;
 	/** order the audience experiences it (0-based) */
 	narrative: number;
-	/** sortable "real" time — a year (may be fractional) or an abstract index */
+	/** sortable "real" time: a year (may be fractional) or an abstract index */
 	chrono: number;
 	/** how to display the moment, e.g. "Nov 12, 1955 · 10:04 PM" */
 	chronoLabel?: string;
@@ -54,14 +72,38 @@ export interface TimelineEvent {
 	/** where it happens, e.g. "Courthouse Square, Hill Valley" */
 	location?: string;
 	kind?: EventKind;
-	/** event id a time jump lands on (draws an arc) */
+	/** event id a time jump lands on */
 	jumpTo?: string;
-	/** which version of the timeline this belongs to, e.g. "prime-1985" | "altered-1985" */
+	/** which timeline branch this beat lives on (see MediaEntry.branches) */
+	branch?: string;
+	/** legacy: superseded by `branch` */
 	variant?: string;
 	/** which saga part this event belongs to (for combined saga timelines) */
 	part?: string;
+	/** which media/part this beat is sourced from, shown on combined master timelines */
+	source?: string;
+	/** flags a paradox or continuity error at this beat, with an explanation */
+	paradox?: string;
+	/** an image for this point on the timeline */
+	image?: string;
 	/** a crossing into another specimen's timeline (franchise continuity) */
 	crossRef?: { entry: string; event: string };
+}
+
+/**
+ * A branch of a timeline. A new branch splinters off its parent whenever the
+ * future is changed (e.g. Marty's arrival, then the dance that restores him).
+ */
+export interface Branch {
+	id: string;
+	label: string;
+	/** the branch this one splinters from */
+	parent?: string;
+	/** event id at which it splinters from its parent */
+	branchAt?: string;
+	status?: 'original' | 'active' | 'endangered' | 'erased' | 'restored';
+	/** one line on what this branch is */
+	note?: string;
 }
 
 export interface MediaEntry {
@@ -80,7 +122,7 @@ export interface MediaEntry {
 	mode: Mode[];
 	loop: Loop | null;
 
-	/** position on the shared prime line, 0 (deep past) … 1 (deep future) */
+	/** position on the shared prime line, 0 (deep past) to 1 (deep future) */
 	destEra: number;
 	/** where it travels to, e.g. "1955" */
 	destLabel: string;
@@ -96,6 +138,10 @@ export interface MediaEntry {
 	imageSource: string;
 	/** citations backing this entry's data */
 	sources?: SourceRef[];
+	/** outbound links: IMDb, Rotten Tomatoes, Steam, where-to-watch, etc. */
+	links?: LinkRef[];
 
+	/** the branches of this entry's timeline (splinters when the future changes) */
+	branches?: Branch[];
 	timeline: TimelineEvent[];
 }

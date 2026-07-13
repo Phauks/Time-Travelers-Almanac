@@ -1,6 +1,6 @@
 import type { MediaEntry } from '$lib/types';
 
-// Seed specimens — a small slice of the 100, authored with real timeline data
+// Seed specimens  -  a small slice of the 100, authored with real timeline data
 // so the reusable Timeline component and the prime-line landing have something
 // true to render. Add entries here; routes and the landing pick them up.
 
@@ -48,7 +48,7 @@ export const specimens: MediaEntry[] = [
 		paradoxes: ['bootstrap', 'causal loop'],
 		paradoxRisk: 'high',
 		fieldNote:
-			'You cannot prevent the future by visiting the past — you are how the future was arranged. Bring a jacket; you arrive with nothing.',
+			'You cannot prevent the future by visiting the past  -  you are how the future was arranged. Bring a jacket; you arrive with nothing.',
 		related: ['twelve-monkeys'],
 		imageSource: 'Film stills → TMDB',
 		timeline: [
@@ -73,7 +73,7 @@ export const specimens: MediaEntry[] = [
 		destLabel: '1955',
 		logline: 'The timeline is clay; the family photograph is the warning light.',
 		mechanism:
-			'A plutonium-fuelled DeLorean reaching 88 mph displaces its occupants to a set date. Change the past and the present — and your own existence — redraws accordingly.',
+			'A plutonium-fuelled DeLorean reaching 88 mph displaces its occupants to a set date. Change the past and the present  -  and your own existence  -  redraws accordingly.',
 		paradoxes: ['grandfather', 'ontological'],
 		paradoxRisk: 'high',
 		fieldNote:
@@ -81,13 +81,18 @@ export const specimens: MediaEntry[] = [
 		related: ['a-connecticut-yankee'],
 		imageSource: 'Film stills → TMDB',
 		sources: [
-			{ label: 'Wikipedia — Back to the Future', url: 'https://en.wikipedia.org/wiki/Back_to_the_Future' },
-			{ label: 'Futurepedia — Twin Pines Mall', url: 'https://backtothefuture.fandom.com/wiki/Twin_Pines_Mall' },
+			{ label: 'Wikipedia  -  Back to the Future', url: 'https://en.wikipedia.org/wiki/Back_to_the_Future' },
+			{ label: 'Futurepedia  -  Twin Pines Mall', url: 'https://backtothefuture.fandom.com/wiki/Twin_Pines_Mall' },
 			{
-				label: 'Futurepedia — Minute by minute in Back to the Future',
+				label: 'Futurepedia  -  Minute by minute in Back to the Future',
 				url: 'https://backtothefuture.fandom.com/wiki/Minute_by_minute_in_Back_to_the_Future'
 			},
 			{ label: 'Screenplay, 4th draft (Gale & Zemeckis)', url: 'https://www.dailyscript.com/scripts/bttf4th.pdf' }
+		],
+		links: [
+			{ kind: 'imdb', url: 'https://www.imdb.com/title/tt0088763/' },
+			{ kind: 'rottentomatoes', url: 'https://www.rottentomatoes.com/m/back_to_the_future' },
+			{ kind: 'watch', url: 'https://www.justwatch.com/us/movie/back-to-the-future' }
 		],
 		timeline: [
 			{
@@ -100,11 +105,11 @@ export const specimens: MediaEntry[] = [
 				kind: 'origin',
 				variant: 'prime-1985',
 				description:
-					'Doc Brown demonstrates the time machine, sending Einstein the dog one minute into the future — the first time travel on the timeline.'
+					'Doc Brown demonstrates the time machine, sending Einstein the dog one minute into the future  -  the first time travel on the timeline.'
 			},
 			{
 				id: 'flee',
-				label: 'Libyans attack — Marty flees',
+				label: 'Libyans attack  -  Marty flees',
 				narrative: 1,
 				chrono: 1985.8205,
 				chronoLabel: 'Oct 26, 1985 · 1:20 AM',
@@ -124,7 +129,7 @@ export const specimens: MediaEntry[] = [
 				location: 'Peabody Ranch, Hill Valley',
 				kind: 'arrival',
 				description:
-					'Marty crashes into a barn and flattens one of the Peabodys’ twin pines — which is why he will return to a "Lone Pine Mall".'
+					'Marty crashes into a barn and flattens one of the Peabodys’ twin pines  -  which is why he will return to a "Lone Pine Mall".'
 			},
 			{
 				id: 'interfere',
@@ -135,7 +140,7 @@ export const specimens: MediaEntry[] = [
 				location: 'Downtown Hill Valley',
 				kind: 'event',
 				description:
-					'Marty pushes George clear of the car meant to introduce him to Lorraine. She becomes infatuated with Marty instead — and he begins to fade from the family photograph.'
+					'Marty pushes George clear of the car meant to introduce him to Lorraine. She becomes infatuated with Marty instead  -  and he begins to fade from the family photograph.'
 			},
 			{
 				id: 'finddoc',
@@ -146,14 +151,14 @@ export const specimens: MediaEntry[] = [
 				location: "Doc's mansion, Hill Valley",
 				kind: 'event',
 				description:
-					'The 1955 Doc has no power source strong enough to get Marty home — except the lightning known to strike the clock tower a week later.'
+					'The 1955 Doc has no power source strong enough to get Marty home  -  except the lightning known to strike the clock tower a week later.'
 			},
 			{
 				id: 'plan',
 				label: 'Engineering the romance',
 				narrative: 5,
 				chrono: 1955.855,
-				chronoLabel: 'Nov 6–11, 1955',
+				chronoLabel: 'Nov 6-11, 1955',
 				location: 'Hill Valley High',
 				kind: 'event',
 				description:
@@ -192,7 +197,7 @@ export const specimens: MediaEntry[] = [
 				location: 'Lone Pine Mall, Hill Valley',
 				kind: 'return',
 				description:
-					'Marty arrives ten minutes before he first left and watches Doc be shot again — but Doc survives, having read Marty’s warning letter and worn a vest.'
+					'Marty arrives ten minutes before he first left and watches Doc be shot again  -  but Doc survives, having read Marty’s warning letter and worn a vest.'
 			},
 			{
 				id: 'altered',
@@ -216,7 +221,7 @@ export const specimens: MediaEntry[] = [
 				kind: 'departure',
 				variant: 'altered-1985',
 				description:
-					'Doc returns from 2015 and whisks Marty and Jennifer into the future — the thread Part II picks up.'
+					'Doc returns from 2015 and whisks Marty and Jennifer into the future  -  the thread Part II picks up.'
 			}
 		]
 	},
@@ -232,7 +237,7 @@ export const specimens: MediaEntry[] = [
 		destLabel: '1990s',
 		logline: 'You cannot stop it. You were always the one who watched it happen.',
 		mechanism:
-			'Convicts are sent from a plague-ruined future to gather information — never to change events, because the events are already fixed.',
+			'Convicts are sent from a plague-ruined future to gather information  -  never to change events, because the events are already fixed.',
 		paradoxes: ['predestination'],
 		paradoxRisk: 'high',
 		fieldNote:
@@ -284,7 +289,7 @@ export const specimens: MediaEntry[] = [
 		destLabel: 'hours ago',
 		logline: 'Two friends, one box, and more timelines than a whiteboard can hold.',
 		mechanism:
-			'A machine run for six hours lets you ride it backward six hours, spawning a doubled, divergent version of the same afternoon — repeatedly, recursively.',
+			'A machine run for six hours lets you ride it backward six hours, spawning a doubled, divergent version of the same afternoon  -  repeatedly, recursively.',
 		paradoxes: ['doubling', 'recursion'],
 		paradoxRisk: 'high',
 		fieldNote:
@@ -310,7 +315,7 @@ export const specimens: MediaEntry[] = [
 		destLabel: 'near future',
 		logline: 'Live. Die. Repeat. Then repeat the repeating.',
 		mechanism:
-			'Alien blood resets the day on the soldier’s death — he keeps his memories, the world keeps nothing, and he grinds the same battle like a save-scummed level.',
+			'Alien blood resets the day on the soldier’s death  -  he keeps his memories, the world keeps nothing, and he grinds the same battle like a save-scummed level.',
 		paradoxes: ['information from the future'],
 		paradoxRisk: 'medium',
 		fieldNote:
@@ -344,9 +349,9 @@ export const specimens: MediaEntry[] = [
 		related: ['edge-of-tomorrow'],
 		imageSource: 'Film stills → TMDB',
 		timeline: [
-			{ id: 'g1', label: 'Feb 2 — wake', narrative: 0, chrono: 0, chronoLabel: '6:00', kind: 'origin' },
+			{ id: 'g1', label: 'Feb 2  -  wake', narrative: 0, chrono: 0, chronoLabel: '6:00', kind: 'origin' },
 			{ id: 'g2', label: 'The day plays out', narrative: 1, chrono: 0.5, chronoLabel: 'day' },
-			{ id: 'g3', label: 'Midnight — reset', narrative: 2, chrono: 1, chronoLabel: '00:00', kind: 'loop', jumpTo: 'g1' },
+			{ id: 'g3', label: 'Midnight  -  reset', narrative: 2, chrono: 1, chronoLabel: '00:00', kind: 'loop', jumpTo: 'g1' },
 			{ id: 'g4', label: 'Feb 3 at last', narrative: 3, chrono: 2, chronoLabel: 'Feb 3' }
 		]
 	},
@@ -362,7 +367,7 @@ export const specimens: MediaEntry[] = [
 		destLabel: 'deep future',
 		logline: 'Love and gravity, it turns out, both reach across time.',
 		mechanism:
-			'Relativistic time dilation near a black hole plus a tesseract built by future humans let a father push a message into his daughter’s past — a message that was always received.',
+			'Relativistic time dilation near a black hole plus a tesseract built by future humans let a father push a message into his daughter’s past  -  a message that was always received.',
 		paradoxes: ['bootstrap', 'predestination'],
 		paradoxRisk: 'high',
 		fieldNote:

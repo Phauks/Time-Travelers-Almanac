@@ -126,7 +126,7 @@
 			</div>
 			<h4>{selected.label}</h4>
 			<p class="when">
-				{selected.chronoLabel}{selected.location ? ` — ${selected.location}` : ''}
+				{selected.chronoLabel}{selected.location ? `  -  ${selected.location}` : ''}
 			</p>
 			{#if selected.description}<p class="desc">{selected.description}</p>{/if}
 		</div>
@@ -294,7 +294,6 @@
 		font-size: 0.95rem;
 		line-height: 1.55;
 		color: color-mix(in srgb, var(--color-paper) 88%, var(--color-muted));
-		max-width: 62ch;
 	}
 
 	@media (prefers-reduced-motion: reduce) {

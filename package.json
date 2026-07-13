@@ -7,7 +7,9 @@
     "dev": "vite dev",
     "build": "vite build",
     "preview": "vite preview",
-    "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json"
+    "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
+    "lint:content": "node scripts/content-lint.mjs",
+    "lint:content:fix": "node scripts/content-lint.mjs --fix"
   },
   "devDependencies": {
     "@sveltejs/adapter-static": "^3.0.10",

@@ -2,6 +2,7 @@
 	import '../app.css';
 	import { base } from '$app/paths';
 	import { page } from '$app/state';
+	import { GithubLogo } from 'phosphor-svelte';
 
 	let { children } = $props();
 
@@ -19,6 +20,16 @@
 		</a>
 		<nav>
 			<a href="{base}/specimens/">Specimens</a>
+			<a
+				class="gh"
+				href="https://github.com/Phauks/Time-Travelers-Almanac"
+				target="_blank"
+				rel="noreferrer noopener"
+				aria-label="View the source on GitHub"
+				title="View the source on GitHub"
+			>
+				<GithubLogo size={19} weight="fill" />
+			</a>
 		</nav>
 	</header>
 
@@ -59,6 +70,11 @@
 	.brand:hover {
 		color: var(--color-paper);
 	}
+	nav {
+		display: flex;
+		align-items: center;
+		gap: 1.1rem;
+	}
 	nav a {
 		font-family: var(--font-mono);
 		font-size: 0.72rem;
@@ -68,5 +84,9 @@
 	}
 	nav a:hover {
 		color: var(--color-paper);
+	}
+	.gh {
+		display: inline-flex;
+		align-items: center;
 	}
 </style>

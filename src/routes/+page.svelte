@@ -14,7 +14,7 @@
 		<h1 class="reveal d1">You have come <em>loose</em> from time.</h1>
 		<p class="lede reveal d2">
 			Every timeline breaks in one of <b>four ways</b>. Follow the prime line to find the specimen
-			that has you — <em>before</em> you try to fix it.
+			that has you  -  <em>before</em> you try to fix it.
 		</p>
 		<div class="cta reveal d3">
 			<a class="btn" href="{base}/specimens/">
@@ -42,7 +42,7 @@
 	<div class="inside-inner">
 		<h2>A guidebook for the temporally displaced.</h2>
 		<p class="sub">
-			One hundred specimens from film, television, books, games and the stage — each diagnosed,
+			One hundred specimens from film, television, books, games and the stage  -  each diagnosed,
 			dissected, and mapped.
 		</p>
 		<div class="index">
@@ -50,7 +50,7 @@
 				<span class="no">01</span>
 				<span class="ic"><Crosshair size={26} /></span>
 				<h3>Diagnose</h3>
-				<p>Enter your symptoms — a repeating Tuesday, a fading photograph, a second you — and get a verdict on the rules you’re bound by.</p>
+				<p>Enter your symptoms  -  a repeating Tuesday, a fading photograph, a second you  -  and get a verdict on the rules you’re bound by.</p>
 			</article>
 			<article class="idx">
 				<span class="no">02</span>

@@ -33,6 +33,9 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
+      - name: Content gate (no em dashes, etc.)
+        run: node scripts/content-lint.mjs
+
       # Reads the site's base path from Pages settings, and tries to turn on
       # Pages (source = GitHub Actions) so no manual toggle is needed.
       - name: Configure Pages

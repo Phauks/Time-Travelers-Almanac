@@ -15,7 +15,7 @@ export const RULE_META: Record<
 		name: 'Fixed',
 		nickname: 'The Stone Tape',
 		token: 'fixed',
-		law: 'You cannot change the past — your trip was always part of history.'
+		law: 'You cannot change the past  -  your trip was always part of history.'
 	},
 	mutable: {
 		name: 'Mutable',

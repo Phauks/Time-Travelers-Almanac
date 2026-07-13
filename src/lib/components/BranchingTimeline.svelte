@@ -119,13 +119,20 @@
 			.filter(Boolean) as { from: { x: number; y: number }; to: { x: number; y: number }; color: string }[]
 	);
 
-	// time jumps, packed into non-overlapping levels so the arcs never cross
+	// time jumps within this timeline, packed into levels so arcs never cross.
+	// `back` = the traveller lands in an earlier time than they left.
 	let jumpsLeveled = $derived.by(() => {
 		const js = pos
 			.filter((p) => p.e.jumpTo && posById.get(p.e.jumpTo))
 			.map((p) => {
 				const to = posById.get(p.e.jumpTo!)!;
-				return { from: p, to, x1: Math.min(p.x, to.x), x2: Math.max(p.x, to.x) };
+				return {
+					from: p,
+					to,
+					back: to.e.chrono < p.e.chrono,
+					x1: Math.min(p.x, to.x),
+					x2: Math.max(p.x, to.x)
+				};
 			})
 			.sort((a, b) => b.x2 - b.x1 - (a.x2 - a.x1));
 		const levels: { x1: number; x2: number }[][] = [];
@@ -136,6 +143,24 @@
 			return { ...j, level: lvl };
 		});
 	});
+
+	// jumps whose other end is off this timeline (another era or another work):
+	// a departure to a labelled destination, or an arrival from one
+	const yearIn = (s: string) => {
+		const m = s.match(/\d{3,4}/);
+		return m ? Number(m[0]) : null;
+	};
+	let offJumps = $derived(
+		pos
+			.filter((p) => p.e.jumpToLabel || p.e.jumpFromLabel)
+			.map((p) => {
+				const out = !!p.e.jumpToLabel;
+				const label = (p.e.jumpToLabel ?? p.e.jumpFromLabel)!;
+				const dest = yearIn(label);
+				const back = dest != null && p.e.chrono > 1000 ? dest < p.e.chrono : false;
+				return { p, label, out, back };
+			})
+	);
 
 	let selectedId = $state(byNarr[0]?.id ?? '');
 	let selected = $derived(events.find((e) => e.id === selectedId) ?? byNarr[0]);
@@ -149,6 +174,9 @@
 
 	// stills attached to events, for the gallery
 	let stills = $derived(events.filter((e) => e.image));
+
+	// nodes where a time machine fires (a departure) get a portal ring
+	let departureIds = $derived(new Set(events.filter((e) => e.jumpTo || e.jumpToLabel).map((e) => e.id)));
 
 	const KIND: Record<EventKind, { label: string; icon: unknown | null }> = {
 		origin: { label: 'Origin', icon: Flag },
@@ -218,6 +246,11 @@
 	{/if}
 	<div class="board">
 		<svg viewBox="0 0 {W} {H}" role="img" aria-label="Branching timeline" preserveAspectRatio="none">
+			<defs>
+				<marker id="jarrow" viewBox="0 0 12 12" refX="9" refY="6" markerWidth="7" markerHeight="7" orient="auto">
+					<path d="M1 1 L10 6 L1 11" fill="none" stroke="context-stroke" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+				</marker>
+			</defs>
 			{#each branches as b, i (b.id)}
 				<text x="6" y={laneY(i) - 6} class="lane-lbl" style="fill:{branchColor(b.id)}">{b.label}</text>
 			{/each}
@@ -248,17 +281,39 @@
 			{/each}
 
 			{#each jumpsLeveled as j (j.from.e.id)}
-				{@const apex = Math.min(j.from.y, j.to.y) - (34 + j.level * 26)}
+				{@const apex = Math.min(j.from.y, j.to.y) - (36 + j.level * 26)}
 				{@const midx = (j.from.x + j.to.x) / 2}
 				<path
-					class="jumpline"
+					class="jumpline {j.back ? 'back' : 'fwd'}"
 					d="M {j.from.x} {j.from.y} C {j.from.x} {apex}, {j.to.x} {apex}, {j.to.x} {j.to.y}"
 					fill="none"
 					stroke-width="2"
 					stroke-dasharray="7 6"
+					marker-end="url(#jarrow)"
 					opacity="0.95"
 				/>
-				<text x={midx} y={apex - 5} text-anchor="middle" class="jumplbl">{jumpText(j.from.e.chrono, j.to.e.chrono)}</text>
+				<text x={midx} y={apex - 5} text-anchor="middle" class="jumplbl {j.back ? 'back' : 'fwd'}">
+					{j.back ? '◀' : '▶'} {jumpText(j.from.e.chrono, j.to.e.chrono)}
+				</text>
+			{/each}
+
+			{#each offJumps as o (o.p.e.id)}
+				{@const capX = o.p.x + (o.out ? 30 : -30)}
+				{@const capY = o.p.y - 52}
+				<path
+					class="jumpline {o.back ? 'back' : 'fwd'}"
+					d={o.out
+						? `M ${o.p.x} ${o.p.y} C ${o.p.x} ${capY}, ${capX} ${capY + 8}, ${capX} ${capY}`
+						: `M ${capX} ${capY} C ${capX} ${capY + 8}, ${o.p.x} ${capY}, ${o.p.x} ${o.p.y}`}
+					fill="none"
+					stroke-width="2"
+					stroke-dasharray="7 6"
+					marker-end="url(#jarrow)"
+					opacity="0.95"
+				/>
+				<text x={capX} y={capY - 5} text-anchor="middle" class="jumplbl {o.back ? 'back' : 'fwd'}">
+					{o.out ? 'to' : 'from'} {o.label}
+				</text>
 			{/each}
 
 			{#each pos as p (p.e.id)}
@@ -270,9 +325,12 @@
 					onclick={() => (selectedId = p.e.id)}
 					onkeydown={(ev) => (ev.key === 'Enter' || ev.key === ' ') && (selectedId = p.e.id)}
 				>
+					{#if departureIds.has(p.e.id)}
+						<circle class="dep-ring" cx={p.x} cy={p.y} r="10" fill="none" stroke-width="1.4" stroke-dasharray="2.5 2.5" />
+					{/if}
 					<circle class="n-dot" cx={p.x} cy={p.y} r={selectedId === p.e.id ? 8 : 6} fill={branchColor(p.branch)} />
 					{#if selectedId === p.e.id}
-						<circle class="sel-ring" cx={p.x} cy={p.y} r="12" fill="none" stroke-width="1.2" />
+						<circle class="sel-ring" cx={p.x} cy={p.y} r="13" fill="none" stroke-width="1.2" />
 					{/if}
 					{#if p.e.paradox}
 						<g transform="translate({p.x + 10}, {p.y - 11})">
@@ -294,7 +352,9 @@
 		{#each branches as b (b.id)}
 			<span class="lg"><i class="dot" style="background:{branchColor(b.id)}"></i>{b.label}<em>{b.note}</em></span>
 		{/each}
-		<span class="lg"><i class="line"></i>time jump (dashed = distance in time)</span>
+		<span class="lg"><i class="line fwd"></i>jump forward in time</span>
+		<span class="lg"><i class="line back"></i>jump back in time</span>
+		<span class="lg"><i class="ring"></i>time machine fires here</span>
 		<span class="lg"><i class="haz"></i>paradox / continuity risk</span>
 	</div>
 	</div>
@@ -411,7 +471,10 @@
 	.side {
 		position: sticky;
 		top: 1rem;
-		max-height: calc(100vh - 2rem);
+	}
+	/* reserved, fixed height so stepping through events never grows the page */
+	.side .detail {
+		height: 440px;
 		overflow-y: auto;
 	}
 	.board {
@@ -433,7 +496,10 @@
 		}
 		.side {
 			position: static;
-			max-height: none;
+		}
+		.side .detail {
+			height: auto;
+			max-height: 60vh;
 		}
 	}
 	.lane-lbl {
@@ -447,8 +513,25 @@
 		letter-spacing: 0.04em;
 		fill: var(--color-jump);
 	}
+	/* forward in time = amber, backward in time = cool blue */
+	.jumpline.fwd {
+		stroke: var(--color-jump);
+	}
+	.jumpline.back {
+		stroke: #2b93bd;
+	}
+	.jumplbl.fwd {
+		fill: var(--color-jump);
+	}
+	.jumplbl.back {
+		fill: #2b93bd;
+	}
 	.jumpline {
 		stroke: var(--color-jump);
+	}
+	.dep-ring {
+		stroke: var(--color-muted);
+		opacity: 0.75;
 	}
 	.n-dot {
 		stroke: var(--color-ink);
@@ -503,6 +586,18 @@
 		width: 20px;
 		height: 0;
 		border-top: 2px dashed var(--color-jump);
+	}
+	.lg .line.fwd {
+		border-top-color: var(--color-jump);
+	}
+	.lg .line.back {
+		border-top-color: #2b93bd;
+	}
+	.lg .ring {
+		width: 12px;
+		height: 12px;
+		border-radius: 50%;
+		border: 1.4px dashed var(--color-muted);
 	}
 	.lg .haz {
 		width: 0;

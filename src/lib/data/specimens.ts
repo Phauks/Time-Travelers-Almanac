@@ -280,6 +280,7 @@ export const specimens: MediaEntry[] = [
 				location: 'The McFly home',
 				kind: 'departure',
 				variant: 'altered-1985',
+				jumpToLabel: '2015',
 				crossRef: { entry: 'back-to-the-future-part-ii', event: 'depart85' },
 				description: 'Doc returns from 2015 and takes Marty and Jennifer into the future.'
 			}
@@ -483,8 +484,10 @@ export const specimens: MediaEntry[] = [
 				location: 'Hill Valley',
 				kind: 'departure',
 				branch: 'restored',
+				jumpToLabel: '1885',
+				traveler: 'Doc',
 				crossRef: { entry: 'back-to-the-future-part-iii', event: 'letter' },
-				description: 'A bolt of lightning sends the DeLorean, and Doc, to the year 1885.'
+				description: 'As Doc stands by the DeLorean, a bolt of lightning strikes it and hurls him, machine and all, back to the year 1885.'
 			}
 		]
 	},
@@ -621,17 +624,6 @@ export const specimens: MediaEntry[] = [
 				description: 'Marty arrives in 1985, and a freight train smashes the empty DeLorean to pieces on the tracks.'
 			},
 			{
-				id: 'doc-depart',
-				label: 'Doc builds a second time machine',
-				narrative: 6.5,
-				chrono: 1893,
-				chronoLabel: 'circa 1893',
-				location: 'Hill Valley',
-				kind: 'departure',
-				jumpTo: 'doc-train',
-				description: 'Stranded in the Old West, Doc spends years turning a steam locomotive into a time machine, then sets off through time with Clara and their two sons. A second time traveller, on his own.'
-			},
-			{
 				id: 'doc-train',
 				label: 'Doc returns by rail',
 				narrative: 7,
@@ -639,7 +631,9 @@ export const specimens: MediaEntry[] = [
 				chronoLabel: 'Oct 27, 1985',
 				location: 'Hill Valley',
 				kind: 'arrival',
-				description: 'The flying steam time machine materialises at the tracks where the DeLorean was destroyed, proving the future is whatever you make it.'
+				jumpFromLabel: '1885',
+				traveler: 'Doc',
+				description: 'Doc, who stayed behind in 1885, spent years turning a steam locomotive into a time machine. It materialises at the tracks with Clara and their sons aboard, a second time traveller arriving under his own power.'
 			}
 		]
 	},

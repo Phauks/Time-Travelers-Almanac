@@ -92,8 +92,18 @@ export interface TimelineEvent {
 	/** where it happens, e.g. "Courthouse Square, Hill Valley" */
 	location?: string;
 	kind?: EventKind;
-	/** event id a time jump lands on */
+	/** event id a time jump lands on (a jump within this timeline) */
 	jumpTo?: string;
+	/**
+	 * a departure whose destination is NOT shown on this timeline (another era
+	 * or another work), e.g. "1885". Rendered as an outbound jump to a labelled
+	 * cap. Pair with crossRef to link the continuing work.
+	 */
+	jumpToLabel?: string;
+	/** an arrival from an off-timeline origin, e.g. "1885". Rendered inbound. */
+	jumpFromLabel?: string;
+	/** who makes this jump (for stories with several independent travellers) */
+	traveler?: string;
 	/** which timeline branch this beat lives on (see MediaEntry.branches) */
 	branch?: string;
 	/** legacy: superseded by `branch` */

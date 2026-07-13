@@ -14,6 +14,43 @@
 	let current = $derived(images[index]);
 	const many = $derived(images.length > 1);
 
+	// fetch the image to report its type and size, and to enable a properly
+	// named cross-origin download via a blob URL. Falls back gracefully.
+	let info = $state<{ type: string; size: string; url: string } | null>(null);
+	function typeLabel(mime: string, src: string) {
+		const m = mime.split('/')[1];
+		if (m) return m.replace('jpeg', 'jpg').replace('svg+xml', 'svg').toUpperCase();
+		const ext = src.split('?')[0].split('.').pop();
+		return ext ? ext.toUpperCase() : 'IMG';
+	}
+	function humanSize(b: number) {
+		if (!b) return '';
+		if (b < 1024) return `${b} B`;
+		if (b < 1024 * 1024) return `${Math.round(b / 1024)} KB`;
+		return `${(b / (1024 * 1024)).toFixed(1)} MB`;
+	}
+	$effect(() => {
+		const src = current?.src;
+		info = null;
+		if (!open || !src) return;
+		let cancelled = false;
+		let objUrl: string | null = null;
+		fetch(src)
+			.then((r) => (r.ok ? r.blob() : Promise.reject(new Error('fetch failed'))))
+			.then((b) => {
+				if (cancelled) return;
+				objUrl = URL.createObjectURL(b);
+				info = { type: typeLabel(b.type, src), size: humanSize(b.size), url: objUrl };
+			})
+			.catch(() => {
+				if (!cancelled) info = { type: typeLabel('', src), size: '', url: '' };
+			});
+		return () => {
+			cancelled = true;
+			if (objUrl) URL.revokeObjectURL(objUrl);
+		};
+	});
+
 	function close() {
 		open = false;
 	}
@@ -61,12 +98,13 @@
 				<span class="cap">{current.caption ?? ''}{many ? `  (${index + 1} of ${images.length})` : ''}</span>
 				<a
 					class="dl"
-					href={current.src}
+					href={info?.url || current.src}
 					download={fileName(current.src)}
 					target="_blank"
 					rel="noreferrer noopener"
 				>
 					<DownloadSimple size={15} weight="bold" /> Download
+					{#if info}<span class="fmt">{info.type}{info.size ? ` / ${info.size}` : ''}</span>{/if}
 				</a>
 			</figcaption>
 		</figure>
@@ -125,6 +163,11 @@
 	.dl:hover {
 		color: #fff;
 		border-color: rgba(255, 255, 255, 0.55);
+	}
+	.dl .fmt {
+		color: #9aa1b2;
+		font-size: 0.66rem;
+		letter-spacing: 0.04em;
 	}
 	.ctl {
 		position: absolute;

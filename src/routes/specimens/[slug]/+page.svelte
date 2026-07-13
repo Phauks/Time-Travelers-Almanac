@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { base } from '$app/paths';
-	import { Warning, MagnifyingGlassPlus } from 'phosphor-svelte';
+	import { Warning, MagnifyingGlassPlus, ArrowRight } from 'phosphor-svelte';
 	import BranchingTimeline from '$lib/components/BranchingTimeline.svelte';
 	import BrandLogo from '$lib/components/BrandLogo.svelte';
 	import SpecimenCard from '$lib/components/SpecimenCard.svelte';
@@ -95,6 +95,7 @@
 
 <article class="dossier" style="--accent:{ruleColorVar(s.rules[0])}">
 	<header class="top">
+		<div class="lead">
 		<div class="col-img">
 			{#if gallery.length}
 				<button class="plate" onclick={() => openLightbox(0)} aria-label="View {s.title} artwork larger">
@@ -162,29 +163,42 @@
 				{/each}
 			</div>
 		</div>
+		</div>
 
 		<aside class="col-tt">
 			<div class="tt para" style="--c:var(--color-mutable)">
-				<p class="k"><Warning size={12} weight="fill" /> Paradox exposure</p>
+				<p class="k"><Warning size={12} weight="fill" /> Paradox</p>
 				<p class="v cap">{s.paradoxRisk}</p>
 				<span class="bar"><i style="width:{riskPct[s.paradoxRisk]}%"></i></span>
-				{#if s.paradoxes.length}
-					<p class="d">Documented: {#each s.paradoxes as p, i (p)}<span>{p}</span>{i < s.paradoxes.length - 1 ? ', ' : ''}{/each}</p>
-				{/if}
 			</div>
-			<div class="tt" style="--c:var(--color-{s.rules[0]})">
+			<div
+				class="tt rule tip-host"
+				style="--c:var(--color-{s.rules[0]})"
+				tabindex="0"
+				role="note"
+				aria-label="The Rule: {RULE_META[s.rules[0]].name}. {RULE_META[s.rules[0]].law}"
+			>
 				<p class="k">The Rule</p>
 				<p class="v">{RULE_META[s.rules[0]].name}</p>
-				<p class="d">{RULE_META[s.rules[0]].nickname}. {RULE_META[s.rules[0]].law}</p>
+				<span class="tip">
+					<b>{RULE_META[s.rules[0]].nickname}.</b>
+					{RULE_META[s.rules[0]].law}
+					<a class="tip-more" href="{base}/rules/{s.rules[0]}/">See more <ArrowRight size={11} weight="bold" /></a>
+				</span>
 			</div>
 			<div class="tt mode">
 				<p class="k">The Mode</p>
 				<p class="v">{s.mode.map((m) => MODE_META[m]).join(', ')}</p>
 			</div>
-			<div class="tt loop">
+			<div
+				class="tt loop tip-host"
+				tabindex="0"
+				role="note"
+				aria-label="Loop status: {s.loop ? LOOP_META[s.loop] : 'None'}"
+			>
 				<p class="k">Loop status</p>
 				<p class="v">{s.loop ? LOOP_META[s.loop] : 'None'}</p>
-				<p class="d">{s.loop ? 'A repeating condition applies.' : 'Linear jumps, no repetition.'}</p>
+				<span class="tip">{s.loop ? 'A repeating condition applies.' : 'Linear jumps, no repetition.'}</span>
 			</div>
 			{#if s.fieldNote}
 				<div class="tt note">
@@ -193,12 +207,12 @@
 				</div>
 			{/if}
 		</aside>
-	</header>
 
-	<section class="mech">
-		<h2>Mechanism</h2>
-		<p>{s.mechanism}</p>
-	</section>
+		<section class="mech">
+			<h2>Mechanism</h2>
+			<p>{s.mechanism}</p>
+		</section>
+	</header>
 
 	<section class="timeline">
 		<h2>Timeline</h2>
@@ -252,28 +266,34 @@
 
 	.top {
 		display: grid;
-		gap: clamp(1.4rem, 3vw, 2.5rem);
-		grid-template-columns: 280px minmax(0, 1fr) 300px;
-		grid-template-areas: 'img main tt';
+		gap: clamp(1.2rem, 2.5vw, 2rem);
+		grid-template-columns: minmax(0, 1fr) 320px;
+		grid-template-areas: 'lead tt' 'mech tt';
 		align-items: start;
 	}
-	@media (max-width: 1040px) {
-		.top {
-			grid-template-columns: 240px minmax(0, 1fr);
-			grid-template-areas: 'img main' 'tt tt';
-		}
-	}
-	@media (max-width: 600px) {
-		.top {
-			grid-template-columns: 1fr;
-			grid-template-areas: 'img' 'main' 'tt';
-		}
-	}
-	.col-img {
-		grid-area: img;
+	.lead {
+		grid-area: lead;
+		display: grid;
+		grid-template-columns: 260px minmax(0, 1fr);
+		gap: clamp(1.2rem, 3vw, 2rem);
+		align-items: start;
 	}
 	.mech {
-		margin-top: 1.6rem;
+		grid-area: mech;
+	}
+	@media (max-width: 960px) {
+		.top {
+			grid-template-columns: 1fr;
+			grid-template-areas: 'lead' 'mech' 'tt';
+		}
+	}
+	@media (max-width: 560px) {
+		.lead {
+			grid-template-columns: 1fr;
+		}
+	}
+	.mech {
+		margin-top: 0.4rem;
 	}
 	.mech h2 {
 		font-family: var(--font-serif);
@@ -286,21 +306,20 @@
 		line-height: 1.65;
 		color: color-mix(in srgb, var(--color-paper) 90%, var(--color-muted));
 	}
-	.col-main {
-		grid-area: main;
-	}
 	.col-tt {
 		grid-area: tt;
-		display: flex;
-		flex-direction: column;
-		gap: 0.7rem;
+		display: grid;
+		grid-template-columns: 1fr 1fr;
+		gap: 0.6rem;
+		align-content: start;
 	}
-	@media (max-width: 1040px) and (min-width: 601px) {
+	/* field note spans the full width beneath the two-by-two grid */
+	.col-tt :global(.tt.note) {
+		grid-column: 1 / -1;
+	}
+	@media (max-width: 400px) {
 		.col-tt {
-			flex-direction: row;
-		}
-		.col-tt > .tt {
-			flex: 1;
+			grid-template-columns: 1fr;
 		}
 	}
 
@@ -449,13 +468,14 @@
 		color: var(--color-paper);
 	}
 
-	/* time-travel info column */
+	/* time-travel info boxes, laid out two by two */
 	.tt {
+		position: relative;
 		background: color-mix(in srgb, var(--color-panel) 60%, transparent);
 		border: 1px solid var(--color-line);
 		border-left: 3px solid var(--c, var(--color-branching));
 		border-radius: 6px;
-		padding: 0.85rem 0.95rem 1rem;
+		padding: 0.65rem 0.75rem 0.75rem;
 	}
 	.tt.mode {
 		--c: var(--color-loop);
@@ -464,28 +484,21 @@
 		--c: var(--color-muted);
 	}
 	.tt .k {
-		font-family: var(--font-mono);
-		font-size: 0.62rem;
-		letter-spacing: 0.14em;
-		text-transform: uppercase;
-		color: var(--color-muted);
-		margin: 0 0 0.35rem;
-	}
-	.tt .v {
-		font-family: var(--font-serif);
-		font-size: 1.15rem;
-		margin: 0;
-	}
-	.tt .d {
-		font-size: 0.78rem;
-		color: var(--color-muted);
-		line-height: 1.4;
-		margin: 0.3rem 0 0;
-	}
-	.tt .k {
 		display: inline-flex;
 		align-items: center;
 		gap: 0.3rem;
+		font-family: var(--font-mono);
+		font-size: 0.58rem;
+		letter-spacing: 0.12em;
+		text-transform: uppercase;
+		color: var(--color-muted);
+		margin: 0 0 0.3rem;
+	}
+	.tt .v {
+		font-family: var(--font-serif);
+		font-size: 1.05rem;
+		margin: 0;
+		line-height: 1.15;
 	}
 	.tt.para .v.cap {
 		text-transform: capitalize;
@@ -495,8 +508,8 @@
 	}
 	.tt.para .bar {
 		display: block;
-		height: 7px;
-		margin-top: 0.5rem;
+		height: 6px;
+		margin-top: 0.45rem;
 		border-radius: 999px;
 		background: var(--color-panel);
 		border: 1px solid var(--color-line);
@@ -507,8 +520,62 @@
 		height: 100%;
 		background: linear-gradient(90deg, var(--color-loop), var(--color-mutable), var(--color-fixed));
 	}
-	.tt.para .d span {
+
+	/* hover / focus popup describing a box (e.g. what "Mutable" means) */
+	.tip-host {
+		cursor: help;
+	}
+	.tip-host .tip {
+		position: absolute;
+		left: 0;
+		bottom: calc(100% + 8px);
+		width: max-content;
+		max-width: 250px;
+		background: var(--color-panel);
+		border: 1px solid var(--color-line);
+		border-radius: 6px;
+		padding: 0.6rem 0.7rem;
+		font-size: 0.8rem;
+		line-height: 1.45;
+		color: color-mix(in srgb, var(--color-paper) 92%, var(--color-muted));
+		box-shadow: 0 10px 28px rgba(0, 0, 0, 0.35);
+		opacity: 0;
+		transform: translateY(4px);
+		pointer-events: none;
+		transition:
+			opacity 0.15s,
+			transform 0.15s;
+		z-index: 20;
+	}
+	.tip-host .tip b {
 		color: var(--color-paper);
+	}
+	.tip-host:hover .tip,
+	.tip-host:focus-visible .tip,
+	.tip-host:focus-within .tip {
+		opacity: 1;
+		transform: translateY(0);
+		pointer-events: auto;
+	}
+	.tip-more {
+		display: flex;
+		width: fit-content;
+		align-items: center;
+		gap: 0.25rem;
+		margin-top: 0.5rem;
+		font-family: var(--font-mono);
+		font-size: 0.62rem;
+		letter-spacing: 0.06em;
+		text-transform: uppercase;
+		color: var(--accent);
+	}
+	.tip-more:hover {
+		text-decoration: underline;
+		text-underline-offset: 2px;
+	}
+	.tip-host:focus-visible {
+		outline: 2px solid var(--c, var(--accent));
+		outline-offset: 2px;
 	}
 	.tt.note {
 		--c: var(--accent);

@@ -4,6 +4,7 @@
 	import { base } from '$app/paths';
 	import { page } from '$app/state';
 	import { GithubLogo, Bug, Sun, Moon } from 'phosphor-svelte';
+	import Search from '$lib/components/Search.svelte';
 
 	let { children } = $props();
 
@@ -33,6 +34,9 @@
 			</svg>
 			<span>The Time Traveller's Almanac</span>
 		</a>
+
+		<Search />
+
 		<nav>
 			<a href="{base}/specimens/">Specimens</a>
 			<a href="{base}/history/">History</a>
@@ -81,7 +85,8 @@
 		display: flex;
 		align-items: center;
 		justify-content: space-between;
-		gap: 1rem;
+		flex-wrap: wrap;
+		gap: 0.75rem 1rem;
 		padding: 0.85rem clamp(1rem, 4vw, 3.5rem);
 		border-bottom: 1px solid var(--color-line);
 		background: color-mix(in srgb, var(--color-ink) 82%, transparent);

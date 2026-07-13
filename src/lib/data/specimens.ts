@@ -262,8 +262,294 @@ export const specimens: MediaEntry[] = [
 				location: 'The McFly home',
 				kind: 'departure',
 				variant: 'altered-1985',
-				description:
-					'Doc returns from 2015 and whisks Marty and Jennifer into the future  -  the thread Part II picks up.'
+				crossRef: { entry: 'back-to-the-future-part-ii', event: 'depart85' },
+				description: 'Doc returns from 2015 and takes Marty and Jennifer into the future.'
+			}
+		]
+	},
+	{
+		slug: 'back-to-the-future-part-ii',
+		title: 'Back to the Future Part II',
+		year: 1989,
+		medium: 'film',
+		saga: 'back-to-the-future',
+		continuity: 'film',
+		partOrder: 2,
+		rules: ['mutable', 'branching'],
+		mode: ['contraption'],
+		loop: null,
+		destEra: 0.72,
+		destLabel: '2015',
+		logline: 'A sports almanac in the wrong hands turns one hometown into a nightmare.',
+		synopsis:
+			'Doc Brown takes Marty and Jennifer to 2015 to head off trouble with their future children. While there, an elderly Biff Tannen steals the time machine and gives a sports almanac to his younger self in 1955, rewriting the present into a corrupt alternate 1985. Marty and Doc must return to 1955 to undo the change without disturbing the events of their first trip.',
+		aliases: ['Back to the Future Part 2', 'Back to the Future II'],
+		mechanism:
+			'The same DeLorean, now Mr. Fusion powered and hover converted. Altering the events of 1955 rewrites the timeline forward into a divergent 1985.',
+		paradoxes: ['alternate timeline', 'information from the future', 'self-visitation'],
+		paradoxRisk: 'high',
+		fieldNote:
+			'If you must revisit a day you have already lived, do not let your earlier self see you, and never leave an almanac lying around.',
+		imageSource: 'Film stills, TMDB',
+		sources: [
+			{ label: 'Wikipedia, Back to the Future Part II', url: 'https://en.wikipedia.org/wiki/Back_to_the_Future_Part_II' },
+			{ label: 'Futurepedia, Back to the Future timeline', url: 'https://backtothefuture.fandom.com/wiki/Back_to_the_Future_timeline' }
+		],
+		links: [
+			{ kind: 'imdb', url: 'https://www.imdb.com/title/tt0096874/' },
+			{ kind: 'rottentomatoes', url: 'https://www.rottentomatoes.com/m/back_to_the_future_part_ii' },
+			{ kind: 'metacritic', url: 'https://www.metacritic.com/movie/back-to-the-future-part-ii/' },
+			{ kind: 'watch', url: 'https://www.justwatch.com/us/movie/back-to-the-future-part-ii' }
+		],
+		ratings: { imdb: 7.8, rtCritic: 63, rtAudience: 86, metacritic: 57 },
+		branches: [
+			{ id: 'prime', label: 'Timeline 1', status: 'original', note: 'the 1985 and 2015 they set out from' },
+			{
+				id: 'dystopia',
+				label: 'Timeline 2',
+				parent: 'prime',
+				branchAt: 'biff-gives',
+				status: 'endangered',
+				note: "Biff's corrupt alternate 1985"
+			},
+			{
+				id: 'restored',
+				label: 'Timeline 3',
+				parent: 'dystopia',
+				branchAt: 'retrieve',
+				status: 'restored',
+				note: 'the timeline set right again'
+			}
+		],
+		timeline: [
+			{
+				id: 'depart85',
+				label: 'Off to the future',
+				narrative: 0,
+				chrono: 1985.83,
+				chronoLabel: 'Oct 26, 1985',
+				location: 'Hill Valley',
+				kind: 'departure',
+				jumpTo: 'arrive15',
+				description: 'Doc arrives from 2015 and takes Marty and Jennifer forward to sort out their children.'
+			},
+			{
+				id: 'arrive15',
+				label: 'Arrival in 2015',
+				narrative: 1,
+				chrono: 2015.8,
+				chronoLabel: 'Oct 21, 2015',
+				location: 'Hill Valley',
+				kind: 'arrival',
+				description: 'Marty poses as his own son to keep the family out of trouble.'
+			},
+			{
+				id: 'almanac',
+				label: 'The sports almanac',
+				narrative: 2,
+				chrono: 2015.81,
+				chronoLabel: 'Oct 21, 2015',
+				location: 'Hill Valley',
+				kind: 'event',
+				description: 'Marty buys a book listing fifty years of sports results, meaning to gamble with it.'
+			},
+			{
+				id: 'biff-steals',
+				label: 'Old Biff takes the DeLorean',
+				narrative: 3,
+				chrono: 2015.82,
+				chronoLabel: 'Oct 21, 2015',
+				location: 'Hill Valley',
+				kind: 'departure',
+				jumpTo: 'biff-gives',
+				description: 'The elderly Biff overhears the plan, pockets the almanac, and borrows the time machine.'
+			},
+			{
+				id: 'biff-gives',
+				label: 'Biff arms his younger self',
+				narrative: 4,
+				chrono: 1955.9,
+				chronoLabel: 'Nov 12, 1955',
+				location: 'Hill Valley',
+				kind: 'arrival',
+				description: 'Old Biff hands the almanac to the teenage Biff, seeding a fortune built on rigged bets.'
+			},
+			{
+				id: 'biff-return',
+				label: 'The impossible return',
+				narrative: 5,
+				chrono: 2015.83,
+				chronoLabel: 'Oct 21, 2015',
+				location: 'Hill Valley',
+				kind: 'return',
+				paradox:
+					"Having just changed 1955, Old Biff drives the DeLorean back to the very 2015 he left. By the film's own rules that future should have been rewritten around him, or erased him entirely. It is the saga's best known continuity error.",
+				description: 'Old Biff returns the machine and staggers off, apparently unaffected.'
+			},
+			{
+				id: 'arrive-a',
+				label: 'A different 1985',
+				narrative: 6,
+				chrono: 1985.84,
+				chronoLabel: 'Oct 26, 1985 (altered)',
+				location: 'Hill Valley',
+				kind: 'return',
+				description: 'Doc, Marty and Jennifer come back to a Hill Valley remade in Biff’s image.'
+			},
+			{
+				id: 'discover',
+				label: "Biff's empire",
+				narrative: 7,
+				chrono: 1985.85,
+				chronoLabel: '1985 (altered)',
+				location: 'Hill Valley',
+				kind: 'event',
+				description: 'They learn Biff is rich and powerful, George McFly is dead, and the almanac is the cause.'
+			},
+			{
+				id: 'to55',
+				label: 'Back to 1955 again',
+				narrative: 8,
+				chrono: 1985.86,
+				chronoLabel: 'Nov 12, 1955',
+				location: 'Hill Valley',
+				kind: 'departure',
+				jumpTo: 'retrieve',
+				description: 'They trace the change to the day of the Enchantment Under the Sea dance.'
+			},
+			{
+				id: 'retrieve',
+				label: 'Retrieving the almanac',
+				narrative: 9,
+				chrono: 1955.905,
+				chronoLabel: 'Nov 12, 1955',
+				location: 'Hill Valley',
+				kind: 'event',
+				description: 'Working around their earlier selves, they take the almanac from young Biff and burn it.'
+			},
+			{
+				id: 'doc-1885',
+				label: 'Doc is struck to 1885',
+				narrative: 10,
+				chrono: 1955.92,
+				chronoLabel: 'Nov 12, 1955',
+				location: 'Hill Valley',
+				kind: 'departure',
+				crossRef: { entry: 'back-to-the-future-part-iii', event: 'letter' },
+				description: 'A bolt of lightning sends the DeLorean, and Doc, to the year 1885.'
+			}
+		]
+	},
+	{
+		slug: 'back-to-the-future-part-iii',
+		title: 'Back to the Future Part III',
+		year: 1990,
+		medium: 'film',
+		saga: 'back-to-the-future',
+		continuity: 'film',
+		partOrder: 3,
+		rules: ['mutable'],
+		mode: ['contraption'],
+		loop: null,
+		destEra: 0.2,
+		destLabel: '1885',
+		logline: 'The old West, a runaway locomotive, and a scientist in love.',
+		synopsis:
+			'Stranded in 1955, Marty receives a letter from Doc, who is living in 1885 and, Marty learns, is about to be killed. Marty travels to the Old West to rescue him, only to find that Doc has fallen for a schoolteacher named Clara. With the DeLorean out of fuel, the two must use a steam locomotive to reach 88 mph and send Marty home.',
+		aliases: ['Back to the Future Part 3', 'Back to the Future III'],
+		mechanism:
+			'The DeLorean, hidden in a mine since 1885. With no gasoline to be had, the momentum of a driven locomotive substitutes for the engine to reach 88 mph.',
+		paradoxes: ['predestination', 'bootstrap'],
+		paradoxRisk: 'medium',
+		fieldNote:
+			'If your machine runs dry in a century without petrol, a fast enough train will serve. Mind the ravine.',
+		imageSource: 'Film stills, TMDB',
+		sources: [
+			{ label: 'Wikipedia, Back to the Future Part III', url: 'https://en.wikipedia.org/wiki/Back_to_the_Future_Part_III' },
+			{ label: 'Futurepedia, Back to the Future timeline', url: 'https://backtothefuture.fandom.com/wiki/Back_to_the_Future_timeline' }
+		],
+		links: [
+			{ kind: 'imdb', url: 'https://www.imdb.com/title/tt0099088/' },
+			{ kind: 'rottentomatoes', url: 'https://www.rottentomatoes.com/m/back_to_the_future_3' },
+			{ kind: 'metacritic', url: 'https://www.metacritic.com/movie/back-to-the-future-part-iii/' },
+			{ kind: 'watch', url: 'https://www.justwatch.com/us/movie/back-to-the-future-part-iii' }
+		],
+		ratings: { imdb: 7.5, rtCritic: 79, rtAudience: 78, metacritic: 55 },
+		branches: [
+			{ id: 'main', label: 'Timeline 1', status: 'original', note: 'the single restored timeline of the saga' }
+		],
+		timeline: [
+			{
+				id: 'letter',
+				label: 'A letter from 1885',
+				narrative: 0,
+				chrono: 1955.95,
+				chronoLabel: 'Nov 1955',
+				location: 'Hill Valley',
+				kind: 'origin',
+				description: "Marty, still in 1955, receives Doc's seventy-year-old letter and learns Doc will soon be killed."
+			},
+			{
+				id: 'depart55',
+				label: 'Off to the Old West',
+				narrative: 1,
+				chrono: 1955.96,
+				chronoLabel: 'Nov 1955',
+				location: 'Hill Valley',
+				kind: 'departure',
+				jumpTo: 'arrive85',
+				description: 'The 1955 Doc helps send Marty back to save his friend.'
+			},
+			{
+				id: 'arrive85',
+				label: 'Arrival in 1885',
+				narrative: 2,
+				chrono: 1885.67,
+				chronoLabel: 'Sep 2, 1885, 8:00 AM',
+				location: 'Hill Valley',
+				kind: 'arrival',
+				description: 'Marty lands in the frontier town, one week before Doc is due to die.'
+			},
+			{
+				id: 'clara',
+				label: 'Doc meets Clara',
+				narrative: 3,
+				chrono: 1885.68,
+				chronoLabel: 'Sep 1885',
+				location: 'Hill Valley',
+				kind: 'event',
+				description: 'Doc saves and falls for the new schoolteacher, Clara Clayton, complicating the escape plan.'
+			},
+			{
+				id: 'tannen',
+				label: 'Mad Dog Tannen',
+				narrative: 4,
+				chrono: 1885.7,
+				chronoLabel: 'Sep 1885',
+				location: 'Hill Valley',
+				kind: 'event',
+				description: 'Marty, going by "Clint Eastwood", is drawn into a feud with the gunman Buford Tannen.'
+			},
+			{
+				id: 'showdown',
+				label: 'The showdown and the train',
+				narrative: 5,
+				chrono: 1885.71,
+				chronoLabel: 'Sep 7, 1885',
+				location: 'Hill Valley',
+				kind: 'departure',
+				jumpTo: 'return85',
+				description: 'After facing Tannen, Marty rides a driven locomotive to push the DeLorean to 88 mph.'
+			},
+			{
+				id: 'return85',
+				label: 'Home, and the machine destroyed',
+				narrative: 6,
+				chrono: 1985.83,
+				chronoLabel: 'Oct 27, 1985',
+				location: 'Hill Valley',
+				kind: 'return',
+				description: 'Marty returns to 1985 and the DeLorean is destroyed by a train. Doc later reappears in a time machine of his own.'
 			}
 		]
 	},

@@ -1,5 +1,16 @@
 <script lang="ts">
-	import { Flag, Lightning, MapPin, ArrowUUpLeft, ArrowsClockwise, DotOutline, Warning } from 'phosphor-svelte';
+	import {
+		Flag,
+		Lightning,
+		MapPin,
+		ArrowUUpLeft,
+		ArrowsClockwise,
+		DotOutline,
+		Warning,
+		ArrowRight
+	} from 'phosphor-svelte';
+	import { base } from '$app/paths';
+	import { getSpecimen } from '$lib/data';
 	import type { Branch, EventKind, TimelineEvent } from '$lib/types';
 
 	let {
@@ -221,6 +232,9 @@
 							<circle cx="0" cy="4" r="1" fill="#05060c" />
 						</g>
 					{/if}
+					{#if p.e.crossRef}
+						<text x={p.x - 12} y={p.y - 6} class="xref">&#187;</text>
+					{/if}
 					<text x={p.x} y={p.y + 24} text-anchor="middle" class="node-date">{shortDate(p.e)}</text>
 				</g>
 			{/each}
@@ -250,6 +264,14 @@
 			{#if selected.description}<p class="desc">{selected.description}</p>{/if}
 			{#if selected.paradox}
 				<p class="para"><Warning size={13} weight="fill" /> {selected.paradox}</p>
+			{/if}
+			{#if selected.crossRef}
+				{@const tgt = getSpecimen(selected.crossRef.entry)}
+				{#if tgt}
+					<a class="crossref" href="{base}/specimens/{tgt.slug}/">
+						Continues in {tgt.title} <ArrowRight size={13} weight="bold" />
+					</a>
+				{/if}
 			{/if}
 		</div>
 	{/if}
@@ -337,6 +359,26 @@
 		font-family: var(--font-mono);
 		font-size: 9px;
 		fill: var(--color-muted);
+	}
+	.xref {
+		fill: var(--color-branching);
+		font-size: 15px;
+		font-weight: 700;
+	}
+	.crossref {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.35rem;
+		margin-top: 0.7rem;
+		font-family: var(--font-mono);
+		font-size: 0.72rem;
+		letter-spacing: 0.04em;
+		text-transform: uppercase;
+		color: var(--color-branching);
+	}
+	.crossref:hover {
+		text-decoration: underline;
+		text-underline-offset: 3px;
 	}
 
 	.legend {

@@ -310,7 +310,7 @@
 					{#if departureIds.has(p.e.id)}
 						<circle class="dep-ring" cx={p.x} cy={p.y} r="10" fill="none" stroke-width="1.4" stroke-dasharray="2.5 2.5" />
 					{/if}
-					{#if p.e.kind === 'origin'}
+					{#if p.e.kind === 'origin' || p.e.origin}
 						<g class="origin-mark" transform="translate({p.x - 11}, {p.y - 3})">
 							<line x1="0" y1="1" x2="0" y2="-12" stroke-width="1.5" stroke-linecap="round" />
 							<path d="M0 -12 L7 -10 L0 -7.5 Z" />

@@ -191,11 +191,6 @@
 						<BrandLogo kind="metacritic" size={16} /> <b>{s.ratings.metacritic}</b><span class="unit">/100</span>
 					</a>
 				{/if}
-				{#if trailerId}
-					<button class="chip lk trailer-btn" onclick={() => (videoOpen = true)}>
-						<BrandLogo kind="trailer" size={15} /> Trailer
-					</button>
-				{/if}
 				{#each extraLinks as link (link.url)}
 					<a class="chip lk" href={link.url} target="_blank" rel="noreferrer noopener">
 						<BrandLogo kind={link.kind} size={15} /> {link.label ?? LINK_META[link.kind] ?? 'Link'}
@@ -235,24 +230,25 @@
 					<p class="fn">{s.fieldNote}</p>
 				</div>
 			{/if}
+			<div class="tt note mech-box">
+				<p class="k">Mechanism</p>
+				<p class="fn">{s.mechanism}</p>
+			</div>
 		</aside>
-
-		<section class="mech">
-			<h2>Mechanism</h2>
-			<p>{s.mechanism}</p>
-		</section>
 	</header>
 
 	<section class="timeline">
 		<h2>Timeline</h2>
-		<BranchingTimeline
-			events={s.timeline}
-			branches={s.branches ?? []}
-			accent={ruleColorVar(s.rules[0])}
-			continuesFrom={prevPart}
-			continuesTo={nextPart}
-			onOpenImage={openImageBySrc}
-		/>
+		{#key s.slug}
+			<BranchingTimeline
+				events={s.timeline}
+				branches={s.branches ?? []}
+				accent={ruleColorVar(s.rules[0])}
+				continuesFrom={prevPart}
+				continuesTo={nextPart}
+				onOpenImage={openImageBySrc}
+			/>
+		{/key}
 	</section>
 
 	{#if mates.length}
@@ -301,7 +297,7 @@
 		display: grid;
 		gap: clamp(1.2rem, 2.5vw, 2rem);
 		grid-template-columns: minmax(0, 1fr) 320px;
-		grid-template-areas: 'lead tt' 'mech tt';
+		grid-template-areas: 'lead tt';
 		align-items: start;
 	}
 	.lead {
@@ -311,13 +307,10 @@
 		gap: clamp(1.2rem, 3vw, 2rem);
 		align-items: start;
 	}
-	.mech {
-		grid-area: mech;
-	}
 	@media (max-width: 960px) {
 		.top {
 			grid-template-columns: 1fr;
-			grid-template-areas: 'lead' 'mech' 'tt';
+			grid-template-areas: 'lead' 'tt';
 		}
 	}
 	@media (max-width: 560px) {
@@ -325,19 +318,9 @@
 			grid-template-columns: 1fr;
 		}
 	}
-	.mech {
-		margin-top: 0.4rem;
-	}
-	.mech h2 {
-		font-family: var(--font-serif);
-		font-size: 1.25rem;
-		margin: 0 0 0.5rem;
-	}
-	.mech p {
-		margin: 0;
-		font-size: 1rem;
-		line-height: 1.65;
-		color: color-mix(in srgb, var(--color-paper) 90%, var(--color-muted));
+	/* mechanism reuses the field-note box style, but reads better upright */
+	.mech-box .fn {
+		font-style: normal;
 	}
 	.col-tt {
 		grid-area: tt;
@@ -620,11 +603,6 @@
 		font-family: var(--font-serif);
 		font-size: 1.25rem;
 		margin: 2.4rem 0 0.8rem;
-	}
-
-	.trailer-btn {
-		background: transparent;
-		cursor: pointer;
 	}
 
 	/* placeholder plate shown when no poster art exists yet */

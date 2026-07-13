@@ -13,10 +13,10 @@
 	function onKey(e: KeyboardEvent) {
 		if (open && e.key === 'Escape') close();
 	}
-	// privacy-friendly embed; only built while open so it does not preload
-	let src = $derived(
-		`https://www.youtube-nocookie.com/embed/${youtubeId}?autoplay=1&rel=0`
-	);
+	// privacy-friendly embed, only built while open so it does not preload.
+	// no autoplay, so the standard YouTube player (poster, play, full controls)
+	// is shown rather than a chromeless autoplaying frame.
+	let src = $derived(`https://www.youtube-nocookie.com/embed/${youtubeId}?rel=0&modestbranding=1`);
 </script>
 
 <svelte:window onkeydown={onKey} />

@@ -105,6 +105,11 @@ export interface TimelineEvent {
 	/** where it happens, e.g. "Courthouse Square, Hill Valley" */
 	location?: string;
 	kind?: EventKind;
+	/**
+	 * marks the story's opening beat, drawn with a flag on the timeline. Kept
+	 * separate from `kind` because an opening beat can also be a departure.
+	 */
+	origin?: boolean;
 	/** event id a time jump lands on (a jump within this timeline) */
 	jumpTo?: string;
 	/**

@@ -140,6 +140,7 @@ export const specimens: MediaEntry[] = [
 				chronoStartLabel: 'Oct 26, 1985, 1:15 AM',
 				location: 'Twin Pines Mall, Hill Valley',
 				kind: 'departure',
+				origin: true,
 				jumpTo: 'einstein',
 				description:
 					'Doc Brown demonstrates the time machine, sending Einstein the dog one minute into the future  -  the first time travel on the timeline.'
@@ -342,6 +343,7 @@ export const specimens: MediaEntry[] = [
 				chronoStartLabel: 'Oct 26, 1985',
 				location: 'Hill Valley',
 				kind: 'departure',
+				origin: true,
 				jumpTo: 'arrive15',
 				branch: 'prime',
 				description: 'Doc arrives from 2015 and takes Marty and Jennifer forward to sort out their children.'

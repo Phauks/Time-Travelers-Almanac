@@ -92,9 +92,34 @@ export const specimens: MediaEntry[] = [
 		links: [
 			{ kind: 'imdb', url: 'https://www.imdb.com/title/tt0088763/' },
 			{ kind: 'rottentomatoes', url: 'https://www.rottentomatoes.com/m/back_to_the_future' },
+			{ kind: 'metacritic', url: 'https://www.metacritic.com/movie/back-to-the-future/' },
 			{ kind: 'watch', url: 'https://www.justwatch.com/us/movie/back-to-the-future-part-i' }
 		],
 		ratings: { imdb: 8.5, rtCritic: 93, rtAudience: 94, metacritic: 87 },
+		branches: [
+			{
+				id: 'prime',
+				label: 'Prime timeline',
+				status: 'original',
+				note: 'the 1985 Marty leaves; his parents met by chance'
+			},
+			{
+				id: 'divergent',
+				label: 'Divergent timeline',
+				parent: 'prime',
+				branchAt: 'arrive55',
+				status: 'endangered',
+				note: 'Marty is now in the past; his meddling threatens his own existence'
+			},
+			{
+				id: 'restored',
+				label: 'Restored timeline',
+				parent: 'divergent',
+				branchAt: 'dance',
+				status: 'restored',
+				note: 'his parents fall in love anew; the changed 1985 he returns to'
+			}
+		],
 		timeline: [
 			{
 				id: 'demo',
@@ -141,7 +166,9 @@ export const specimens: MediaEntry[] = [
 				location: 'Downtown Hill Valley',
 				kind: 'event',
 				description:
-					'Marty pushes George clear of the car meant to introduce him to Lorraine. She becomes infatuated with Marty instead  -  and he begins to fade from the family photograph.'
+					'Marty pushes George clear of the car meant to introduce him to Lorraine. She becomes infatuated with Marty instead  -  and he begins to fade from the family photograph.',
+				paradox:
+					'Ontological risk: with his parents no longer destined to meet, Marty starts to erase himself. For a while he stands on a timeline where he was never born.'
 			},
 			{
 				id: 'finddoc',

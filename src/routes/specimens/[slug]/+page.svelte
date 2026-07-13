@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { base } from '$app/paths';
 	import { ArrowLeft, Warning } from 'phosphor-svelte';
-	import Timeline from '$lib/components/Timeline.svelte';
-	import SiteIcon from '$lib/components/SiteIcon.svelte';
+	import BranchingTimeline from '$lib/components/BranchingTimeline.svelte';
+	import BrandLogo from '$lib/components/BrandLogo.svelte';
 	import {
 		RULE_META,
 		MODE_META,
@@ -32,6 +32,12 @@
 	let related = $derived(
 		(s.related ?? []).map((slug) => getSpecimen(slug)).filter((x) => x !== undefined)
 	);
+
+	// ratings link straight to their source; only non-rating links become buttons
+	let linkMap = $derived(Object.fromEntries((s.links ?? []).map((l) => [l.kind, l.url])));
+	let extraLinks = $derived(
+		(s.links ?? []).filter((l) => !['imdb', 'rottentomatoes', 'metacritic'].includes(l.kind))
+	);
 </script>
 
 <svelte:head>
@@ -56,25 +62,33 @@
 			{#if s.ratings}
 				<div class="ratings">
 					{#if s.ratings.imdb != null}
-						<span class="rt"><SiteIcon kind="imdb" size={14} /> {s.ratings.imdb.toFixed(1)}</span>
+						<a class="rt" href={linkMap.imdb} target="_blank" rel="noreferrer noopener">
+							<BrandLogo kind="imdb" size={16} /> <b>{s.ratings.imdb.toFixed(1)}</b><span class="of">/10</span>
+						</a>
 					{/if}
 					{#if s.ratings.rtCritic != null}
-						<span class="rt"><SiteIcon kind="rottentomatoes" size={14} /> {s.ratings.rtCritic}% critics</span>
+						<a class="rt" href={linkMap.rottentomatoes} target="_blank" rel="noreferrer noopener">
+							<BrandLogo kind="rottentomatoes" size={16} /> <b>{s.ratings.rtCritic}%</b><span class="of">critics</span>
+						</a>
 					{/if}
 					{#if s.ratings.rtAudience != null}
-						<span class="rt"><SiteIcon kind="rottentomatoes" size={14} /> {s.ratings.rtAudience}% audience</span>
+						<a class="rt" href={linkMap.rottentomatoes} target="_blank" rel="noreferrer noopener">
+							<BrandLogo kind="rottentomatoes" size={16} /> <b>{s.ratings.rtAudience}%</b><span class="of">audience</span>
+						</a>
 					{/if}
 					{#if s.ratings.metacritic != null}
-						<span class="rt"><SiteIcon kind="metacritic" size={14} /> {s.ratings.metacritic}</span>
+						<a class="rt" href={linkMap.metacritic} target="_blank" rel="noreferrer noopener">
+							<BrandLogo kind="metacritic" size={16} /> <b>{s.ratings.metacritic}</b><span class="of">/100</span>
+						</a>
 					{/if}
 				</div>
 			{/if}
 
-			{#if s.links?.length}
+			{#if extraLinks.length}
 				<div class="links">
-					{#each s.links as link (link.url)}
+					{#each extraLinks as link (link.url)}
 						<a class="lk" href={link.url} target="_blank" rel="noreferrer noopener">
-							<SiteIcon kind={link.kind} size={15} />
+							<BrandLogo kind={link.kind} size={14} />
 							{link.label ?? LINK_META[link.kind] ?? 'Link'}
 						</a>
 					{/each}
@@ -129,7 +143,7 @@
 
 	<section class="timeline">
 		<h2>Walk the timeline</h2>
-		<Timeline events={s.timeline} accent={ruleColorVar(s.rules[0])} />
+		<BranchingTimeline events={s.timeline} branches={s.branches ?? []} accent={ruleColorVar(s.rules[0])} />
 	</section>
 
 	{#if related.length}
@@ -157,7 +171,7 @@
 
 <style>
 	.dossier {
-		max-width: 960px;
+		max-width: 1200px;
 		margin: 0 auto;
 		padding: clamp(1.2rem, 4vw, 2.5rem) clamp(1rem, 4vw, 3.5rem) 5rem;
 	}
@@ -296,10 +310,24 @@
 	.rt {
 		display: inline-flex;
 		align-items: center;
-		gap: 0.4rem;
+		gap: 0.45rem;
 		font-family: var(--font-mono);
-		font-size: 0.8rem;
+		font-size: 0.85rem;
 		color: var(--color-paper);
+		border: 1px solid var(--color-line);
+		border-radius: 999px;
+		padding: 0.4rem 0.75rem;
+		transition: border-color 0.15s;
+	}
+	.rt:hover {
+		border-color: color-mix(in srgb, var(--color-paper) 35%, var(--color-line));
+	}
+	.rt b {
+		font-weight: 700;
+	}
+	.rt .of {
+		color: var(--color-muted);
+		font-size: 0.72rem;
 	}
 	.links {
 		display: flex;

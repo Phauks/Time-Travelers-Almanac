@@ -1,87 +1,83 @@
 # Handover: the timeline component
 
-Where the timeline stands and where it is going. The component is
-`src/lib/components/BranchingTimeline.svelte`. It is now one coherent card:
-a header (title + As Told/As Happened toggle + Legend button), the board, and
-a three-region event panel (image, text, tags). The board scales with the
-number of events (a fixed step per beat) so long stories scroll rather than
-compress. Legend content lives in one `legendBody` snippet, shown by hovering
-the title or toggling the Legend button; there is no permanent legend strip.
+Where the timeline stands and where it is going. There are now two renderers
+over one shared geometry:
 
-## Done in the latest pass
+- `src/lib/components/BranchingTimeline.svelte` — the in-card SVG board
+  (unchanged look: header, scrollable board, event panel), plus an **Expand**
+  button.
+- `src/lib/components/Chronoscope.svelte` + `src/lib/timeline/chronoscope.ts`
+  — the full-screen Canvas 2D instrument. Design rationale and architecture
+  live in `docs/CHRONOSCOPE.md`; the survey of prior art that led here is in
+  the research artifact (round two: Histography, ChronoZoom, Fallen of WWII,
+  NatGeo/NYT scrollytelling).
 
-- Single card with header/board/panel; title header shows the media name.
-- Legend on title hover and via a Legend button overlaid on the board.
-- Board scales (`W = ML + MR + (n-1)*STEP`) and scrolls; fills the column when
-  short (`svg { width: 100% }` with an inline `min-width`).
-- Event panel is three regions: image left, text right, tags beneath.
-- Timeline branch descriptors dropped (only show a name if the fiction names
-  the timeline, Steins;Gate style; `Branch.label` is that name).
-- Reserved image slot: beat still, else dimmed poster, else a blank note.
-- Video is a native YouTube `<iframe>` (youtube-nocookie), autoplay off,
-  `controls=1`; play/pause are YouTube's own.
+Shared modules:
 
-## Next: a full-screen, draggable timeline view (requested)
+- `src/lib/timeline/layout.ts` — all board geometry as pure functions of
+  `(events, branches, order)`: branch membership, lane positions, per-pair
+  base segments (dashed across big gaps), splinters, level-packed jump arcs,
+  off-timeline jumps, departure ids. Both renderers consume this; change
+  geometry here and both views follow.
+- `src/lib/timeline/display.ts` — kind metadata, `shortDate`, `whenLabel`,
+  `jumpText`.
+- `src/lib/components/EventPanel.svelte` — the image/text/tags detail panel,
+  shared by the card and the full-screen view.
 
-Goal: a button on the card opens the timeline full screen, board filling the
-width, the event detail docked on the right. The board becomes an infinite
-pan/zoom canvas that eases back toward the timeline when released, and events
-show thumbnails inline.
+## Done in this pass (the Chronoscope, phase 1)
 
-Suggested approach:
+- Full-screen overlay shell (Lightbox pattern): header with title, As Told /
+  As Happened toggle, **Tour**, **Fit**, close; canvas board left; docked
+  EventPanel right; stacks vertically under 860px.
+- Camera: drag pan with pointer capture, wheel zoom about the cursor
+  (ctrl+wheel handles trackpad pinch), two-pointer pinch, soft bounds with
+  drag resistance and a spring-back rubber band on release.
+- Semantic zoom tiers: far = lanes/ribbons/nodes silhouette; ~0.55 dates fade
+  in; ~0.9 beat titles; ~1.4 inline thumbnails (cover-cropped, cached) on
+  beats that have stills.
+- Jumps are **comet ribbons**: one filled tapered shape per jump with an
+  integrated barbed head, `--color-jump` forward / cool blue back, soft glow;
+  the selected departure's ribbon carries a travelling pulse
+  (`prefers-reduced-motion` disables all tweens and the pulse).
+- Guided tour: walks the beats in the current order, flying the camera; any
+  canvas interaction pauses it.
+- Theme-native: engine reads `--color-*`/`--font-mono` tokens at open, so the
+  board is parchment in light mode and void-dark in dark mode.
+- A11y: Escape closes, arrow keys step beats, hidden list of real buttons for
+  screen readers/Tab, hover cursor + hit-testing on nodes.
+- Verified with Playwright on `/specimens/back-to-the-future/` in both
+  themes: card unchanged, expand/step/tour/pause/re-order/escape all pass,
+  no console errors; `vite build` green.
 
-1. **Shell**: a fixed overlay (like `Lightbox`/`VideoModal`) holding the board
-   left and a persistent event panel right. Reuse the same `pos`/`segParts`/
-   `jumpsLeveled` derivations; only the container and interaction change.
-2. **Pan/zoom**: track `tx, ty, scale` state; apply as a transform on a single
-   group. Pointer drag updates `tx/ty`; wheel/pinch updates `scale` about the
-   cursor. On pointer-up, animate `tx/ty` back so the nearest lane re-centres
-   (a spring or eased tween on a rAF loop; remember `Date.now()` is unavailable
-   in workflow scripts but fine in component code).
-3. **Bounds/"pull back"**: clamp softly. When released outside a comfortable
-   range, tween back to the clamped value (rubber-band).
-4. **Thumbnails on beats**: when a beat has `image`, render a small clipped
-   image at the node (SVG `<image>` with a `clipPath`, or an HTML overlay
-   positioned from `pos`). Fall back to nothing (not the poster) on the board
-   to avoid noise.
-5. **Spacing**: keep the `STEP` model; in the big view raise `STEP` and node
-   size so it feels roomy.
+## Known gaps / phase 2 candidates
 
-## Rendering: is SVG right? Alternatives to investigate
+- `svelte-check` currently crashes in this environment (TypeScript 7 pin vs
+  svelte-check expecting ≤6) — pre-existing, not from this change.
+- No legend inside the overlay yet (it exists on the card).
+- Off-timeline jump stubs are functional but plain; hover does not yet
+  highlight a ribbon's two endpoints together.
+- Tour pacing is a fixed 3.2s; the Fallen-of-WWII grammar (narrated glide,
+  pause-to-explore) could go further, e.g. easing zoom per jump distance.
+- Mobile pinch is implemented but untested on a real device.
+- Thumbnail draw order can overlap a ribbon at extreme zoom; consider a
+  dedicated overlay pass.
 
-SVG is fine for correctness but the arrowheads look stiff and per-node HTML
-(thumbnails, rich labels) is awkward inside `<svg>`. Options, cheapest first:
+## Where this goes next (see docs/CHRONOSCOPE.md)
 
-- **Hybrid SVG + HTML overlay (recommended next step).** Keep SVG for the
-  lines/arcs (crisp, easy geometry) but render nodes, thumbnails, and labels as
-  absolutely-positioned HTML over the SVG, placed from the same `pos` numbers.
-  Best of both: vector arrows, real DOM for media and interaction. Low risk,
-  incremental.
-- **Canvas 2D.** Draw everything imperatively. Great for many nodes and smooth
-  pan/zoom; you lose easy hit-testing and accessibility (must re-implement).
-  Worth it only if event counts get large.
-- **A graph/flow library** (e.g. Svelte Flow / xyflow, or D3 for layout only).
-  Gives pan/zoom, nodes-as-components, and edges out of the box; cost is a
-  dependency and bending its edge routing to our jump/branch semantics.
-- **WebGL (PixiJS/regl)** only if this becomes a giant, animated canvas; likely
-  overkill.
-- **Nicer arrows regardless of tech**: curved cubic paths with a tapered
-  (filled path) arrowhead rather than a stroked marker; animate a dash offset
-  along a jump to suggest travel; ease node radius on select.
-
-## Fun directions (design, not urgent)
-
-- Animate a pulse travelling along a jump arc when it is selected.
-- Parallax the lanes slightly on pan; subtle grid or "era" bands behind.
-- A "play" control that walks the beats in order, panning the canvas.
-- Distinct textures per rule (fixed = engraved, mutable = ink-bleed,
-  branching = split), tying the timeline to the three-rule identity.
-- Hover a jump to highlight its departure and arrival nodes together.
+1. Phase 2 polish: endpoint-pair hover glow, overlay legend, distance-eased
+   tour, elastic-time x-axis experiment (spacing weighted by log time-gap).
+2. Lenses: the same layout data as branching world-lines (Endgame
+   click-to-trace) and a story curve (told × happened) view.
+3. The master timeline: every specimen on one canvas — density skyline far
+   out (Histography), ChronoZoom-style nesting into a single specimen.
 
 ## Watch-outs
 
-- Keep the board derivations pure functions of `events`/`branches`; the
-  `{#key slug}` wrapper in the dossier remounts on navigation, so avoid relying
-  on persisted internal state.
-- `overflow-x: clip` on `body` prevents stray horizontal scroll; a full-screen
-  canvas should manage its own bounds rather than causing page scroll.
+- Keep `layout.ts` pure — no DOM, no Svelte. The `{#key slug}` wrapper in the
+  dossier remounts the card on navigation; the Chronoscope engine is created
+  per open and destroyed on close, so no state may persist inside it either.
+- In `Chronoscope.svelte`, the engine-lifecycle `$effect` must not read
+  `selectedId` (it is written there, and a tracked read recreates the engine
+  on every selection — this bug shipped once already; `untrack` guards it).
+- `overflow-x: clip` on `body` prevents stray page scroll; the overlay locks
+  `body` scroll while open and manages its own bounds.

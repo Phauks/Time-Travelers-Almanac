@@ -1,20 +1,11 @@
 <script lang="ts">
-	import {
-		Flag,
-		Lightning,
-		MapPin,
-		ArrowUUpLeft,
-		ArrowsClockwise,
-		DotOutline,
-		Warning,
-		ArrowRight,
-		ArrowLeft,
-		CaretLeft,
-		CaretRight,
-		Info
-	} from 'phosphor-svelte';
+	import { ArrowRight, ArrowLeft, ArrowsOutSimple, Info } from 'phosphor-svelte';
 	import { base } from '$app/paths';
-	import type { Branch, EventKind, TimelineEvent } from '$lib/types';
+	import EventPanel from './EventPanel.svelte';
+	import Chronoscope from './Chronoscope.svelte';
+	import { computeLayout } from '$lib/timeline/layout';
+	import { shortDate, jumpText } from '$lib/timeline/display';
+	import type { Branch, TimelineEvent } from '$lib/types';
 
 	let {
 		title = 'Timeline',
@@ -40,185 +31,30 @@
 		onOpenImage?: (src: string) => void;
 	} = $props();
 
-	// ---- branch membership: walk narrative order, switch at each branchAt marker ----
-	const byNarr = [...events].sort((a, b) => a.narrative - b.narrative);
-	const narrIndex = new Map(byNarr.map((e, i) => [e.id, i]));
-	const rootId = (branches.find((b) => !b.parent) ?? branches[0])?.id ?? 'main';
-	const branchAtMap = new Map(branches.filter((b) => b.branchAt).map((b) => [b.branchAt!, b.id]));
-	const jumpTargets = new Set(events.filter((e) => e.jumpTo).map((e) => e.jumpTo));
-	// Membership: an event may name its branch explicitly (needed when the story
-	// hops between timelines out of order, as in BTTF Part II). Otherwise we walk
-	// narrative order and switch branch at each branchAt marker.
-	const memberOf = new Map<string, string>();
-	{
-		let cur = rootId;
-		for (const e of byNarr) {
-			if (branchAtMap.has(e.id)) cur = branchAtMap.get(e.id)!;
-			memberOf.set(e.id, e.branch ?? cur);
-		}
-	}
-	const laneOf = (id: string) => Math.max(0, branches.findIndex((b) => b.id === id));
-	const branchById = new Map(branches.map((b) => [b.id, b]));
-	const STATUS: Record<string, string> = {
-		original: '#9aa3b5',
-		active: '#9aa3b5',
-		endangered: '#ff6b74',
-		erased: '#6b7280',
-		restored: '#ffb454'
-	};
-	const branchColor = (id: string) =>
-		(branchById.get(id)?.status && STATUS[branchById.get(id)!.status!]) || '#b57cff';
-
-	// ---- layout ----
-	// The board no longer squeezes every beat into the viewport: each event gets
-	// a fixed step of room, so a long story makes a wide board that scrolls.
-	const ML = 104, MR = 56, TOP = 98, GAP = 86, STEP = 150;
-	const laneCount = Math.max(1, branches.length);
-	const H = TOP + (laneCount - 1) * GAP + 54;
-	const laneY = (lane: number) => TOP + lane * GAP;
-
 	let order = $state<'told' | 'happened'>('told');
 	let showLegend = $state(false);
-	let n = $derived(events.length);
-	let W = $derived(Math.max(680, ML + MR + Math.max(0, n - 1) * STEP));
-	let ordered = $derived(
-		order === 'told'
-			? [...events].sort((a, b) => a.narrative - b.narrative)
-			: [...events].sort((a, b) => a.chrono - b.chrono)
+	let scopeOpen = $state(false);
+
+	// all board geometry lives in the shared layout module (one layout, two
+	// renderers: this SVG card and the full-screen Chronoscope canvas)
+	let L = $derived(computeLayout(events, branches, order));
+
+	let selectedId = $state(
+		[...events].sort((a, b) => a.narrative - b.narrative)[0]?.id ?? ''
 	);
-	const xOf = (slot: number) => ML + slot * STEP;
-	let pos = $derived(
-		ordered.map((e, i) => {
-			const branch = memberOf.get(e.id) ?? rootId;
-			return { e, x: xOf(i), branch, y: laneY(laneOf(branch)) };
-		})
-	);
-	let posById = $derived(new Map(pos.map((p) => [p.e.id, p])));
-
-	const bigGap = (a: number, b: number) => a > 1000 && b > 1000 && Math.abs(a - b) >= 2;
-
-	// base line drawn per adjacent same-branch pair; dashed across a big time gap
-	let segParts = $derived.by(() => {
-		const parts: { x1: number; x2: number; y: number; color: string; dashed: boolean }[] = [];
-		for (const b of branches) {
-			const ps = pos.filter((p) => p.branch === b.id).sort((a, z) => a.x - z.x);
-			for (let i = 0; i < ps.length - 1; i++) {
-				const a = ps[i], z = ps[i + 1];
-				if (a.e.jumpTo === z.e.id || z.e.jumpTo === a.e.id) continue; // a jump covers this hop
-				parts.push({
-					x1: a.x, x2: z.x, y: laneY(laneOf(b.id)),
-					color: branchColor(b.id),
-					dashed: bigGap(a.e.chrono, z.e.chrono)
-				});
-			}
-		}
-		return parts;
-	});
-
-	// continuous splinters (a change in the timeline, same era, no travel)
-	let splinters = $derived(
-		branches
-			.filter((b) => b.parent && b.branchAt && !jumpTargets.has(b.branchAt))
-			.map((b) => {
-				const to = posById.get(b.branchAt!);
-				const cut = narrIndex.get(b.branchAt!) ?? 0;
-				const before = byNarr
-					.filter((e) => memberOf.get(e.id) === b.parent && (narrIndex.get(e.id) ?? 0) < cut)
-					.pop();
-				const from = before ? posById.get(before.id) : undefined;
-				return to && from ? { from, to, color: branchColor(b.id) } : null;
-			})
-			.filter(Boolean) as { from: { x: number; y: number }; to: { x: number; y: number }; color: string }[]
-	);
-
-	// time jumps within this timeline, packed into levels so arcs never cross.
-	// `back` = the traveller lands in an earlier time than they left.
-	let jumpsLeveled = $derived.by(() => {
-		const js = pos
-			.filter((p) => p.e.jumpTo && posById.get(p.e.jumpTo))
-			.map((p) => {
-				const to = posById.get(p.e.jumpTo!)!;
-				return {
-					from: p,
-					to,
-					back: to.e.chrono < p.e.chrono,
-					x1: Math.min(p.x, to.x),
-					x2: Math.max(p.x, to.x)
-				};
-			})
-			.sort((a, b) => b.x2 - b.x1 - (a.x2 - a.x1));
-		const levels: { x1: number; x2: number }[][] = [];
-		return js.map((j) => {
-			let lvl = 0;
-			while (levels[lvl] && !levels[lvl].every((iv) => j.x2 < iv.x1 - 6 || j.x1 > iv.x2 + 6)) lvl++;
-			(levels[lvl] ||= []).push({ x1: j.x1, x2: j.x2 });
-			return { ...j, level: lvl };
-		});
-	});
-
-	// jumps whose other end is off this timeline (another era or another work):
-	// a departure to a labelled destination, or an arrival from one
-	const yearIn = (s: string) => {
-		const m = s.match(/\d{3,4}/);
-		return m ? Number(m[0]) : null;
-	};
-	let offJumps = $derived(
-		pos
-			.filter((p) => p.e.jumpToLabel || p.e.jumpFromLabel)
-			.map((p) => {
-				const out = !!p.e.jumpToLabel;
-				const label = (p.e.jumpToLabel ?? p.e.jumpFromLabel)!;
-				const dest = yearIn(label);
-				const back = dest != null && p.e.chrono > 1000 ? dest < p.e.chrono : false;
-				return { p, label, out, back };
-			})
-	);
-
-	let selectedId = $state(byNarr[0]?.id ?? '');
-	let selected = $derived(events.find((e) => e.id === selectedId) ?? byNarr[0]);
+	let selected = $derived(events.find((e) => e.id === selectedId) ?? L.ordered[0]);
 
 	// step through events in whatever order is currently shown
-	let selIndex = $derived(ordered.findIndex((e) => e.id === selectedId));
+	let selIndex = $derived(L.ordered.findIndex((e) => e.id === selectedId));
 	function step(delta: number) {
 		const i = selIndex < 0 ? 0 : selIndex + delta;
-		if (i >= 0 && i < ordered.length) selectedId = ordered[i].id;
+		if (i >= 0 && i < L.ordered.length) selectedId = L.ordered[i].id;
 	}
-
-	// nodes where a time machine fires (a departure) get a portal ring
-	let departureIds = $derived(new Set(events.filter((e) => e.jumpTo || e.jumpToLabel).map((e) => e.id)));
-
-	const KIND: Record<EventKind, { label: string; icon: unknown | null }> = {
-		origin: { label: 'Origin', icon: Flag },
-		departure: { label: 'Time jump', icon: Lightning },
-		arrival: { label: 'Arrival', icon: MapPin },
-		return: { label: 'Return', icon: ArrowUUpLeft },
-		loop: { label: 'Loop', icon: ArrowsClockwise },
-		event: { label: 'Event', icon: DotOutline }
-	};
-	const kmeta = (e: TimelineEvent) => KIND[e.kind ?? 'event'];
-	const shortDate = (e: TimelineEvent) => {
-		const l = e.chronoStartLabel ?? '';
-		const m = l.match(/\d{4}/); // keep everything up to and including the year
-		return (m ? l.slice(0, m.index! + 4) : l.split(',')[0]).trim();
-	};
-	// full display label, spanning start to end when the beat covers a range
-	const whenLabel = (e: TimelineEvent) => {
-		const base = e.chronoStartLabel ?? '';
-		const loc = e.location ? `, ${e.location}` : '';
-		return e.chronoEndLabel ? `${base} to ${e.chronoEndLabel}${loc}` : `${base}${loc}`;
-	};
-	function jumpText(fromC: number, toC: number): string {
-		if (fromC < 1000 || toC < 1000) return 'jump';
-		const d = Math.round(toC) - Math.round(fromC);
-		if (d === 0) return 'jump';
-		return d < 0 ? `${Math.abs(d)} yrs back` : `${d} yrs on`;
-	}
-	const curBranch = (id: string) => memberOf.get(id) ?? rootId;
 </script>
 
 {#snippet legendBody()}
 	{#each branches as b (b.id)}
-		<span class="lg"><i class="dot" style="background:{branchColor(b.id)}"></i>{b.label}</span>
+		<span class="lg"><i class="dot" style="background:{L.branchColor(b.id)}"></i>{b.label}</span>
 	{/each}
 	<span class="lg"><i class="flag"></i>origin</span>
 	<span class="lg"><i class="line fwd"></i>jump forward</span>
@@ -241,6 +77,9 @@
 			</div>
 			<button class="legend-btn" class:on={showLegend} aria-pressed={showLegend} onclick={() => (showLegend = !showLegend)}>
 				<Info size={13} weight="bold" /> Legend
+			</button>
+			<button class="legend-btn" onclick={() => (scopeOpen = true)}>
+				<ArrowsOutSimple size={13} weight="bold" /> Expand
 			</button>
 		</div>
 	</div>
@@ -266,17 +105,17 @@
 		{#if showLegend}
 			<div class="legend legend-overlay">{@render legendBody()}</div>
 		{/if}
-		<svg viewBox="0 0 {W} {H}" style="min-width:{W}px" role="img" aria-label="Branching timeline">
+		<svg viewBox="0 0 {L.W} {L.H}" style="min-width:{L.W}px" role="img" aria-label="Branching timeline">
 			<defs>
 				<marker id="jarrow" viewBox="0 0 12 12" refX="9" refY="6" markerWidth="7" markerHeight="7" orient="auto">
 					<path d="M1 1 L10 6 L1 11" fill="none" stroke="context-stroke" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
 				</marker>
 			</defs>
-			{#each branches as b, i (b.id)}
-				<text x="6" y={laneY(i) - 6} class="lane-lbl" style="fill:{branchColor(b.id)}">{b.label}</text>
+			{#each L.lanes as ln (ln.id)}
+				<text x="6" y={ln.y - 6} class="lane-lbl" style="fill:{ln.color}">{ln.label}</text>
 			{/each}
 
-			{#each segParts as s, i (i)}
+			{#each L.segParts as s, i (i)}
 				<line
 					x1={s.x1}
 					y1={s.y}
@@ -290,7 +129,7 @@
 				/>
 			{/each}
 
-			{#each splinters as c, i (i)}
+			{#each L.splinters as c, i (i)}
 				{@const midx = (c.from.x + c.to.x) / 2}
 				<path
 					d="M {c.from.x} {c.from.y} C {midx} {c.from.y}, {midx} {c.to.y}, {c.to.x} {c.to.y}"
@@ -301,7 +140,7 @@
 				/>
 			{/each}
 
-			{#each jumpsLeveled as j (j.from.e.id)}
+			{#each L.jumps as j (j.from.e.id)}
 				{@const apex = Math.min(j.from.y, j.to.y) - (36 + j.level * 26)}
 				{@const midx = (j.from.x + j.to.x) / 2}
 				<path
@@ -318,7 +157,7 @@
 				</text>
 			{/each}
 
-			{#each offJumps as o (o.p.e.id)}
+			{#each L.offJumps as o (o.p.e.id)}
 				{@const capX = o.p.x + (o.out ? 30 : -30)}
 				{@const capY = o.p.y - 52}
 				<path
@@ -337,7 +176,7 @@
 				</text>
 			{/each}
 
-			{#each pos as p (p.e.id)}
+			{#each L.pos as p (p.e.id)}
 				<g
 					class="node"
 					role="button"
@@ -346,7 +185,7 @@
 					onclick={() => (selectedId = p.e.id)}
 					onkeydown={(ev) => (ev.key === 'Enter' || ev.key === ' ') && (selectedId = p.e.id)}
 				>
-					{#if departureIds.has(p.e.id)}
+					{#if L.departureIds.has(p.e.id)}
 						<circle class="dep-ring" cx={p.x} cy={p.y} r="10" fill="none" stroke-width="1.4" stroke-dasharray="2.5 2.5" />
 					{/if}
 					{#if p.e.kind === 'origin' || p.e.origin}
@@ -355,7 +194,7 @@
 							<path d="M0 -12 L7 -10 L0 -7.5 Z" />
 						</g>
 					{/if}
-					<circle class="n-dot" cx={p.x} cy={p.y} r={selectedId === p.e.id ? 8 : 6} fill={branchColor(p.branch)} />
+					<circle class="n-dot" cx={p.x} cy={p.y} r={selectedId === p.e.id ? 8 : 6} fill={L.branchColor(p.branch)} />
 					{#if selectedId === p.e.id}
 						<circle class="sel-ring" cx={p.x} cy={p.y} r="13" fill="none" stroke-width="1.2" />
 					{/if}
@@ -378,62 +217,33 @@
 
 	<div class="side">
 	{#if selected}
-		{@const M = kmeta(selected)}
-		{@const b = branchById.get(curBranch(selected.id))}
-		<div class="detail" style="border-left-color:{branchColor(curBranch(selected.id))}">
-			<div class="detnav">
-				<button class="arrow" onclick={() => step(-1)} disabled={selIndex <= 0} aria-label="Previous event">
-					<CaretLeft size={15} weight="bold" />
-				</button>
-				<span class="count">{selIndex + 1} / {ordered.length}</span>
-				<button
-					class="arrow"
-					onclick={() => step(1)}
-					disabled={selIndex >= ordered.length - 1}
-					aria-label="Next event"
-				>
-					<CaretRight size={15} weight="bold" />
-				</button>
-			</div>
-			<div class="det-main">
-				<div class="media">
-					{#if selected.image}
-						<button
-							class="shot"
-							onclick={() => onOpenImage?.(selected.image!)}
-							aria-label="Open {selected.label} in the gallery"
-						>
-							<img src={selected.image} alt={selected.label} />
-						</button>
-					{:else if fallbackImage}
-						<img class="shot-fallback" src={fallbackImage} alt="" />
-						<span class="media-note">no still yet</span>
-					{:else}
-						<span class="media-note">no image</span>
-					{/if}
-				</div>
-				<div class="det-text">
-					<h4>{selected.label}</h4>
-					<p class="when">{whenLabel(selected)}</p>
-					{#if selected.description}<p class="desc">{selected.description}</p>{/if}
-					{#if selected.paradox}
-						<p class="para"><Warning size={13} weight="fill" /> {selected.paradox}</p>
-					{/if}
-				</div>
-			</div>
-			<div class="badges">
-				<span class="badge" style="--c:{branchColor(curBranch(selected.id))}">
-					{#if M.icon}{@const Icon = M.icon}<Icon size={12} weight="fill" />{/if}{M.label}
-				</span>
-				{#if b}<span class="badge branch">{b.label}</span>{/if}
-				{#if selected.source}<span class="badge src">{selected.source}</span>{/if}
-			</div>
-		</div>
+		{@const b = branches.find((br) => br.id === L.branchOf(selected.id))}
+		<EventPanel
+			{selected}
+			branchLabel={b?.label}
+			branchColor={L.branchColor(L.branchOf(selected.id))}
+			selIndex={selIndex < 0 ? 0 : selIndex}
+			total={L.ordered.length}
+			onStep={step}
+			{fallbackImage}
+			{onOpenImage}
+		/>
 	{/if}
 	</div>
 	</div>
 	</div>
 </div>
+
+<Chronoscope
+	bind:open={scopeOpen}
+	{title}
+	{events}
+	{branches}
+	{accent}
+	{fallbackImage}
+	{onOpenImage}
+	initialSelected={selectedId}
+/>
 
 <style>
 	.btl {
@@ -539,6 +349,10 @@
 		color: var(--color-paper);
 		border-color: color-mix(in srgb, var(--color-paper) 35%, var(--color-line));
 	}
+	.legend-btn:focus-visible {
+		outline: 2px solid var(--accent);
+		outline-offset: 2px;
+	}
 	.tlx-body {
 		display: grid;
 		grid-template-columns: minmax(0, 1fr) 340px;
@@ -577,20 +391,10 @@
 		background: color-mix(in srgb, var(--color-panel) 30%, transparent);
 		padding: 0.8rem;
 	}
-	.side .detail {
+	.side :global(.detail) {
 		flex: 1;
 		min-height: 0;
 		overflow-y: auto;
-	}
-	/* three regions: image left, text right, tags beneath */
-	.det-main {
-		display: grid;
-		grid-template-columns: 120px minmax(0, 1fr);
-		gap: 0.7rem;
-		align-items: start;
-	}
-	.det-text {
-		min-width: 0;
 	}
 	@media (max-width: 860px) {
 		.tlx-body {
@@ -723,102 +527,6 @@
 		border-bottom: 10px solid #ffcc33;
 	}
 
-	.detail {
-		border-left: 3px solid var(--accent);
-		border-radius: 4px;
-		padding: 0 0 0 0.8rem;
-	}
-	/* always-reserved image slot (left of the three regions): still, poster, or blank */
-	.media {
-		position: relative;
-		aspect-ratio: 3 / 4;
-		border: 1px solid var(--color-line);
-		border-radius: 6px;
-		overflow: hidden;
-		background: color-mix(in srgb, var(--color-panel) 70%, #000);
-		display: flex;
-		align-items: center;
-		justify-content: center;
-	}
-	.media .shot {
-		display: block;
-		width: 100%;
-		height: 100%;
-		padding: 0;
-		border: 0;
-		background: transparent;
-		cursor: zoom-in;
-	}
-	.media .shot img {
-		width: 100%;
-		height: 100%;
-		object-fit: cover;
-		display: block;
-	}
-	.media .shot-fallback {
-		width: 100%;
-		height: 100%;
-		object-fit: cover;
-		opacity: 0.28;
-		filter: grayscale(0.3);
-	}
-	.media-note {
-		position: absolute;
-		font-family: var(--font-mono);
-		font-size: 0.6rem;
-		letter-spacing: 0.08em;
-		text-transform: uppercase;
-		color: var(--color-muted);
-	}
-	.badges {
-		display: flex;
-		flex-wrap: wrap;
-		gap: 0.4rem;
-		margin-bottom: 0.5rem;
-	}
-	.badge {
-		display: inline-flex;
-		align-items: center;
-		gap: 0.3rem;
-		font-family: var(--font-mono);
-		font-size: 0.6rem;
-		letter-spacing: 0.08em;
-		text-transform: uppercase;
-		padding: 3px 8px;
-		border-radius: 999px;
-		color: var(--c, var(--color-muted));
-		border: 1px solid color-mix(in srgb, var(--c, var(--color-muted)) 45%, transparent);
-	}
-	.badge.branch {
-		--c: var(--color-muted);
-	}
-	.detail h4 {
-		font-family: var(--font-serif);
-		font-size: 1.2rem;
-		margin: 0 0 0.2rem;
-	}
-	.when {
-		margin: 0 0 0.5rem;
-		font-family: var(--font-mono);
-		font-size: 0.72rem;
-		color: var(--color-muted);
-	}
-	.desc {
-		margin: 0;
-		font-size: 1rem;
-		line-height: 1.6;
-	}
-	.para {
-		margin: 0.7rem 0 0;
-		display: flex;
-		gap: 0.4rem;
-		align-items: flex-start;
-		font-size: 0.9rem;
-		color: #ff8a92;
-		border-top: 1px dashed color-mix(in srgb, #ff6b74 40%, transparent);
-		padding-top: 0.6rem;
-	}
-
 	.connectors {
 		display: flex;
 		align-items: center;
@@ -843,52 +551,5 @@
 	.continues:hover {
 		color: var(--color-paper);
 		border-color: color-mix(in srgb, var(--color-paper) 35%, var(--color-line));
-	}
-
-	.detnav {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		gap: 0.5rem;
-		margin-bottom: 0.7rem;
-	}
-	.detnav .count {
-		font-family: var(--font-mono);
-		font-size: 0.66rem;
-		letter-spacing: 0.08em;
-		color: var(--color-muted);
-	}
-	.arrow {
-		display: inline-flex;
-		align-items: center;
-		justify-content: center;
-		width: 28px;
-		height: 28px;
-		border: 1px solid var(--color-line);
-		border-radius: 6px;
-		background: transparent;
-		color: var(--color-paper);
-		cursor: pointer;
-		transition:
-			border-color 0.15s,
-			opacity 0.15s;
-	}
-	.arrow:hover:not(:disabled) {
-		border-color: color-mix(in srgb, var(--color-paper) 40%, var(--color-line));
-	}
-	.arrow:disabled {
-		opacity: 0.35;
-		cursor: default;
-	}
-	.arrow:focus-visible {
-		outline: 2px solid var(--accent);
-		outline-offset: 2px;
-	}
-	.media .shot:focus-visible {
-		outline: 2px solid var(--accent);
-		outline-offset: -2px;
-	}
-	.badge.src {
-		--c: var(--accent);
 	}
 </style>

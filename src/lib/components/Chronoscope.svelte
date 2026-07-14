@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { untrack } from 'svelte';
-	import { X, Play, Pause, CornersOut, Path, FilmSlate } from 'phosphor-svelte';
+	import { replaceState } from '$app/navigation';
+	import { X, Play, Pause, CornersOut, Path, FilmSlate, Info } from 'phosphor-svelte';
 	import EventPanel from './EventPanel.svelte';
 	import { Chronoscope, type ChronoTheme } from '$lib/timeline/chronoscope';
 	import { LENSES, lanesLens } from '$lib/timeline/lens';
@@ -64,7 +65,8 @@
 	let engine = $state.raw<Chronoscope | null>(null);
 
 	let touring = $state(false);
-	let tourTimer: ReturnType<typeof setInterval> | undefined;
+	let showLegend = $state(false);
+	let tourTimer: ReturnType<typeof setTimeout> | undefined;
 
 	function readTheme(el: HTMLElement): ChronoTheme {
 		const cs = getComputedStyle(el);
@@ -102,7 +104,30 @@
 
 	function stopTour() {
 		touring = false;
-		clearInterval(tourTimer);
+		clearTimeout(tourTimer);
+	}
+
+	// the tour paces itself by distance: a 70-year sweep takes visibly longer
+	// to fly than a same-night hop, and the dwell starts when the flight lands
+	const TOUR_DWELL = 2100;
+	function flightFor(fromId: string, toId: string): number {
+		const dist = engine?.beatDistance(fromId, toId) ?? 400;
+		return Math.min(1400, Math.max(450, dist * 0.9));
+	}
+
+	function tourStep() {
+		const i = tourList.findIndex((e) => e.id === selectedId);
+		if (i >= tourList.length - 1) {
+			stopTour();
+			return;
+		}
+		const nextId = tourList[i + 1].id;
+		const flight = flightFor(selectedId, nextId);
+		selectedId = nextId;
+		engine?.setSelected(nextId);
+		engine?.flyToBeat(nextId, flight);
+		syncUrl(open);
+		tourTimer = setTimeout(tourStep, flight + TOUR_DWELL);
 	}
 
 	function toggleTour() {
@@ -114,11 +139,7 @@
 		touring = true;
 		const at = tourList.findIndex((e) => e.id === selectedId);
 		select(tourList[at >= 0 && at < tourList.length - 1 ? at : 0].id, true);
-		tourTimer = setInterval(() => {
-			const i = tourList.findIndex((e) => e.id === selectedId);
-			if (i >= tourList.length - 1) stopTour();
-			else select(tourList[i + 1].id, true);
-		}, 3200);
+		tourTimer = setTimeout(tourStep, 650 + TOUR_DWELL);
 	}
 
 	function close() {
@@ -147,7 +168,12 @@
 			url.searchParams.delete('view');
 			url.searchParams.delete('beat');
 		}
-		history.replaceState(history.state, '', url);
+		try {
+			replaceState(url, {});
+		} catch {
+			// router not ready yet (first paint) — the plain API is fine here
+			history.replaceState(history.state, '', url);
+		}
 	}
 
 	// engine lifecycle: created when the overlay mounts its canvas. Selection
@@ -167,7 +193,9 @@
 					: (L.ordered[0]?.id ?? '');
 		});
 		engine = eng;
-		syncUrl(true);
+		// untracked: syncUrl reads selectedId, and a tracked read here would
+		// recreate the engine on every selection change (see handover watch-outs)
+		untrack(() => syncUrl(true));
 		return () => {
 			eng.destroy();
 			if (engine === eng) engine = null;
@@ -190,6 +218,11 @@
 	// threads toggle without a full scene rebuild
 	$effect(() => {
 		engine?.setShowThreads(showThreads && layout.threads.length > 0);
+	});
+
+	// the active lens supplies its own render passes (e.g. the story curve)
+	$effect(() => {
+		engine?.setExtraLayers(lens.extraLayers ?? []);
 	});
 
 	// the engine paints with resolved token values, so a theme flip while the
@@ -258,6 +291,9 @@
 						</select>
 					</label>
 				{/if}
+				<button class="pill" class:on={showLegend} aria-pressed={showLegend} onclick={() => (showLegend = !showLegend)}>
+					<Info size={13} weight="bold" /> Legend
+				</button>
 				<button class="pill" onclick={toggleTour} aria-pressed={touring}>
 					{#if touring}<Pause size={13} weight="fill" /> Pause tour{:else}<Play size={13} weight="fill" /> Tour{/if}
 				</button>
@@ -277,6 +313,30 @@
 					aria-label="Timeline board. Drag to pan, scroll to zoom, click a beat to inspect it. Use the arrow keys to step through beats."
 				></canvas>
 				<span class="hint">drag to pan · scroll to zoom · click a beat · scrub the minimap</span>
+				{#if showLegend}
+					<div class="legend" role="note" aria-label="Legend">
+						{#each scene.branches as b (b.id)}
+							<span class="lg"><i class="swatch" style="background:{layout.branchColor(b.id)}"></i>{b.label}</span>
+						{/each}
+						{#if lens.id === 'curve'}
+							<span class="lg"><svg viewBox="0 0 26 12" aria-hidden="true"><path d="M2 6 H24" stroke="var(--color-muted)" stroke-width="2"/></svg>time flows on</span>
+							<span class="lg"><svg viewBox="0 0 26 12" aria-hidden="true"><path d="M2 10 C10 10 16 2 24 2" stroke="var(--color-jump)" stroke-width="2.4" fill="none"/></svg>leap forward</span>
+							<span class="lg"><svg viewBox="0 0 26 12" aria-hidden="true"><path d="M2 2 C10 2 16 10 24 10" stroke="#2b93bd" stroke-width="2.4" fill="none"/></svg>flashback / jump back</span>
+							<span class="lg"><svg viewBox="0 0 26 12" aria-hidden="true"><path d="M2 10 L24 2" stroke="var(--color-line)" stroke-width="1.4" stroke-dasharray="3 3"/></svg>a linear telling</span>
+						{:else}
+							<span class="lg"><svg viewBox="0 0 26 12" aria-hidden="true"><path d="M2 9 C8 2 16 2 21 6 L24 4 L22 9 Z" fill="var(--color-jump)"/></svg>jump forward</span>
+							<span class="lg"><svg viewBox="0 0 26 12" aria-hidden="true"><path d="M24 9 C18 2 10 2 5 6 L2 4 L4 9 Z" fill="#2b93bd"/></svg>jump back</span>
+							<span class="lg"><svg viewBox="0 0 26 12" aria-hidden="true"><circle cx="13" cy="6" r="4.5" fill="none" stroke="var(--color-muted)" stroke-width="1.4" stroke-dasharray="2 2"/></svg>time machine fires</span>
+							<span class="lg"><svg viewBox="0 0 26 12" aria-hidden="true"><path d="M9 5 A5 5 0 0 1 17 5" fill="none" stroke="var(--color-branching)" stroke-width="1.4"/><path d="M9 8 A5 5 0 0 0 17 8" fill="none" stroke="var(--color-branching)" stroke-width="1.4"/></svg>history splits here</span>
+							<span class="lg"><svg viewBox="0 0 26 12" aria-hidden="true"><path d="M2 6 H24" stroke="#ff6b74" stroke-width="2" stroke-dasharray="2 5" opacity="0.6"/></svg>overwritten, decaying</span>
+							<span class="lg"><svg viewBox="0 0 26 12" aria-hidden="true"><path d="M13 1 V11" stroke="var(--color-muted)" stroke-width="1" stroke-dasharray="2 3"/><path d="M13 2 L15 4 L13 6 L11 4 Z" fill="var(--color-muted)"/><path d="M13 7 L15 9 L13 11 L11 9 Z" fill="var(--color-muted)"/></svg>same moment, two worlds</span>
+							{#if layout.threads.length}
+								<span class="lg"><svg viewBox="0 0 26 12" aria-hidden="true"><path d="M2 9 C8 9 10 3 14 3 S22 8 24 8" fill="none" stroke="#35d6a4" stroke-width="1.6" stroke-dasharray="4 3"/></svg>a traveller's path</span>
+							{/if}
+							<span class="lg"><svg viewBox="0 0 26 12" aria-hidden="true"><path d="M13 1 L19 10 L7 10 Z" fill="#ffcc33" stroke="var(--color-ink)" stroke-width="0.8"/></svg>paradox / continuity risk</span>
+						{/if}
+					</div>
+				{/if}
 			</div>
 			<aside class="side">
 				{#if selected}
@@ -437,6 +497,41 @@
 	canvas:focus-visible {
 		outline: 2px solid var(--accent);
 		outline-offset: -2px;
+	}
+	.legend {
+		position: absolute;
+		top: 0.8rem;
+		left: 0.9rem;
+		z-index: 5;
+		display: flex;
+		flex-direction: column;
+		gap: 0.45rem;
+		max-width: 300px;
+		padding: 0.6rem 0.75rem;
+		border: 1px solid var(--color-line);
+		border-radius: 8px;
+		background: color-mix(in srgb, var(--color-panel) 92%, transparent);
+		box-shadow: 0 8px 22px rgba(0, 0, 0, 0.3);
+		font-family: var(--font-mono);
+		font-size: 0.66rem;
+		color: var(--color-muted);
+	}
+	.lg {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.5rem;
+	}
+	.lg svg {
+		width: 26px;
+		height: 12px;
+		flex: none;
+	}
+	.lg .swatch {
+		width: 10px;
+		height: 10px;
+		border-radius: 50%;
+		flex: none;
+		margin: 0 8px;
 	}
 	.hint {
 		position: absolute;

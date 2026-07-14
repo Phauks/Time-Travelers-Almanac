@@ -111,6 +111,17 @@ export class Chronoscope {
 		this.invalidate();
 	}
 
+	private extraStatic: Layer[] = [];
+	private extraDynamic: Layer[] = [];
+
+	/** replace the active lens's layers (unlike use(), not cumulative) */
+	setExtraLayers(layers: Layer[]) {
+		this.extraStatic = layers.filter((l) => !l.dynamic);
+		this.extraDynamic = layers.filter((l) => l.dynamic);
+		this.invalidate();
+		this.requestDraw();
+	}
+
 	setScene(layout: TimelineLayout, theme: ChronoTheme) {
 		const first = !this.layout;
 		this.layout = layout;
@@ -152,12 +163,19 @@ export class Chronoscope {
 		this.requestDraw();
 	}
 
-	flyToBeat(id: string) {
+	flyToBeat(id: string, dur = 650) {
 		const p = this.layout?.posById.get(id);
 		if (!p) return;
 		const s = Math.max(this.cam.s, 1.3);
-		this.cam.flyTo({ x: p.x, y: p.y - 30, s }, 650);
+		this.cam.flyTo({ x: p.x, y: p.y - 30, s }, dur);
 		this.requestDraw();
+	}
+
+	/** world distance between two beats (for distance-eased tour pacing) */
+	beatDistance(a: string, b: string): number | null {
+		const pa = this.layout?.posById.get(a);
+		const pb = this.layout?.posById.get(b);
+		return pa && pb ? Math.hypot(pb.x - pa.x, pb.y - pa.y) : null;
 	}
 
 	// ----------------------------------------------------------- interaction
@@ -352,10 +370,10 @@ export class Chronoscope {
 	/** true while something is in motion and needs another frame */
 	private animating(): boolean {
 		if (this.cam.mode === 'fly' || this.cam.mode === 'spring') return true;
-		// a selected departure keeps its ribbon pulse alive
+		// a selected departure keeps its ribbon pulse alive — but only when the
+		// active lens actually draws that ribbon (the story curve has none)
 		if (!this.reduced && this.selectedId) {
-			const sel = this.layout?.posById.get(this.selectedId);
-			if (sel && sel.e.jumpTo) return true;
+			if (this.layout?.jumps.some((j) => j.from.e.id === this.selectedId)) return true;
 		}
 		return false;
 	}
@@ -384,6 +402,7 @@ export class Chronoscope {
 		cctx.clearRect(0, 0, cw, ch);
 		const f = this.makeFrame(cctx, this.cam.x, this.cam.y, cw, ch, now);
 		for (const layer of this.staticLayers) layer.draw(f);
+		for (const layer of this.extraStatic) layer.draw(f);
 		this.cacheState = { x: this.cam.x, y: this.cam.y, s: this.cam.s, v: this.sceneVersion };
 	}
 
@@ -416,6 +435,7 @@ export class Chronoscope {
 		// dynamic pass: live every frame
 		const f = this.makeFrame(ctx, this.cam.x, this.cam.y, this.vw, this.vh, now);
 		for (const layer of this.dynamicLayers) layer.draw(f);
+		for (const layer of this.extraDynamic) layer.draw(f);
 		drawMinimapViewport(f, { x: this.cam.x, y: this.cam.y, s: this.cam.s }, this.theme);
 	}
 }

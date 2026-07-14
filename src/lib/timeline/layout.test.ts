@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { computeLayout, elasticWeight } from './layout';
+import { computeStoryCurve } from './storycurve';
 import { stitchTimelines } from './stitch';
 import type { Branch, TimelineEvent } from '$lib/types';
 
@@ -202,6 +203,39 @@ describe('jump levelling', () => {
 		);
 		const levels = new Set(L.jumps.map((j) => j.level));
 		expect(levels.size).toBe(2);
+	});
+});
+
+describe('story-curve lens layout', () => {
+	it('plots x by narrative order and y by chronological rank', () => {
+		const L = computeStoryCurve(EVENTS, BRANCHES, 'told', { ml: 0, step: 100, top: 0 });
+		const xs = L.ordered.map((e) => L.posById.get(e.id)!.x);
+		expect(xs).toEqual([0, 100, 200, 300, 400]);
+		// chrono ranks: 1955.1 < 1955.2 < 1955.3 < 1985.1 < 1985.2
+		const rank = (id: string) => L.posById.get(id)!.lane;
+		expect(rank('b')).toBe(0);
+		expect(rank('a')).toBe(3);
+		expect(rank('e')).toBe(4);
+	});
+
+	it('shares a row between beats at the same instant', () => {
+		const L = computeStoryCurve(
+			[ev('p', 0, 1985), ev('q', 1, 1985), ev('r', 2, 1990)],
+			[],
+			'told'
+		);
+		expect(L.posById.get('p')!.y).toBe(L.posById.get('q')!.y);
+		expect(L.posById.get('r')!.y).toBeGreaterThan(L.posById.get('p')!.y);
+	});
+
+	it('keeps the lane vocabulary empty so standard layers no-op', () => {
+		const L = computeStoryCurve(EVENTS, BRANCHES);
+		expect(L.segParts).toEqual([]);
+		expect(L.jumps).toEqual([]);
+		expect(L.lanes).toEqual([]);
+		// but membership and departures still power the panel and portal rings
+		expect(L.branchOf('e')).toBe('restored');
+		expect(L.departureIds.has('a')).toBe(true);
 	});
 });
 

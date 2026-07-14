@@ -153,6 +153,33 @@ export function elasticWeight(gap: number): number {
 	return Math.min(2.4, 0.6 + 0.55 * Math.log10(1 + gap));
 }
 
+/**
+ * Branch membership: walk narrative order, switch at each branchAt marker.
+ * An event may also name its branch explicitly (needed when the story hops
+ * between timelines out of order, as in BTTF Part II). Shared by every lens.
+ */
+export function branchMembership(events: TimelineEvent[], branches: Branch[]) {
+	const byNarr = [...events].sort((a, b) => a.narrative - b.narrative);
+	const rootId = (branches.find((b) => !b.parent) ?? branches[0])?.id ?? 'main';
+	const branchAtMap = new Map(branches.filter((b) => b.branchAt).map((b) => [b.branchAt!, b.id]));
+	const memberOf = new Map<string, string>();
+	let cur = rootId;
+	for (const e of byNarr) {
+		if (branchAtMap.has(e.id)) cur = branchAtMap.get(e.id)!;
+		memberOf.set(e.id, e.branch ?? cur);
+	}
+	return { byNarr, rootId, memberOf, branchOf: (id: string) => memberOf.get(id) ?? rootId };
+}
+
+/** status-driven branch colour lookup, shared by every lens */
+export function makeBranchColor(branches: Branch[]) {
+	const branchById = new Map(branches.map((b) => [b.id, b]));
+	return (id: string) => {
+		const st = branchById.get(id)?.status;
+		return (st && STATUS_COLORS[st]) || FALLBACK_BRANCH_COLOR;
+	};
+}
+
 export function computeLayout(
 	events: TimelineEvent[],
 	branches: Branch[] = [],
@@ -161,28 +188,10 @@ export function computeLayout(
 ): TimelineLayout {
 	const { ml, mr, top, gap, step, minW } = { ...DEFAULTS, ...opts };
 
-	// ---- branch membership: walk narrative order, switch at each branchAt marker ----
-	const byNarr = [...events].sort((a, b) => a.narrative - b.narrative);
+	const { byNarr, rootId, memberOf, branchOf } = branchMembership(events, branches);
 	const narrIndex = new Map(byNarr.map((e, i) => [e.id, i]));
-	const rootId = (branches.find((b) => !b.parent) ?? branches[0])?.id ?? 'main';
-	const branchAtMap = new Map(branches.filter((b) => b.branchAt).map((b) => [b.branchAt!, b.id]));
 	const jumpTargets = new Set(events.filter((e) => e.jumpTo).map((e) => e.jumpTo));
-	// An event may name its branch explicitly (needed when the story hops between
-	// timelines out of order, as in BTTF Part II); otherwise walk narrative order.
-	const memberOf = new Map<string, string>();
-	{
-		let cur = rootId;
-		for (const e of byNarr) {
-			if (branchAtMap.has(e.id)) cur = branchAtMap.get(e.id)!;
-			memberOf.set(e.id, e.branch ?? cur);
-		}
-	}
-	const branchById = new Map(branches.map((b) => [b.id, b]));
-	const branchColor = (id: string) => {
-		const st = branchById.get(id)?.status;
-		return (st && STATUS_COLORS[st]) || FALLBACK_BRANCH_COLOR;
-	};
-	const branchOf = (eventId: string) => memberOf.get(eventId) ?? rootId;
+	const branchColor = makeBranchColor(branches);
 
 	// ---- x positions ----
 	const ordered =

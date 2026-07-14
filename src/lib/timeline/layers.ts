@@ -524,32 +524,55 @@ const laneLabelsLayer: Layer = {
 	}
 };
 
-/** selection ring, re-glowed ribbon, and the travelling pulse */
+/** selection ring, re-glowed ribbon, the travelling pulse, and hover-pair glow */
 const selectionLayer: Layer = {
 	id: 'selection',
 	dynamic: true,
 	draw(f) {
-		if (!f.selectedId) return;
 		const { ctx, theme, layout: L } = f;
+
+		// hovering a jump endpoint lights up BOTH ends of the travel together
+		if (f.hoverId && f.hoverId !== f.selectedId) {
+			const h = L.posById.get(f.hoverId);
+			if (h) {
+				const ring = (bx: number, by: number, color: string, alpha: number) => {
+					ctx.beginPath();
+					ctx.arc(f.sx(bx), f.sy(by), f.px(9, 5.5, 14), 0, 7);
+					ctx.strokeStyle = color;
+					ctx.globalAlpha = alpha;
+					ctx.lineWidth = 1.4;
+					ctx.stroke();
+					ctx.globalAlpha = 1;
+				};
+				ring(h.x, h.y, L.branchColor(h.branch), 0.55);
+				const j = L.jumps.find(
+					(jj) => jj.from.e.id === f.hoverId || jj.to.e.id === f.hoverId
+				);
+				if (j) {
+					const other = j.from.e.id === f.hoverId ? j.to : j.from;
+					const color = j.back ? theme.jumpBack : theme.jump;
+					ring(other.x, other.y, color, 0.7);
+					const apexY = f.sy(Math.min(j.from.y, j.to.y) - arcLift(j.level));
+					ribbon(
+						ctx,
+						{ x: f.sx(j.from.x), y: f.sy(j.from.y) },
+						{ x: f.sx(j.to.x), y: f.sy(j.to.y) },
+						apexY,
+						color,
+						1,
+						f.px(5, 2.6, 9),
+						16
+					);
+				}
+			}
+		}
+
+		if (!f.selectedId) return;
 		const p = L.posById.get(f.selectedId);
 		if (!p) return;
 		const x = f.sx(p.x);
 		const y = f.sy(p.y);
 		const r = f.px(8, 4.5, 13);
-
-		// hover ring on another beat
-		if (f.hoverId && f.hoverId !== f.selectedId) {
-			const h = L.posById.get(f.hoverId);
-			if (h) {
-				ctx.beginPath();
-				ctx.arc(f.sx(h.x), f.sy(h.y), f.px(9, 5.5, 14), 0, 7);
-				ctx.strokeStyle = L.branchColor(h.branch);
-				ctx.globalAlpha = 0.55;
-				ctx.lineWidth = 1.4;
-				ctx.stroke();
-				ctx.globalAlpha = 1;
-			}
-		}
 
 		// the selected node, re-drawn larger with its ring
 		ctx.beginPath();

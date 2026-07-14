@@ -28,3 +28,8 @@ export const lanesLens: Lens = {
 
 /** all registered lenses; the overlay shows a switcher once there is more than one */
 export const LENSES: Lens[] = [lanesLens];
+
+// the story-curve lens registers itself on import (type-only import back into
+// this module, so no runtime cycle)
+import { storyCurveLens } from './storycurve';
+LENSES.push(storyCurveLens);

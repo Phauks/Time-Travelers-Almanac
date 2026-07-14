@@ -92,18 +92,39 @@ Shared modules (`src/lib/timeline/`):
   re-reads tokens and re-renders.
 - 18 vitest unit tests on the pure core (`npm test`).
 
-## Known gaps / phase 2 candidates
+## Done in the third pass (the second lens + overlay polish)
+
+- **Story-curve lens** (`storycurve.ts`): beats at (narrative order,
+  chronological rank); segment colours read the telling — muted steps for
+  time flowing on, amber leaps forward, blue flashbacks — against the faint
+  diagonal a linear telling would draw. Proves the lens interface: the
+  header switcher appears automatically, and the engine, camera, minimap,
+  panel and tour all work unchanged on the new picture. Works on the full
+  saga too (the trilogy as one EKG).
+- `branchMembership()`/`makeBranchColor()` extracted so every lens shares
+  one membership walk; `engine.setExtraLayers()` carries lens layers.
+- **Overlay legend** (Legend pill) adapting to the active lens: branch
+  swatches plus the board vocabulary (ribbons, portal ring, birth burst,
+  decay, moment diamonds, threads, paradox) or the curve vocabulary.
+- **Hover-pair glow**: hovering either end of a jump rings both endpoints
+  and re-glows the ribbon.
+- **Distance-eased tour**: flight time scales with world distance
+  (450–1400ms), dwell starts on landing.
+- Fixed a reactivity bug: `syncUrl` reads `selectedId`, so calling it
+  tracked inside the engine-lifecycle effect recreated the engine on every
+  tour step (see watch-outs — this is the second time this class of bug
+  appeared). URL sync now goes through SvelteKit's `replaceState`.
+
+## Known gaps / next candidates
 
 - `svelte-check` currently crashes in this environment (TypeScript 7 pin vs
   svelte-check expecting ≤6) — pre-existing, not from this change.
-- No legend inside the overlay yet (it exists on the card).
-- Off-timeline jump stubs are functional but plain; hover does not yet
-  highlight a ribbon's two endpoints together.
-- Tour pacing is a fixed 3.2s; the Fallen-of-WWII grammar (narrated glide,
-  pause-to-explore) could go further, e.g. easing zoom per jump distance.
 - Mobile pinch is implemented but untested on a real device.
 - Thumbnail draw order can overlap a ribbon at extreme zoom; consider a
   dedicated overlay pass.
+- The story curve could show jump ribbons ghosted (its `jumps` are empty by
+  design; a curve-specific variant is possible).
+- A world-lines lens (Endgame click-to-trace) is the natural third lens.
 
 ## Where this goes next (see docs/CHRONOSCOPE.md)
 

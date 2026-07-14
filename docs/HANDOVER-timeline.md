@@ -12,17 +12,31 @@ over one shared geometry:
   the research artifact (round two: Histography, ChronoZoom, Fallen of WWII,
   NatGeo/NYT scrollytelling).
 
-Shared modules:
+Shared modules (`src/lib/timeline/`):
 
-- `src/lib/timeline/layout.ts` — all board geometry as pure functions of
+- `layout.ts` — all board geometry as pure functions of
   `(events, branches, order)`: branch membership, lane positions, per-pair
-  base segments (dashed across big gaps), splinters, level-packed jump arcs,
-  off-timeline jumps, departure ids. Both renderers consume this; change
-  geometry here and both views follow.
-- `src/lib/timeline/display.ts` — kind metadata, `shortDate`, `whenLabel`,
-  `jumpText`.
+  base segments, splinters, level-packed jump arcs, off-timeline jumps,
+  births, decay, registered moments, traveller threads. Both renderers
+  consume this; change geometry here and both views follow. Covered by
+  `layout.test.ts` (vitest, `npm test`).
+- `camera.ts` — renderer-agnostic pan/zoom viewpoint: soft bounds, drag
+  resistance, spring-back, eased flights, one `mode` at a time (no boolean
+  soup). Reusable verbatim by the future master timeline.
+- `layers.ts` — every draw pass as a stateless `Layer`; static layers are
+  cached to an offscreen canvas and blitted during pans, dynamic layers
+  (selection/pulse, lane labels, minimap) draw live. `engine.use(layer)`
+  registers plugins.
+- `lens.ts` — a lens = layout function + extra layers. `lanesLens` is the
+  default; the overlay grows a switcher automatically once `LENSES` has a
+  second entry (world-lines and story-curve are the intended next two).
+- `stitch.ts` — saga stitching: franchise parts combined into one master
+  timeline, ids prefixed, narrative offset per part, and cross-part
+  `crossRef`s promoted into real jump ribbons.
+- `display.ts` — kind metadata, `shortDate`, `whenLabel`, `jumpText`.
 - `src/lib/components/EventPanel.svelte` — the image/text/tags detail panel,
-  shared by the card and the full-screen view.
+  shared by the card and the full-screen view (now with a "crosses into"
+  link when a beat has a `crossRef`).
 
 ## Done in this pass (the Chronoscope, phase 1)
 
@@ -48,6 +62,35 @@ Shared modules:
 - Verified with Playwright on `/specimens/back-to-the-future/` in both
   themes: card unchanged, expand/step/tour/pause/re-order/escape all pass,
   no console errors; `vite build` green.
+
+## Done in the second pass (temporal splitting + modularity)
+
+- **Temporal registration**: As Happened uses an elastic time-metric x-axis
+  (`elasticWeight`: log-compressed gaps), and beats sharing an instant across
+  lanes share an x, joined by a dotted "moment" connector with diamonds.
+- **Born lanes**: a branch occupies a row only from its `branchAt` onward;
+  freed rows are reclaimed (git-graph compaction); lane labels sit at the
+  lane's birth. Births render distinctly: an arrival shockwave when a
+  traveller's landing split history, a dashed halo + wye for drift splits.
+- **Rule-aware decay**: an endangered/erased branch fades into gradient
+  dashes past the moment its successor is born (derived automatically;
+  `Branch.erasedAt`/`restoredAt` exist for explicit override).
+- **Traveller threads**: `event.traveler` tags become weaving dashed threads
+  (BTTF I's Marty and II/III's Doc are tagged); a Threads toggle and a
+  per-traveller tour select ("follow Marty") in the overlay.
+- **Full saga view**: on franchise entries, a Full Saga toggle stitches every
+  part onto one canvas — BTTF becomes 37 beats, 8 lanes, with cross-film
+  crossRefs drawn as real ribbons. Pairs beautifully with As Happened.
+- **Minimap scrub strip** (bottom-left) with a live viewport frame; click or
+  drag it to fly the camera.
+- **Deep links**: `?view=scope&beat=<id>` opens the Chronoscope on a beat;
+  the URL tracks selection and clears on close.
+- **Pan cache**: static layers render into an offscreen canvas blitted while
+  panning; dynamic layers stay live. Irrelevant at 16 beats, load-bearing at
+  master-timeline scale.
+- **Theme observer**: flipping `data-theme` while the overlay is open
+  re-reads tokens and re-renders.
+- 18 vitest unit tests on the pure core (`npm test`).
 
 ## Known gaps / phase 2 candidates
 

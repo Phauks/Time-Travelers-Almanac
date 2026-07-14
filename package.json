@@ -9,7 +9,8 @@
     "preview": "vite preview",
     "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
     "lint:content": "node scripts/content-lint.mjs",
-    "lint:content:fix": "node scripts/content-lint.mjs --fix"
+    "lint:content:fix": "node scripts/content-lint.mjs --fix",
+    "test": "vitest run"
   },
   "devDependencies": {
     "@sveltejs/adapter-static": "^3.0.10",
@@ -21,7 +22,8 @@
     "svelte-check": "^4.7.2",
     "tailwindcss": "^4.3.2",
     "typescript": "^7.0.2",
-    "vite": "^8.1.4"
+    "vite": "^8.1.4",
+    "vitest": "^4.1.10"
   },
   "dependencies": {
     "animejs": "^4.5.0",

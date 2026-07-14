@@ -1,9 +1,10 @@
 <script lang="ts">
 	import { untrack } from 'svelte';
-	import { X, Play, Pause, CornersOut } from 'phosphor-svelte';
+	import { X, Play, Pause, CornersOut, Path, FilmSlate } from 'phosphor-svelte';
 	import EventPanel from './EventPanel.svelte';
-	import { computeLayout } from '$lib/timeline/layout';
 	import { Chronoscope, type ChronoTheme } from '$lib/timeline/chronoscope';
+	import { LENSES, lanesLens } from '$lib/timeline/lens';
+	import { stitchTimelines, type SagaPart } from '$lib/timeline/stitch';
 	import type { Branch, TimelineEvent } from '$lib/types';
 
 	let {
@@ -14,7 +15,8 @@
 		accent = 'var(--color-branching)',
 		fallbackImage = undefined,
 		onOpenImage,
-		initialSelected = undefined
+		initialSelected = undefined,
+		saga = []
 	}: {
 		open?: boolean;
 		title?: string;
@@ -25,16 +27,34 @@
 		onOpenImage?: (src: string) => void;
 		/** beat to select when the view opens (the card's current selection) */
 		initialSelected?: string;
+		/** every part of this franchise, in order, for the stitched saga view */
+		saga?: SagaPart[];
 	} = $props();
 
 	let order = $state<'told' | 'happened'>('told');
+	let lens = $state.raw(lanesLens);
+	let sagaOn = $state(false);
+	let showThreads = $state(true);
+	let tourTraveler = $state('all');
+
+	const canSaga = $derived(saga.length > 1);
+	// the scene under the lens: this one story, or the whole stitched saga
+	let scene = $derived(
+		sagaOn && canSaga ? stitchTimelines(saga) : { events, branches }
+	);
 	// roomier spacing than the in-card board: the full screen can afford it
 	let layout = $derived(
-		computeLayout(events, branches, order, { step: 210, gap: 130, top: 120, ml: 140, mr: 90 })
+		lens.compute(scene.events, scene.branches, order, {
+			step: 210,
+			gap: 130,
+			top: 120,
+			ml: 140,
+			mr: 90
+		})
 	);
 
 	let selectedId = $state('');
-	let selected = $derived(events.find((e) => e.id === selectedId));
+	let selected = $derived(scene.events.find((e) => e.id === selectedId));
 	let selIndex = $derived(layout.ordered.findIndex((e) => e.id === selectedId));
 
 	let rootEl = $state<HTMLElement | null>(null);
@@ -65,12 +85,20 @@
 	function select(id: string, fly = false) {
 		selectedId = id;
 		engine?.setSelected(id, fly);
+		syncUrl(open);
 	}
 
 	function step(delta: number) {
 		const i = (selIndex < 0 ? 0 : selIndex) + delta;
 		if (i >= 0 && i < layout.ordered.length) select(layout.ordered[i].id, true);
 	}
+
+	// the tour walks either every beat, or one traveller's beats only
+	let tourList = $derived(
+		tourTraveler === 'all'
+			? layout.ordered
+			: layout.ordered.filter((e) => e.traveler === tourTraveler)
+	);
 
 	function stopTour() {
 		touring = false;
@@ -82,20 +110,21 @@
 			stopTour();
 			return;
 		}
+		if (!tourList.length) return;
 		touring = true;
-		// begin from the start when the tour is kicked off at the end
-		if (selIndex >= layout.ordered.length - 1) select(layout.ordered[0].id, true);
-		else select(layout.ordered[Math.max(0, selIndex)].id, true);
+		const at = tourList.findIndex((e) => e.id === selectedId);
+		select(tourList[at >= 0 && at < tourList.length - 1 ? at : 0].id, true);
 		tourTimer = setInterval(() => {
-			const i = layout.ordered.findIndex((e) => e.id === selectedId);
-			if (i >= layout.ordered.length - 1) stopTour();
-			else select(layout.ordered[i + 1].id, true);
+			const i = tourList.findIndex((e) => e.id === selectedId);
+			if (i >= tourList.length - 1) stopTour();
+			else select(tourList[i + 1].id, true);
 		}, 3200);
 	}
 
 	function close() {
 		stopTour();
 		open = false;
+		syncUrl(false);
 	}
 
 	function onKey(e: KeyboardEvent) {
@@ -103,6 +132,22 @@
 		if (e.key === 'Escape') close();
 		else if (e.key === 'ArrowRight') step(1);
 		else if (e.key === 'ArrowLeft') step(-1);
+	}
+
+	// deep-linking: ?view=scope&beat=<id> mirrors the open state and selection.
+	// isOpen is explicit — call sites in teardown paths must not depend on
+	// reading the bindable prop mid-transition.
+	function syncUrl(isOpen: boolean) {
+		if (typeof window === 'undefined') return;
+		const url = new URL(window.location.href);
+		if (isOpen) {
+			url.searchParams.set('view', 'scope');
+			if (selectedId) url.searchParams.set('beat', selectedId);
+		} else {
+			url.searchParams.delete('view');
+			url.searchParams.delete('beat');
+		}
+		history.replaceState(history.state, '', url);
 	}
 
 	// engine lifecycle: created when the overlay mounts its canvas. Selection
@@ -115,23 +160,47 @@
 			onUserInteract: stopTour
 		});
 		untrack(() => {
+			const L = layout;
 			selectedId =
-				initialSelected && events.some((e) => e.id === initialSelected)
+				initialSelected && L.posById.has(initialSelected)
 					? initialSelected
-					: (layout.ordered[0]?.id ?? '');
+					: (L.ordered[0]?.id ?? '');
 		});
 		engine = eng;
+		syncUrl(true);
 		return () => {
 			eng.destroy();
 			if (engine === eng) engine = null;
+			syncUrl(false);
 		};
 	});
 
-	// keep the scene fresh when the ordering (and so the layout) changes
+	// keep the scene fresh when ordering, lens, or saga mode changes; selection
+	// that no longer exists in the new scene falls back to the first beat
 	$effect(() => {
 		if (!engine || !rootEl) return;
 		engine.setScene(layout, readTheme(rootEl));
-		engine.setSelected(untrack(() => selectedId));
+		untrack(() => {
+			if (!layout.posById.has(selectedId)) selectedId = layout.ordered[0]?.id ?? '';
+			engine!.setSelected(selectedId);
+			engine!.setShowThreads(showThreads && layout.threads.length > 0);
+		});
+	});
+
+	// threads toggle without a full scene rebuild
+	$effect(() => {
+		engine?.setShowThreads(showThreads && layout.threads.length > 0);
+	});
+
+	// the engine paints with resolved token values, so a theme flip while the
+	// overlay is open must re-read them
+	$effect(() => {
+		if (!open || !engine) return;
+		const mo = new MutationObserver(() => {
+			if (engine && rootEl) engine.setScene(layout, readTheme(rootEl));
+		});
+		mo.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+		return () => mo.disconnect();
 	});
 
 	// the page beneath must not scroll while the instrument is open
@@ -157,12 +226,38 @@
 		aria-label="{title} — full-screen timeline"
 	>
 		<header class="bar">
-			<span class="ttl">{title}</span>
+			<span class="ttl">{sagaOn && canSaga ? `${title} — full saga` : title}</span>
 			<div class="acts">
+				{#if LENSES.length > 1}
+					<div class="toggle" role="group" aria-label="Lens">
+						{#each LENSES as l (l.id)}
+							<button class:on={lens.id === l.id} onclick={() => (lens = l)}>{l.label}</button>
+						{/each}
+					</div>
+				{/if}
 				<div class="toggle" role="group" aria-label="Timeline ordering">
 					<button class:on={order === 'told'} aria-pressed={order === 'told'} onclick={() => (order = 'told')}>As Told</button>
 					<button class:on={order === 'happened'} aria-pressed={order === 'happened'} onclick={() => (order = 'happened')}>As Happened</button>
 				</div>
+				{#if canSaga}
+					<button class="pill" class:on={sagaOn} aria-pressed={sagaOn} onclick={() => (sagaOn = !sagaOn)}>
+						<FilmSlate size={13} weight="bold" /> Full saga
+					</button>
+				{/if}
+				{#if layout.threads.length}
+					<button class="pill" class:on={showThreads} aria-pressed={showThreads} onclick={() => (showThreads = !showThreads)}>
+						<Path size={13} weight="bold" /> Threads
+					</button>
+					<label class="who">
+						<span class="sr-only">Tour follows</span>
+						<select bind:value={tourTraveler}>
+							<option value="all">Everyone</option>
+							{#each layout.threads as t (t.traveler)}
+								<option value={t.traveler}>{t.traveler}</option>
+							{/each}
+						</select>
+					</label>
+				{/if}
 				<button class="pill" onclick={toggleTour} aria-pressed={touring}>
 					{#if touring}<Pause size={13} weight="fill" /> Pause tour{:else}<Play size={13} weight="fill" /> Tour{/if}
 				</button>
@@ -181,11 +276,11 @@
 					bind:this={canvasEl}
 					aria-label="Timeline board. Drag to pan, scroll to zoom, click a beat to inspect it. Use the arrow keys to step through beats."
 				></canvas>
-				<span class="hint">drag to pan · scroll to zoom · click a beat</span>
+				<span class="hint">drag to pan · scroll to zoom · click a beat · scrub the minimap</span>
 			</div>
 			<aside class="side">
 				{#if selected}
-					{@const b = branches.find((br) => br.id === layout.branchOf(selected.id))}
+					{@const b = scene.branches.find((br) => br.id === layout.branchOf(selected.id))}
 					<EventPanel
 						{selected}
 						branchLabel={b?.label}
@@ -283,6 +378,7 @@
 		cursor: pointer;
 	}
 	.pill:hover,
+	.pill.on,
 	.pill[aria-pressed='true'] {
 		color: var(--color-paper);
 		border-color: color-mix(in srgb, var(--color-paper) 35%, var(--color-line));
@@ -293,6 +389,30 @@
 	}
 	.pill.close {
 		padding: 0.38rem 0.5rem;
+	}
+	.who select {
+		border: 1px solid var(--color-line);
+		border-radius: 999px;
+		background: transparent;
+		color: var(--color-muted);
+		font-family: var(--font-mono);
+		font-size: 0.66rem;
+		letter-spacing: 0.04em;
+		text-transform: uppercase;
+		padding: 0.35rem 0.6rem;
+		cursor: pointer;
+	}
+	.who select:focus-visible {
+		outline: 2px solid var(--accent);
+		outline-offset: 2px;
+	}
+	.sr-only {
+		position: absolute;
+		width: 1px;
+		height: 1px;
+		overflow: hidden;
+		clip-path: inset(50%);
+		white-space: nowrap;
 	}
 	.stage {
 		flex: 1;
@@ -320,7 +440,7 @@
 	}
 	.hint {
 		position: absolute;
-		left: 0.9rem;
+		right: 0.9rem;
 		bottom: 0.7rem;
 		font-family: var(--font-mono);
 		font-size: 0.62rem;

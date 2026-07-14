@@ -159,6 +159,14 @@ export interface Branch {
 	/** event id at which it splinters from its parent */
 	branchAt?: string;
 	status?: 'original' | 'active' | 'endangered' | 'erased' | 'restored';
+	/**
+	 * event id from which this branch counts as overwritten history (it decays
+	 * on the board past this beat). When omitted, an endangered/erased branch
+	 * is inferred to fade from the moment its successor branch is born.
+	 */
+	erasedAt?: string;
+	/** event id at which an erased branch was re-established, if the story restores it */
+	restoredAt?: string;
 	/** one line on what this branch is */
 	note?: string;
 }

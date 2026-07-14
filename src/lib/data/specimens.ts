@@ -158,6 +158,7 @@ export const specimens: MediaEntry[] = [
 			},
 			{
 				id: 'flee',
+				traveler: 'Marty',
 				label: 'Libyans attack  -  Marty flees',
 				narrative: 1,
 				chrono: 1985.8205,
@@ -170,6 +171,7 @@ export const specimens: MediaEntry[] = [
 			},
 			{
 				id: 'arrive55',
+				traveler: 'Marty',
 				label: 'Arrival in 1955',
 				narrative: 2,
 				chrono: 1955.845,
@@ -229,6 +231,7 @@ export const specimens: MediaEntry[] = [
 			},
 			{
 				id: 'depart55',
+				traveler: 'Marty',
 				label: 'The clock-tower lightning',
 				narrative: 7,
 				chrono: 1955.866,
@@ -241,6 +244,7 @@ export const specimens: MediaEntry[] = [
 			},
 			{
 				id: 'return85',
+				traveler: 'Marty',
 				label: 'Back to 1985',
 				narrative: 8,
 				chrono: 1985.821,

@@ -1,0 +1,699 @@
+// The Chronoscope's render passes. Each layer draws one concern from a Frame;
+// the engine composes them, caches the static ones during pans, and plugins
+// can add layers with engine.use(). No layer holds state.
+
+import type { TimelineLayout } from './layout';
+import { shortDate, jumpText } from './display';
+
+export interface ChronoTheme {
+	/** page background (node outline colour, thumbnail frame fill) */
+	ink: string;
+	panel: string;
+	paper: string;
+	muted: string;
+	line: string;
+	/** forward-jump colour (--color-jump) */
+	jump: string;
+	/** backward-jump colour */
+	jumpBack: string;
+	/** accent (--color-branching by default) */
+	accent: string;
+	monoFont: string;
+}
+
+export interface Frame {
+	ctx: CanvasRenderingContext2D;
+	vw: number;
+	vh: number;
+	now: number;
+	scale: number;
+	sx: (wx: number) => number;
+	sy: (wy: number) => number;
+	layout: TimelineLayout;
+	theme: ChronoTheme;
+	/** semantic zoom tiers: dates, beat titles, thumbnails */
+	tiers: { dateA: number; labelA: number; thumbA: number };
+	selectedId: string | null;
+	hoverId: string | null;
+	showThreads: boolean;
+	image: (src: string) => HTMLImageElement | null;
+	/** a world size in screen px, clamped for legibility */
+	px: (v: number, min: number, max?: number) => number;
+}
+
+export interface Layer {
+	id: string;
+	/** dynamic layers redraw every frame; static ones are cached during pans */
+	dynamic?: boolean;
+	draw(f: Frame): void;
+}
+
+/** vertical clearance of a jump arc's apex above its higher endpoint */
+export const arcLift = (level: number) => 36 + level * 26;
+
+/** distinct hues for traveller threads, cycled */
+const THREAD_COLORS = ['#35d6a4', '#ff8ad0', '#7cc4ff', '#ffd166'];
+
+// ---------------------------------------------------------------- geometry
+
+/**
+ * A comet ribbon: the whole jump is one filled shape that swells from the
+ * departure, thins, and flares into a barbed head at the arrival.
+ */
+export function ribbon(
+	ctx: CanvasRenderingContext2D,
+	from: { x: number; y: number },
+	to: { x: number; y: number },
+	apexY: number,
+	color: string,
+	alpha: number,
+	base: number,
+	glow = 8
+): { x: number; y: number } {
+	const cx = (from.x + to.x) / 2;
+	const N = 44;
+	const pts: { x: number; y: number; t: number }[] = [];
+	for (let i = 0; i <= N; i++) {
+		const t = i / N;
+		const u = 1 - t;
+		pts.push({
+			x: u * u * from.x + 2 * u * t * cx + t * t * to.x,
+			y: u * u * from.y + 2 * u * t * apexY + t * t * to.y,
+			t
+		});
+	}
+	const w = (t: number) =>
+		t < 0.86
+			? base * (0.28 + 0.9 * Math.sin(Math.PI * (t / 0.86)) ** 0.7)
+			: base * 2.6 * (1 - (t - 0.86) / 0.14);
+	const L: { x: number; y: number }[] = [];
+	const R: { x: number; y: number }[] = [];
+	for (let i = 0; i <= N; i++) {
+		const p = pts[i];
+		const q = pts[Math.min(i + 1, N)];
+		const r = pts[Math.max(i - 1, 0)];
+		let nx = -(q.y - r.y);
+		let ny = q.x - r.x;
+		const len = Math.hypot(nx, ny) || 1;
+		nx /= len;
+		ny /= len;
+		const hw = w(p.t) / 2;
+		L.push({ x: p.x + nx * hw, y: p.y + ny * hw });
+		R.push({ x: p.x - nx * hw, y: p.y - ny * hw });
+	}
+	ctx.beginPath();
+	ctx.moveTo(L[0].x, L[0].y);
+	for (const p of L) ctx.lineTo(p.x, p.y);
+	for (let i = N; i >= 0; i--) ctx.lineTo(R[i].x, R[i].y);
+	ctx.closePath();
+	ctx.save();
+	ctx.shadowColor = color;
+	ctx.shadowBlur = glow;
+	ctx.fillStyle = color;
+	ctx.globalAlpha = alpha;
+	ctx.fill();
+	ctx.restore();
+	return pts[Math.floor(N / 2)];
+}
+
+/** a point along the same quadratic the ribbon follows */
+export function ribbonPoint(
+	from: { x: number; y: number },
+	to: { x: number; y: number },
+	apexY: number,
+	t: number
+) {
+	const u = 1 - t;
+	const cx = (from.x + to.x) / 2;
+	return {
+		x: u * u * from.x + 2 * u * t * cx + t * t * to.x,
+		y: u * u * from.y + 2 * u * t * apexY + t * t * to.y
+	};
+}
+
+const offJumpCap = (f: Frame, o: { p: { x: number; y: number }; out: boolean }) => ({
+	x: f.sx(o.p.x) + (o.out ? 1 : -1) * f.px(34, 18, 60),
+	y: f.sy(o.p.y) - f.px(52, 26, 90)
+});
+
+// ------------------------------------------------------------ static layers
+
+/** registered moments: one instant crossing several lanes (As Happened) */
+const momentsLayer: Layer = {
+	id: 'moments',
+	draw(f) {
+		const { ctx, theme } = f;
+		for (const m of f.layout.moments) {
+			const x = f.sx(m.x);
+			if (x < -20 || x > f.vw + 20) continue;
+			const y0 = f.sy(m.ys[0]) - f.px(26, 14, 40);
+			const y1 = f.sy(m.ys[m.ys.length - 1]) + f.px(26, 14, 40);
+			ctx.strokeStyle = theme.muted;
+			ctx.globalAlpha = 0.4;
+			ctx.lineWidth = 1;
+			ctx.setLineDash([2, 4]);
+			ctx.beginPath();
+			ctx.moveTo(x, y0);
+			ctx.lineTo(x, y1);
+			ctx.stroke();
+			ctx.setLineDash([]);
+			// a small diamond where the instant touches each lane
+			ctx.fillStyle = theme.muted;
+			for (const wy of m.ys) {
+				const y = f.sy(wy);
+				const r = f.px(3, 2, 4.5);
+				ctx.beginPath();
+				ctx.moveTo(x, y - r);
+				ctx.lineTo(x + r, y);
+				ctx.lineTo(x, y + r);
+				ctx.lineTo(x - r, y);
+				ctx.closePath();
+				ctx.fill();
+			}
+			ctx.globalAlpha = 1;
+		}
+	}
+};
+
+/** lane base lines; overwritten stretches decay into fading dashes */
+const lanesLayer: Layer = {
+	id: 'lanes',
+	draw(f) {
+		const { ctx } = f;
+		ctx.lineCap = 'round';
+		for (const g of f.layout.segParts) {
+			const x1 = f.sx(g.x1);
+			const x2 = f.sx(g.x2);
+			if (x2 < -20 || x1 > f.vw + 20) continue;
+			const y = f.sy(g.y);
+			ctx.lineWidth = f.px(2.5, 1.4, 4);
+			if (g.fading) {
+				const grad = ctx.createLinearGradient(x1, 0, x2, 0);
+				grad.addColorStop(0, g.color);
+				grad.addColorStop(1, g.color + '00');
+				ctx.strokeStyle = grad;
+				ctx.globalAlpha = 0.5;
+				ctx.setLineDash([f.px(3, 2), f.px(8, 4)]);
+			} else {
+				ctx.strokeStyle = g.color;
+				ctx.globalAlpha = 0.92;
+				ctx.setLineDash(g.dashed ? [f.px(6, 3), f.px(7, 3.5)] : []);
+			}
+			ctx.beginPath();
+			ctx.moveTo(x1, y);
+			ctx.lineTo(x2, y);
+			ctx.stroke();
+		}
+		ctx.setLineDash([]);
+		ctx.globalAlpha = 1;
+	}
+};
+
+/** drift births peel off their parent lane as a wye */
+const splintersLayer: Layer = {
+	id: 'splinters',
+	draw(f) {
+		const { ctx } = f;
+		for (const c of f.layout.splinters) {
+			const fx = f.sx(c.from.x);
+			const tx = f.sx(c.to.x);
+			if (Math.max(fx, tx) < -20 || Math.min(fx, tx) > f.vw + 20) continue;
+			const fy = f.sy(c.from.y);
+			const ty = f.sy(c.to.y);
+			const mx = (fx + tx) / 2;
+			ctx.strokeStyle = c.color;
+			ctx.lineWidth = f.px(2, 1.2, 3.2);
+			ctx.globalAlpha = 0.9;
+			ctx.beginPath();
+			ctx.moveTo(fx, fy);
+			ctx.bezierCurveTo(mx, fy, mx, ty, tx, ty);
+			ctx.stroke();
+			ctx.globalAlpha = 1;
+		}
+	}
+};
+
+/** the moment history split: a burst for arrivals, a node cap for drifts */
+const birthsLayer: Layer = {
+	id: 'births',
+	draw(f) {
+		const { ctx } = f;
+		for (const b of f.layout.births) {
+			const x = f.sx(b.at.x);
+			if (x < -40 || x > f.vw + 40) continue;
+			const y = f.sy(b.at.y);
+			ctx.strokeStyle = b.color;
+			if (b.kind === 'arrival') {
+				// a shockwave: two off-centre arcs + radial ticks, history cracking open
+				ctx.globalAlpha = 0.85;
+				ctx.lineWidth = f.px(1.4, 0.9, 2.2);
+				ctx.beginPath();
+				ctx.arc(x, y, f.px(13, 8, 20), -0.9, 0.9);
+				ctx.stroke();
+				ctx.beginPath();
+				ctx.arc(x, y, f.px(13, 8, 20), Math.PI - 0.9, Math.PI + 0.9);
+				ctx.stroke();
+				ctx.globalAlpha = 0.6;
+				for (const a of [-0.45, 0.45, Math.PI - 0.45, Math.PI + 0.45]) {
+					const r0 = f.px(15, 9, 23);
+					const r1 = f.px(19, 12, 29);
+					ctx.beginPath();
+					ctx.moveTo(x + Math.cos(a) * r0, y + Math.sin(a) * r0);
+					ctx.lineTo(x + Math.cos(a) * r1, y + Math.sin(a) * r1);
+					ctx.stroke();
+				}
+			} else {
+				ctx.globalAlpha = 0.9;
+				ctx.lineWidth = f.px(1.2, 0.8, 2);
+				ctx.beginPath();
+				ctx.arc(x, y, f.px(11, 7, 17), 0, 7);
+				ctx.setLineDash([f.px(1.5, 1), f.px(3, 2)]);
+				ctx.stroke();
+				ctx.setLineDash([]);
+			}
+			ctx.globalAlpha = 1;
+		}
+	}
+};
+
+/** jump ribbons with their labels, plus off-timeline stubs */
+const ribbonsLayer: Layer = {
+	id: 'ribbons',
+	draw(f) {
+		const { ctx, theme } = f;
+		ctx.textAlign = 'center';
+		for (const j of f.layout.jumps) {
+			const xa = f.sx(j.from.x);
+			const xb = f.sx(j.to.x);
+			if (Math.max(xa, xb) < -40 || Math.min(xa, xb) > f.vw + 40) continue;
+			const color = j.back ? theme.jumpBack : theme.jump;
+			const apexY = f.sy(Math.min(j.from.y, j.to.y) - arcLift(j.level));
+			const mid = ribbon(
+				ctx,
+				{ x: xa, y: f.sy(j.from.y) },
+				{ x: xb, y: f.sy(j.to.y) },
+				apexY,
+				color,
+				0.9,
+				f.px(5, 2.6, 9)
+			);
+			if (f.tiers.dateA > 0.03) {
+				ctx.globalAlpha = f.tiers.dateA;
+				ctx.fillStyle = color;
+				ctx.font = `${f.px(9.5, 8, 13)}px ${theme.monoFont}`;
+				ctx.fillText(
+					`${j.back ? '◀' : '▶'} ${jumpText(j.from.e.chrono, j.to.e.chrono)}`,
+					mid.x,
+					apexY - f.px(6, 4, 9)
+				);
+				ctx.globalAlpha = 1;
+			}
+		}
+		for (const o of f.layout.offJumps) {
+			const nx = f.sx(o.p.x);
+			if (nx < -60 || nx > f.vw + 60) continue;
+			const ny = f.sy(o.p.y);
+			const color = o.back ? theme.jumpBack : theme.jump;
+			const cap = offJumpCap(f, o);
+			const apexY = Math.min(ny, cap.y) - f.px(14, 6, 24);
+			if (o.out) ribbon(ctx, { x: nx, y: ny }, cap, apexY, color, 0.9, f.px(4, 2.2, 7));
+			else ribbon(ctx, cap, { x: nx, y: ny }, apexY, color, 0.9, f.px(4, 2.2, 7));
+			if (f.tiers.dateA > 0.03) {
+				ctx.globalAlpha = f.tiers.dateA;
+				ctx.fillStyle = color;
+				ctx.font = `${f.px(9.5, 8, 13)}px ${theme.monoFont}`;
+				ctx.fillText(`${o.out ? 'to' : 'from'} ${o.label}`, cap.x, cap.y - f.px(6, 4, 9));
+				ctx.globalAlpha = 1;
+			}
+		}
+	}
+};
+
+/** each named traveller's path through the story, a thin weaving thread */
+const threadsLayer: Layer = {
+	id: 'threads',
+	draw(f) {
+		if (!f.showThreads || !f.layout.threads.length) return;
+		const { ctx, theme } = f;
+		f.layout.threads.forEach((t, ti) => {
+			const color = THREAD_COLORS[ti % THREAD_COLORS.length];
+			const lift = f.px(7 + ti * 5, 4, 14);
+			ctx.strokeStyle = color;
+			ctx.lineWidth = f.px(1.6, 1.1, 2.4);
+			ctx.globalAlpha = 0.8;
+			ctx.setLineDash([f.px(5, 3), f.px(4, 2.5)]);
+			ctx.beginPath();
+			t.points.forEach((p, i) => {
+				const x = f.sx(p.x);
+				const y = f.sy(p.y) - lift;
+				if (i === 0) ctx.moveTo(x, y);
+				else {
+					const prev = t.points[i - 1];
+					const px0 = f.sx(prev.x);
+					const py0 = f.sy(prev.y) - lift;
+					const mx = (px0 + x) / 2;
+					ctx.bezierCurveTo(mx, py0, mx, y, x, y);
+				}
+			});
+			ctx.stroke();
+			ctx.setLineDash([]);
+			if (f.tiers.labelA > 0.03 && t.points[0]) {
+				ctx.globalAlpha = f.tiers.labelA;
+				ctx.fillStyle = color;
+				ctx.font = `${f.px(9, 8, 12)}px ${theme.monoFont}`;
+				ctx.textAlign = 'left';
+				ctx.fillText(t.traveler, f.sx(t.points[0].x) + f.px(8, 5), f.sy(t.points[0].y) - lift - f.px(4, 3));
+				ctx.textAlign = 'center';
+			}
+			ctx.globalAlpha = 1;
+		});
+	}
+};
+
+/** the beats: nodes, origin flags, portal rings, paradox marks, dates, titles, thumbnails */
+const beatsLayer: Layer = {
+	id: 'beats',
+	draw(f) {
+		const { ctx, theme, layout: L } = f;
+		ctx.textAlign = 'center';
+		for (const p of L.pos) {
+			const x = f.sx(p.x);
+			if (x < -80 || x > f.vw + 80) continue;
+			const y = f.sy(p.y);
+			const color = L.branchColor(p.branch);
+			const r = f.px(6, 3.5, 10);
+
+			if (f.tiers.thumbA > 0.02 && p.e.image) {
+				const img = f.image(p.e.image);
+				const tw = f.px(88, 40, 132);
+				const th = tw * 0.62;
+				const ty = y - th - r - f.px(14, 8, 22);
+				ctx.globalAlpha = f.tiers.thumbA;
+				ctx.fillStyle = theme.panel;
+				ctx.strokeStyle = theme.line;
+				ctx.lineWidth = 1;
+				ctx.beginPath();
+				ctx.roundRect(x - tw / 2, ty, tw, th, 5);
+				ctx.fill();
+				if (img) {
+					ctx.save();
+					ctx.clip();
+					const iw = img.naturalWidth;
+					const ih = img.naturalHeight;
+					const k = Math.max(tw / iw, th / ih);
+					ctx.drawImage(img, x - (iw * k) / 2, ty + th / 2 - (ih * k) / 2, iw * k, ih * k);
+					ctx.restore();
+					ctx.beginPath();
+					ctx.roundRect(x - tw / 2, ty, tw, th, 5);
+				}
+				ctx.stroke();
+				ctx.globalAlpha = 1;
+			}
+
+			if (L.departureIds.has(p.e.id)) {
+				ctx.strokeStyle = theme.muted;
+				ctx.globalAlpha = 0.75;
+				ctx.lineWidth = f.px(1.4, 0.9, 2.2);
+				ctx.setLineDash([f.px(2.5, 1.5), f.px(2.5, 1.5)]);
+				ctx.beginPath();
+				ctx.arc(x, y, r + f.px(4, 2.5, 6), 0, 7);
+				ctx.stroke();
+				ctx.setLineDash([]);
+				ctx.globalAlpha = 1;
+			}
+
+			if (p.e.kind === 'origin' || p.e.origin) {
+				const fx = x - f.px(11, 6, 16);
+				ctx.strokeStyle = theme.accent;
+				ctx.fillStyle = theme.accent;
+				ctx.lineWidth = f.px(1.5, 1, 2.2);
+				ctx.beginPath();
+				ctx.moveTo(fx, y - f.px(3, 2, 5));
+				ctx.lineTo(fx, y - f.px(15, 9, 22));
+				ctx.stroke();
+				ctx.beginPath();
+				ctx.moveTo(fx, y - f.px(15, 9, 22));
+				ctx.lineTo(fx + f.px(7, 4, 10), y - f.px(13, 7.5, 19));
+				ctx.lineTo(fx, y - f.px(10.5, 6, 16));
+				ctx.closePath();
+				ctx.fill();
+			}
+
+			ctx.beginPath();
+			ctx.arc(x, y, r, 0, 7);
+			ctx.fillStyle = color;
+			ctx.fill();
+			ctx.lineWidth = f.px(3, 1.8, 4.5);
+			ctx.strokeStyle = theme.ink;
+			ctx.stroke();
+
+			if (p.e.paradox) {
+				const wx = x + f.px(10, 6, 15);
+				const wy = y - f.px(11, 7, 17);
+				const w = f.px(7, 4.5, 10);
+				ctx.beginPath();
+				ctx.moveTo(wx, wy - w * 0.93);
+				ctx.lineTo(wx + w, wy + w * 0.86);
+				ctx.lineTo(wx - w, wy + w * 0.86);
+				ctx.closePath();
+				ctx.fillStyle = '#ffcc33';
+				ctx.strokeStyle = theme.ink;
+				ctx.lineWidth = 1.2;
+				ctx.fill();
+				ctx.stroke();
+				ctx.fillStyle = theme.ink;
+				ctx.font = `bold ${f.px(8, 5.5, 11)}px ${theme.monoFont}`;
+				ctx.fillText('!', wx, wy + w * 0.55);
+			}
+
+			if (p.e.crossRef) {
+				ctx.fillStyle = theme.accent;
+				ctx.font = `bold ${f.px(15, 10, 21)}px ${theme.monoFont}`;
+				ctx.fillText('»', x - f.px(12, 7, 17), y - f.px(6, 4, 9));
+			}
+
+			if (f.tiers.dateA > 0.03) {
+				ctx.globalAlpha = f.tiers.dateA;
+				ctx.fillStyle = theme.muted;
+				ctx.font = `${f.px(9, 8, 12.5)}px ${theme.monoFont}`;
+				ctx.fillText(shortDate(p.e), x, y + r + f.px(15, 11, 21));
+				ctx.globalAlpha = 1;
+			}
+			if (f.tiers.labelA > 0.03) {
+				ctx.globalAlpha = f.tiers.labelA;
+				ctx.fillStyle = theme.paper;
+				ctx.font = `${f.px(10.5, 9, 14)}px ${theme.monoFont}`;
+				const t = p.e.label.length > 30 ? p.e.label.slice(0, 28) + '…' : p.e.label;
+				ctx.fillText(t, x, y + r + f.px(30, 22, 40));
+				ctx.globalAlpha = 1;
+			}
+			if (p.e.source && f.tiers.labelA > 0.03) {
+				ctx.globalAlpha = f.tiers.labelA * 0.85;
+				ctx.fillStyle = theme.accent;
+				ctx.font = `${f.px(8, 7, 11)}px ${theme.monoFont}`;
+				ctx.fillText(p.e.source.toUpperCase(), x, y + r + f.px(43, 32, 56));
+				ctx.globalAlpha = 1;
+			}
+		}
+	}
+};
+
+// ----------------------------------------------------------- dynamic layers
+
+/** lane names ride the left edge of the viewport until their lane ends */
+const laneLabelsLayer: Layer = {
+	id: 'lane-labels',
+	dynamic: true,
+	draw(f) {
+		const { ctx, theme } = f;
+		ctx.font = `${f.px(11, 9, 15)}px ${theme.monoFont}`;
+		ctx.textAlign = 'left';
+		for (const ln of f.layout.lanes) {
+			const y = f.sy(ln.y);
+			if (y < -20 || y > f.vh + 20) continue;
+			const endX = f.sx(ln.endX);
+			if (endX < 12) continue;
+			const x = Math.max(12, f.sx(ln.startX) - f.px(60, 30, 96));
+			if (x > f.vw - 20) continue;
+			ctx.fillStyle = ln.color;
+			ctx.globalAlpha = 0.95;
+			ctx.fillText(ln.label, x, y - f.px(10, 7, 14));
+			ctx.globalAlpha = 1;
+		}
+		ctx.textAlign = 'center';
+	}
+};
+
+/** selection ring, re-glowed ribbon, and the travelling pulse */
+const selectionLayer: Layer = {
+	id: 'selection',
+	dynamic: true,
+	draw(f) {
+		if (!f.selectedId) return;
+		const { ctx, theme, layout: L } = f;
+		const p = L.posById.get(f.selectedId);
+		if (!p) return;
+		const x = f.sx(p.x);
+		const y = f.sy(p.y);
+		const r = f.px(8, 4.5, 13);
+
+		// hover ring on another beat
+		if (f.hoverId && f.hoverId !== f.selectedId) {
+			const h = L.posById.get(f.hoverId);
+			if (h) {
+				ctx.beginPath();
+				ctx.arc(f.sx(h.x), f.sy(h.y), f.px(9, 5.5, 14), 0, 7);
+				ctx.strokeStyle = L.branchColor(h.branch);
+				ctx.globalAlpha = 0.55;
+				ctx.lineWidth = 1.4;
+				ctx.stroke();
+				ctx.globalAlpha = 1;
+			}
+		}
+
+		// the selected node, re-drawn larger with its ring
+		ctx.beginPath();
+		ctx.arc(x, y, r, 0, 7);
+		ctx.fillStyle = L.branchColor(p.branch);
+		ctx.fill();
+		ctx.lineWidth = f.px(3, 1.8, 4.5);
+		ctx.strokeStyle = theme.ink;
+		ctx.stroke();
+		ctx.beginPath();
+		ctx.arc(x, y, r + f.px(5, 3.5, 8), 0, 7);
+		ctx.strokeStyle = theme.paper;
+		ctx.lineWidth = 1.2;
+		ctx.stroke();
+
+		// its outgoing ribbon glows brighter and carries the pulse
+		const j = L.jumps.find((jj) => jj.from.e.id === f.selectedId);
+		if (j) {
+			const color = j.back ? theme.jumpBack : theme.jump;
+			const from = { x: f.sx(j.from.x), y: f.sy(j.from.y) };
+			const to = { x: f.sx(j.to.x), y: f.sy(j.to.y) };
+			const apexY = f.sy(Math.min(j.from.y, j.to.y) - arcLift(j.level));
+			ribbon(ctx, from, to, apexY, color, 1, f.px(5, 2.6, 9), 14);
+			const t = ((f.now % 1600) + 1600) % 1600 / 1600;
+			const sp = ribbonPoint(from, to, apexY, t);
+			ctx.save();
+			ctx.shadowColor = color;
+			ctx.shadowBlur = 14;
+			ctx.beginPath();
+			ctx.arc(sp.x, sp.y, 3.2, 0, 7);
+			ctx.fillStyle = theme.paper;
+			ctx.fill();
+			ctx.restore();
+		}
+	}
+};
+
+// ---------------------------------------------------------------- minimap
+
+export interface MinimapGeom {
+	x: number;
+	y: number;
+	w: number;
+	h: number;
+	/** world → minimap */
+	mx: (wx: number) => number;
+	my: (wy: number) => number;
+	/** minimap point → world point */
+	world: (px: number, py: number) => { x: number; y: number };
+}
+
+export function minimapGeom(f: { vw: number; vh: number; layout: TimelineLayout }): MinimapGeom {
+	const maxLevel = f.layout.jumps.reduce((m, j) => Math.max(m, j.level), 0);
+	const wy0 = -(arcLift(maxLevel) + 60);
+	const wy1 = f.layout.H + 20;
+	const w = Math.min(280, Math.max(160, f.vw * 0.24));
+	const h = 44;
+	const x = 12;
+	const y = f.vh - h - 12;
+	const kx = w / f.layout.W;
+	const ky = h / (wy1 - wy0);
+	return {
+		x,
+		y,
+		w,
+		h,
+		mx: (wx) => x + wx * kx,
+		my: (wy) => y + (wy - wy0) * ky,
+		world: (px, py) => ({ x: (px - x) / kx, y: (py - y) / ky + wy0 })
+	};
+}
+
+/** a scrub strip: the whole board in miniature with the viewport framed */
+const minimapLayer: Layer = {
+	id: 'minimap',
+	dynamic: true,
+	draw(f) {
+		const { ctx, theme } = f;
+		const g = minimapGeom(f);
+		ctx.save();
+		ctx.globalAlpha = 0.92;
+		ctx.fillStyle = theme.panel;
+		ctx.strokeStyle = theme.line;
+		ctx.lineWidth = 1;
+		ctx.beginPath();
+		ctx.roundRect(g.x - 6, g.y - 6, g.w + 12, g.h + 12, 6);
+		ctx.fill();
+		ctx.stroke();
+		for (const ln of f.layout.lanes) {
+			ctx.strokeStyle = ln.color;
+			ctx.globalAlpha = 0.7;
+			ctx.lineWidth = 1;
+			ctx.beginPath();
+			ctx.moveTo(g.mx(ln.startX), g.my(ln.y));
+			ctx.lineTo(g.mx(ln.endX), g.my(ln.y));
+			ctx.stroke();
+		}
+		ctx.globalAlpha = 1;
+		for (const p of f.layout.pos) {
+			ctx.fillStyle = f.layout.branchColor(p.branch);
+			ctx.beginPath();
+			ctx.arc(g.mx(p.x), g.my(p.y), 1.4, 0, 7);
+			ctx.fill();
+		}
+		ctx.restore();
+		// the viewport frame is drawn by the engine (it needs the camera itself)
+	}
+};
+
+/**
+ * The minimap viewport frame needs the camera itself, not just sx/sy, so the
+ * engine draws it via this helper after the layer list runs.
+ */
+export function drawMinimapViewport(
+	f: Frame,
+	cam: { x: number; y: number; s: number },
+	theme: ChronoTheme
+) {
+	const g = minimapGeom(f);
+	const { ctx } = f;
+	const x0 = cam.x - f.vw / 2 / cam.s;
+	const x1 = cam.x + f.vw / 2 / cam.s;
+	const y0 = cam.y - f.vh / 2 / cam.s;
+	const y1 = cam.y + f.vh / 2 / cam.s;
+	ctx.strokeStyle = theme.paper;
+	ctx.globalAlpha = 0.9;
+	ctx.lineWidth = 1.2;
+	ctx.strokeRect(
+		g.mx(Math.max(0, x0)),
+		Math.max(g.y - 4, g.my(y0)),
+		Math.max(4, g.mx(Math.min(f.layout.W, x1)) - g.mx(Math.max(0, x0))),
+		Math.min(g.h + 8, g.my(y1) - g.my(y0))
+	);
+	ctx.globalAlpha = 1;
+}
+
+export const STATIC_LAYERS: Layer[] = [
+	momentsLayer,
+	lanesLayer,
+	splintersLayer,
+	birthsLayer,
+	ribbonsLayer,
+	threadsLayer,
+	beatsLayer
+];
+
+export const DYNAMIC_LAYERS: Layer[] = [laneLabelsLayer, selectionLayer, minimapLayer];

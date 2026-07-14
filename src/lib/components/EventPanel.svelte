@@ -1,5 +1,6 @@
 <script lang="ts">
-	import { Warning, CaretLeft, CaretRight } from 'phosphor-svelte';
+	import { Warning, CaretLeft, CaretRight, ArrowSquareOut } from 'phosphor-svelte';
+	import { base } from '$app/paths';
 	import { kindMeta, whenLabel } from '$lib/timeline/display';
 	import type { TimelineEvent } from '$lib/types';
 
@@ -28,6 +29,7 @@
 	} = $props();
 
 	let M = $derived(kindMeta(selected));
+	const pretty = (slug: string) => slug.replace(/-/g, ' ');
 </script>
 
 <div class="detail" style="border-left-color:{branchColor}">
@@ -68,6 +70,11 @@
 			{#if selected.description}<p class="desc">{selected.description}</p>{/if}
 			{#if selected.paradox}
 				<p class="para"><Warning size={13} weight="fill" /> {selected.paradox}</p>
+			{/if}
+			{#if selected.crossRef}
+				<a class="xref-link" href="{base}/specimens/{selected.crossRef.entry}/">
+					<ArrowSquareOut size={13} weight="bold" /> Crosses into {pretty(selected.crossRef.entry)}
+				</a>
 			{/if}
 		</div>
 	</div>
@@ -221,6 +228,24 @@
 		margin: 0;
 		font-size: 1rem;
 		line-height: 1.6;
+	}
+	.xref-link {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.35rem;
+		margin-top: 0.6rem;
+		font-family: var(--font-mono);
+		font-size: 0.66rem;
+		letter-spacing: 0.06em;
+		text-transform: uppercase;
+		color: var(--color-branching);
+		border: 1px solid color-mix(in srgb, var(--color-branching) 45%, transparent);
+		border-radius: 999px;
+		padding: 0.28rem 0.65rem;
+	}
+	.xref-link:hover {
+		color: var(--color-paper);
+		border-color: var(--color-branching);
 	}
 	.para {
 		margin: 0.7rem 0 0;

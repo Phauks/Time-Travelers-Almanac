@@ -84,6 +84,14 @@
 		return out;
 	});
 	let mates = $derived(franchiseMates(s));
+	// every part of the franchise with a timeline, in order, for the saga view
+	let saga = $derived.by(() => {
+		if (!s.franchise) return [];
+		return [s, ...mates]
+			.filter((m) => m.timeline?.length && m.continuity === s.continuity)
+			.sort((a, b) => (a.partOrder ?? 0) - (b.partOrder ?? 0))
+			.map((m) => ({ slug: m.slug, title: m.title, events: m.timeline, branches: m.branches ?? [] }));
+	});
 	let related = $derived(relatedSpecimens(s));
 	let franchiseLabel = $derived(s.franchise ? s.franchise.replace(/-/g, ' ') : '');
 	// the franchise parts immediately before and after this one, shown as the
@@ -254,6 +262,7 @@
 				continuesTo={nextPart}
 				fallbackImage={s.poster}
 				onOpenImage={openImageBySrc}
+				{saga}
 			/>
 		{/key}
 	</section>

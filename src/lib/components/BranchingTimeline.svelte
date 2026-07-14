@@ -1,10 +1,12 @@
 <script lang="ts">
+	import { onMount } from 'svelte';
 	import { ArrowRight, ArrowLeft, ArrowsOutSimple, Info } from 'phosphor-svelte';
 	import { base } from '$app/paths';
 	import EventPanel from './EventPanel.svelte';
 	import Chronoscope from './Chronoscope.svelte';
 	import { computeLayout } from '$lib/timeline/layout';
 	import { shortDate, jumpText } from '$lib/timeline/display';
+	import type { SagaPart } from '$lib/timeline/stitch';
 	import type { Branch, TimelineEvent } from '$lib/types';
 
 	let {
@@ -15,7 +17,8 @@
 		continuesFrom = null,
 		continuesTo = null,
 		fallbackImage = undefined,
-		onOpenImage
+		onOpenImage,
+		saga = []
 	}: {
 		title?: string;
 		events: TimelineEvent[];
@@ -29,6 +32,8 @@
 		fallbackImage?: string;
 		/** open a given image in the page's gallery lightbox */
 		onOpenImage?: (src: string) => void;
+		/** every part of this franchise, in order, for the Chronoscope's saga view */
+		saga?: SagaPart[];
 	} = $props();
 
 	let order = $state<'told' | 'happened'>('told');
@@ -50,6 +55,14 @@
 		const i = selIndex < 0 ? 0 : selIndex + delta;
 		if (i >= 0 && i < L.ordered.length) selectedId = L.ordered[i].id;
 	}
+
+	// deep link: ?view=scope&beat=<id> opens the Chronoscope on a given beat
+	onMount(() => {
+		const q = new URLSearchParams(window.location.search);
+		const beat = q.get('beat');
+		if (beat && events.some((e) => e.id === beat)) selectedId = beat;
+		if (q.get('view') === 'scope') scopeOpen = true;
+	});
 </script>
 
 {#snippet legendBody()}
@@ -112,7 +125,8 @@
 				</marker>
 			</defs>
 			{#each L.lanes as ln (ln.id)}
-				<text x="6" y={ln.y - 6} class="lane-lbl" style="fill:{ln.color}">{ln.label}</text>
+				<!-- a born lane's name sits at its birth, so shared rows don't collide -->
+				<text x={Math.max(6, ln.startX - 98)} y={ln.y - 6} class="lane-lbl" style="fill:{ln.color}">{ln.label}</text>
 			{/each}
 
 			{#each L.segParts as s, i (i)}
@@ -124,8 +138,8 @@
 					stroke={s.color}
 					stroke-width="2.5"
 					stroke-linecap="round"
-					stroke-dasharray={s.dashed ? '6 7' : '0'}
-					opacity="0.92"
+					stroke-dasharray={s.fading ? '3 8' : s.dashed ? '6 7' : '0'}
+					opacity={s.fading ? 0.35 : 0.92}
 				/>
 			{/each}
 
@@ -242,6 +256,7 @@
 	{accent}
 	{fallbackImage}
 	{onOpenImage}
+	{saga}
 	initialSelected={selectedId}
 />
 

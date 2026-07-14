@@ -13,10 +13,12 @@
 	function onKey(e: KeyboardEvent) {
 		if (open && e.key === 'Escape') close();
 	}
-	// privacy-friendly embed, only built while open so it does not preload.
-	// no autoplay, so the standard YouTube player (poster, play, full controls)
-	// is shown rather than a chromeless autoplaying frame.
-	let src = $derived(`https://www.youtube-nocookie.com/embed/${youtubeId}?rel=0&modestbranding=1`);
+	// This renders YouTube's own player inside an <iframe> (the privacy-friendly
+	// youtube-nocookie host). controls=1 forces the native control bar; play and
+	// pause are YouTube's, shown centre when paused and on hover while playing.
+	let src = $derived(
+		`https://www.youtube-nocookie.com/embed/${youtubeId}?rel=0&controls=1&playsinline=1`
+	);
 </script>
 
 <svelte:window onkeydown={onKey} />

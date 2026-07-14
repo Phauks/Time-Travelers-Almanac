@@ -121,8 +121,13 @@
 				<div class="plate ph"><span>{MEDIUM_META[s.medium]}</span></div>
 			{/if}
 
-			{#if trailerId || eventShots.length}
+			{#if s.poster || trailerId || eventShots.length}
 				<div class="media-strip">
+					{#if s.poster}
+						<button class="media-tile" onclick={() => openLightbox(0)} aria-label="View poster">
+							<img src={s.poster} alt="{s.title} poster" loading="lazy" />
+						</button>
+					{/if}
 					{#if trailerId}
 						<button class="media-tile video" onclick={() => (videoOpen = true)} aria-label="Play trailer">
 							<img
@@ -241,6 +246,7 @@
 		<h2>Timeline</h2>
 		{#key s.slug}
 			<BranchingTimeline
+				title={s.title}
 				events={s.timeline}
 				branches={s.branches ?? []}
 				accent={ruleColorVar(s.rules[0])}

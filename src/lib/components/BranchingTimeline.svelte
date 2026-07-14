@@ -10,12 +10,14 @@
 		ArrowRight,
 		ArrowLeft,
 		CaretLeft,
-		CaretRight
+		CaretRight,
+		Info
 	} from 'phosphor-svelte';
 	import { base } from '$app/paths';
 	import type { Branch, EventKind, TimelineEvent } from '$lib/types';
 
 	let {
+		title = 'Timeline',
 		events,
 		branches = [],
 		accent = 'var(--color-branching)',
@@ -24,6 +26,7 @@
 		fallbackImage = undefined,
 		onOpenImage
 	}: {
+		title?: string;
 		events: TimelineEvent[];
 		branches?: Branch[];
 		accent?: string;
@@ -75,6 +78,7 @@
 	const laneY = (lane: number) => TOP + lane * GAP;
 
 	let order = $state<'told' | 'happened'>('told');
+	let showLegend = $state(false);
 	let n = $derived(events.length);
 	let W = $derived(Math.max(680, ML + MR + Math.max(0, n - 1) * STEP));
 	let ordered = $derived(
@@ -212,8 +216,34 @@
 	const curBranch = (id: string) => memberOf.get(id) ?? rootId;
 </script>
 
+{#snippet legendBody()}
+	{#each branches as b (b.id)}
+		<span class="lg"><i class="dot" style="background:{branchColor(b.id)}"></i>{b.label}</span>
+	{/each}
+	<span class="lg"><i class="flag"></i>origin</span>
+	<span class="lg"><i class="line fwd"></i>jump forward</span>
+	<span class="lg"><i class="line back"></i>jump back</span>
+	<span class="lg"><i class="ring"></i>time machine fires</span>
+	<span class="lg"><i class="haz"></i>paradox / continuity risk</span>
+{/snippet}
+
 <div class="btl" style="--accent:{accent}">
 	<div class="tlx">
+	<div class="tlx-head">
+		<span class="tlx-title">
+			{title}
+			<span class="legend legend-pop">{@render legendBody()}</span>
+		</span>
+		<div class="tlx-head-actions">
+			<div class="toggle" role="group" aria-label="Timeline ordering">
+				<button class:on={order === 'told'} aria-pressed={order === 'told'} onclick={() => (order = 'told')}>As Told</button>
+				<button class:on={order === 'happened'} aria-pressed={order === 'happened'} onclick={() => (order = 'happened')}>As Happened</button>
+			</div>
+			<button class="legend-btn" class:on={showLegend} aria-pressed={showLegend} onclick={() => (showLegend = !showLegend)}>
+				<Info size={13} weight="bold" /> Legend
+			</button>
+		</div>
+	</div>
 	{#if continuesFrom || continuesTo}
 		<div class="connectors">
 			{#if continuesFrom}
@@ -233,7 +263,10 @@
 	<div class="tlx-body">
 	<div class="board-col">
 	<div class="board">
-		<svg viewBox="0 0 {W} {H}" style="width:{W}px" role="img" aria-label="Branching timeline">
+		{#if showLegend}
+			<div class="legend legend-overlay">{@render legendBody()}</div>
+		{/if}
+		<svg viewBox="0 0 {W} {H}" style="min-width:{W}px" role="img" aria-label="Branching timeline">
 			<defs>
 				<marker id="jarrow" viewBox="0 0 12 12" refX="9" refY="6" markerWidth="7" markerHeight="7" orient="auto">
 					<path d="M1 1 L10 6 L1 11" fill="none" stroke="context-stroke" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
@@ -344,16 +377,6 @@
 	</div>
 
 	<div class="side">
-	<div class="toggle" role="group" aria-label="Timeline ordering">
-		<button class:on={order === 'told'} aria-pressed={order === 'told'} onclick={() => (order = 'told')}
-			>As Told</button
-		>
-		<button
-			class:on={order === 'happened'}
-			aria-pressed={order === 'happened'}
-			onclick={() => (order = 'happened')}>As Happened</button
-		>
-	</div>
 	{#if selected}
 		{@const M = kmeta(selected)}
 		{@const b = branchById.get(curBranch(selected.id))}
@@ -372,21 +395,31 @@
 					<CaretRight size={15} weight="bold" />
 				</button>
 			</div>
-			<div class="media">
-				{#if selected.image}
-					<button
-						class="shot"
-						onclick={() => onOpenImage?.(selected.image!)}
-						aria-label="Open {selected.label} in the gallery"
-					>
-						<img src={selected.image} alt={selected.label} />
-					</button>
-				{:else if fallbackImage}
-					<img class="shot-fallback" src={fallbackImage} alt="" />
-					<span class="media-note">no still for this moment yet</span>
-				{:else}
-					<span class="media-note">no image</span>
-				{/if}
+			<div class="det-main">
+				<div class="media">
+					{#if selected.image}
+						<button
+							class="shot"
+							onclick={() => onOpenImage?.(selected.image!)}
+							aria-label="Open {selected.label} in the gallery"
+						>
+							<img src={selected.image} alt={selected.label} />
+						</button>
+					{:else if fallbackImage}
+						<img class="shot-fallback" src={fallbackImage} alt="" />
+						<span class="media-note">no still yet</span>
+					{:else}
+						<span class="media-note">no image</span>
+					{/if}
+				</div>
+				<div class="det-text">
+					<h4>{selected.label}</h4>
+					<p class="when">{whenLabel(selected)}</p>
+					{#if selected.description}<p class="desc">{selected.description}</p>{/if}
+					{#if selected.paradox}
+						<p class="para"><Warning size={13} weight="fill" /> {selected.paradox}</p>
+					{/if}
+				</div>
 			</div>
 			<div class="badges">
 				<span class="badge" style="--c:{branchColor(curBranch(selected.id))}">
@@ -395,26 +428,9 @@
 				{#if b}<span class="badge branch">{b.label}</span>{/if}
 				{#if selected.source}<span class="badge src">{selected.source}</span>{/if}
 			</div>
-			<h4>{selected.label}</h4>
-			<p class="when">{whenLabel(selected)}</p>
-			{#if selected.description}<p class="desc">{selected.description}</p>{/if}
-			{#if selected.paradox}
-				<p class="para"><Warning size={13} weight="fill" /> {selected.paradox}</p>
-			{/if}
 		</div>
 	{/if}
 	</div>
-	</div>
-
-	<div class="legend">
-		{#each branches as b (b.id)}
-			<span class="lg"><i class="dot" style="background:{branchColor(b.id)}"></i>{b.label}<em>{b.note}</em></span>
-		{/each}
-		<span class="lg"><i class="flag"></i>origin (story starts here)</span>
-		<span class="lg"><i class="line fwd"></i>jump forward in time</span>
-		<span class="lg"><i class="line back"></i>jump back in time</span>
-		<span class="lg"><i class="ring"></i>time machine fires here</span>
-		<span class="lg"><i class="haz"></i>paradox / continuity risk</span>
 	</div>
 	</div>
 </div>
@@ -425,12 +441,11 @@
 	}
 	.toggle {
 		display: flex;
-		margin-bottom: 0.7rem;
 		border: 1px solid var(--color-line);
 		border-radius: 999px;
 		overflow: hidden;
 		font-family: var(--font-mono);
-		font-size: 0.68rem;
+		font-size: 0.66rem;
 	}
 	.toggle button {
 		flex: 1;
@@ -450,12 +465,79 @@
 		outline: 2px solid var(--accent);
 		outline-offset: 2px;
 	}
-	/* one coherent card wrapping board, panel, and legend */
+	/* one coherent card wrapping header, board, and panel */
 	.tlx {
+		position: relative;
 		border: 1px solid var(--color-line);
 		border-radius: 12px;
 		background: color-mix(in srgb, var(--color-panel) 45%, transparent);
 		overflow: hidden;
+	}
+	.tlx-head {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 0.8rem;
+		flex-wrap: wrap;
+		padding: 0.6rem 0.9rem;
+		border-bottom: 1px solid var(--color-line);
+	}
+	.tlx-title {
+		position: relative;
+		font-family: var(--font-serif);
+		font-size: 1.1rem;
+		cursor: default;
+	}
+	/* legend appears on hovering the title, or via the Legend button */
+	.tlx-title .legend-pop {
+		position: absolute;
+		left: 0;
+		top: calc(100% + 8px);
+		z-index: 30;
+		width: max-content;
+		max-width: min(320px, 80vw);
+		padding: 0.6rem 0.7rem;
+		border: 1px solid var(--color-line);
+		border-radius: 8px;
+		background: var(--color-panel);
+		box-shadow: 0 12px 30px rgba(0, 0, 0, 0.35);
+		opacity: 0;
+		transform: translateY(4px);
+		pointer-events: none;
+		transition:
+			opacity 0.15s,
+			transform 0.15s;
+	}
+	.tlx-title:hover .legend-pop,
+	.tlx-title:focus-within .legend-pop {
+		opacity: 1;
+		transform: translateY(0);
+	}
+	.tlx-head-actions {
+		display: flex;
+		align-items: center;
+		gap: 0.6rem;
+		flex-wrap: wrap;
+	}
+	.legend-btn {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.35rem;
+		border: 1px solid var(--color-line);
+		border-radius: 999px;
+		background: transparent;
+		color: var(--color-muted);
+		font-family: var(--font-mono);
+		font-size: 0.66rem;
+		letter-spacing: 0.04em;
+		text-transform: uppercase;
+		padding: 0.35rem 0.7rem;
+		cursor: pointer;
+	}
+	.legend-btn.on,
+	.legend-btn:hover {
+		color: var(--color-paper);
+		border-color: color-mix(in srgb, var(--color-paper) 35%, var(--color-line));
 	}
 	.tlx-body {
 		display: grid;
@@ -466,13 +548,27 @@
 		min-width: 0;
 	}
 	.board {
+		position: relative;
 		padding: 0.35rem 0.5rem;
 		overflow-x: auto;
 	}
-	/* board scales with the number of events; the wide svg scrolls in place */
+	/* board fills the column when short, scrolls when the story is long */
 	svg {
 		display: block;
+		width: 100%;
 		height: auto;
+	}
+	.legend-overlay {
+		position: absolute;
+		top: 0.6rem;
+		left: 0.6rem;
+		z-index: 5;
+		max-width: 320px;
+		padding: 0.55rem 0.7rem;
+		border: 1px solid var(--color-line);
+		border-radius: 8px;
+		background: color-mix(in srgb, var(--color-panel) 92%, transparent);
+		box-shadow: 0 8px 22px rgba(0, 0, 0, 0.3);
 	}
 	.side {
 		display: flex;
@@ -485,6 +581,16 @@
 		flex: 1;
 		min-height: 0;
 		overflow-y: auto;
+	}
+	/* three regions: image left, text right, tags beneath */
+	.det-main {
+		display: grid;
+		grid-template-columns: 120px minmax(0, 1fr);
+		gap: 0.7rem;
+		align-items: start;
+	}
+	.det-text {
+		min-width: 0;
 	}
 	@media (max-width: 860px) {
 		.tlx-body {
@@ -560,24 +666,17 @@
 
 	.legend {
 		display: flex;
-		flex-wrap: wrap;
-		gap: 0.5rem 1.4rem;
+		flex-direction: column;
+		gap: 0.45rem;
 		margin: 0;
-		padding: 0.7rem 0.9rem;
-		border-top: 1px solid var(--color-line);
 		font-family: var(--font-mono);
-		font-size: 0.68rem;
+		font-size: 0.66rem;
 		color: var(--color-muted);
 	}
 	.lg {
 		display: inline-flex;
 		align-items: center;
 		gap: 0.45rem;
-	}
-	.lg em {
-		font-style: normal;
-		opacity: 0.7;
-		margin-left: 0.35rem;
 	}
 	.lg .dot {
 		width: 10px;
@@ -629,12 +728,10 @@
 		border-radius: 4px;
 		padding: 0 0 0 0.8rem;
 	}
-	/* always-reserved image slot: the beat's still, else the poster, else blank */
+	/* always-reserved image slot (left of the three regions): still, poster, or blank */
 	.media {
 		position: relative;
-		height: 150px;
-		flex: none;
-		margin-bottom: 0.7rem;
+		aspect-ratio: 3 / 4;
 		border: 1px solid var(--color-line);
 		border-radius: 6px;
 		overflow: hidden;

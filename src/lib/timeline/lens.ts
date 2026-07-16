@@ -22,14 +22,15 @@ export interface Lens {
 
 export const lanesLens: Lens = {
 	id: 'lanes',
-	label: 'World-lanes',
+	label: 'Lanes',
 	compute: computeLayout
 };
 
 /** all registered lenses; the overlay shows a switcher once there is more than one */
 export const LENSES: Lens[] = [lanesLens];
 
-// the story-curve lens registers itself on import (type-only import back into
-// this module, so no runtime cycle)
+// further lenses register themselves on import (their imports back into this
+// module are type-only, so there is no runtime cycle)
+import { worldLinesLens } from './worldlines';
 import { storyCurveLens } from './storycurve';
-LENSES.push(storyCurveLens);
+LENSES.push(worldLinesLens, storyCurveLens);

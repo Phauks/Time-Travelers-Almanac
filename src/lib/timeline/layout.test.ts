@@ -239,6 +239,44 @@ describe('story-curve lens layout', () => {
 	});
 });
 
+describe('world-lines lens layout', () => {
+	it('keeps a child branch on its parent line at birth, then peels to its own level', async () => {
+		const { computeWorldLines } = await import('./worldlines');
+		const L = computeWorldLines(EVENTS, BRANCHES, 'told');
+		// b is divergent's branchAt: it sits exactly where the parent line is
+		const primeY = L.lanes.find((l) => l.id === 'prime')!.y;
+		expect(L.posById.get('b')!.y).toBe(primeY);
+		// far after birth, e (restored) sits at its own level, below the root
+		const far = L.posById.get('e')!;
+		expect(far.y).toBeGreaterThan(L.lanes[0].y);
+		expect(far.lane).toBeGreaterThan(0);
+	});
+
+	it('always uses the chronological elastic axis; order only re-sorts stepping', async () => {
+		const { computeWorldLines } = await import('./worldlines');
+		const told = computeWorldLines(EVENTS, BRANCHES, 'told');
+		const happened = computeWorldLines(EVENTS, BRANCHES, 'happened');
+		// positions identical across orders
+		for (const e of EVENTS) {
+			expect(told.posById.get(e.id)!.x).toBe(happened.posById.get(e.id)!.x);
+		}
+		// stepping order differs
+		expect(told.ordered.map((e) => e.id)).toEqual(['a', 'b', 'c', 'd', 'e']);
+		expect(happened.ordered.map((e) => e.id)).toEqual(['b', 'c', 'd', 'a', 'e']);
+	});
+
+	it('emits sampled world lines with decay on the endangered branch', async () => {
+		const { computeWorldLines } = await import('./worldlines');
+		const L = computeWorldLines(EVENTS, BRANCHES, 'told');
+		expect(L.worldLines!.length).toBeGreaterThanOrEqual(2);
+		const div = L.worldLines!.find((w) => w.branch === 'divergent')!;
+		expect(div.fadeAfterX).toBe(L.posById.get('d')!.x);
+		// its line starts on the parent's level and ends on its own
+		expect(div.pts[0].y).toBe(L.lanes.find((l) => l.id === 'prime')!.y);
+		expect(div.pts.at(-1)!.y).not.toBe(div.pts[0].y);
+	});
+});
+
 describe('saga stitching', () => {
 	const partI = {
 		slug: 'one',

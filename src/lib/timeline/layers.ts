@@ -383,33 +383,6 @@ const beatsLayer: Layer = {
 			const color = L.branchColor(p.branch);
 			const r = f.px(6, 3.5, 10);
 
-			if (f.tiers.thumbA > 0.02 && p.e.image) {
-				const img = f.image(p.e.image);
-				const tw = f.px(88, 40, 132);
-				const th = tw * 0.62;
-				const ty = y - th - r - f.px(14, 8, 22);
-				ctx.globalAlpha = f.tiers.thumbA;
-				ctx.fillStyle = theme.panel;
-				ctx.strokeStyle = theme.line;
-				ctx.lineWidth = 1;
-				ctx.beginPath();
-				ctx.roundRect(x - tw / 2, ty, tw, th, 5);
-				ctx.fill();
-				if (img) {
-					ctx.save();
-					ctx.clip();
-					const iw = img.naturalWidth;
-					const ih = img.naturalHeight;
-					const k = Math.max(tw / iw, th / ih);
-					ctx.drawImage(img, x - (iw * k) / 2, ty + th / 2 - (ih * k) / 2, iw * k, ih * k);
-					ctx.restore();
-					ctx.beginPath();
-					ctx.roundRect(x - tw / 2, ty, tw, th, 5);
-				}
-				ctx.stroke();
-				ctx.globalAlpha = 1;
-			}
-
 			if (L.departureIds.has(p.e.id)) {
 				ctx.strokeStyle = theme.muted;
 				ctx.globalAlpha = 0.75;
@@ -494,6 +467,49 @@ const beatsLayer: Layer = {
 				ctx.fillText(p.e.source.toUpperCase(), x, y + r + f.px(43, 32, 56));
 				ctx.globalAlpha = 1;
 			}
+		}
+	}
+};
+
+/**
+ * Beat thumbnails in their own pass, above every other static layer, so a
+ * ribbon or a neighbouring node can never draw across a photo at close zoom.
+ */
+const thumbsLayer: Layer = {
+	id: 'thumbs',
+	draw(f) {
+		if (f.tiers.thumbA <= 0.02) return;
+		const { ctx, theme, layout: L } = f;
+		for (const p of L.pos) {
+			if (!p.e.image) continue;
+			const x = f.sx(p.x);
+			if (x < -80 || x > f.vw + 80) continue;
+			const y = f.sy(p.y);
+			const r = f.px(6, 3.5, 10);
+			const img = f.image(p.e.image);
+			const tw = f.px(88, 40, 132);
+			const th = tw * 0.62;
+			const ty = y - th - r - f.px(14, 8, 22);
+			ctx.globalAlpha = f.tiers.thumbA;
+			ctx.fillStyle = theme.panel;
+			ctx.strokeStyle = theme.line;
+			ctx.lineWidth = 1;
+			ctx.beginPath();
+			ctx.roundRect(x - tw / 2, ty, tw, th, 5);
+			ctx.fill();
+			if (img) {
+				ctx.save();
+				ctx.clip();
+				const iw = img.naturalWidth;
+				const ih = img.naturalHeight;
+				const k = Math.max(tw / iw, th / ih);
+				ctx.drawImage(img, x - (iw * k) / 2, ty + th / 2 - (ih * k) / 2, iw * k, ih * k);
+				ctx.restore();
+				ctx.beginPath();
+				ctx.roundRect(x - tw / 2, ty, tw, th, 5);
+			}
+			ctx.stroke();
+			ctx.globalAlpha = 1;
 		}
 	}
 };
@@ -716,7 +732,8 @@ export const STATIC_LAYERS: Layer[] = [
 	birthsLayer,
 	ribbonsLayer,
 	threadsLayer,
-	beatsLayer
+	beatsLayer,
+	thumbsLayer
 ];
 
 export const DYNAMIC_LAYERS: Layer[] = [laneLabelsLayer, selectionLayer, minimapLayer];

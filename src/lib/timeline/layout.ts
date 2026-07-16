@@ -123,6 +123,18 @@ export interface TimelineLayout {
 	branchOf: (eventId: string) => string;
 	W: number;
 	H: number;
+	/**
+	 * world-lines lens only: one sampled line per branch, sharing its parent's
+	 * path until the split then peeling away; drawn by the lens's extra layer
+	 */
+	worldLines?: WorldLine[];
+}
+
+export interface WorldLine {
+	branch: string;
+	color: string;
+	pts: { x: number; y: number }[];
+	fadeAfterX: number | null;
 }
 
 /** branch status → lane colour (the violet fallback marks unknown branches) */
@@ -180,6 +192,132 @@ export function makeBranchColor(branches: Branch[]) {
 	};
 }
 
+/**
+ * Elastic time-metric x positions with temporal registration: spacing grows
+ * with the log of the real gap, and beats sharing an instant share an x —
+ * unless they share a branch, where they still need their own room. Expects
+ * events pre-sorted by chrono. Shared by the lanes and world-lines lenses.
+ */
+export function elasticXPositions(
+	byChrono: TimelineEvent[],
+	branchOf: (id: string) => string,
+	ml: number,
+	step: number
+): Map<string, number> {
+	const xOf = new Map<string, number>();
+	let x = ml;
+	let prev: TimelineEvent | null = null;
+	for (const e of byChrono) {
+		if (prev) {
+			if (sameMoment(e.chrono, prev.chrono)) {
+				if (branchOf(e.id) === branchOf(prev.id)) x += step * 0.45;
+			} else {
+				x += step * elasticWeight(e.chrono - prev.chrono);
+			}
+		}
+		xOf.set(e.id, x);
+		prev = e;
+	}
+	return xOf;
+}
+
+/** pack jump arcs into levels so they never cross; shared by lenses */
+export function levelJumps(pos: BeatPos[], posById: Map<string, BeatPos>): JumpArc[] {
+	const js = pos
+		.filter((p) => p.e.jumpTo && posById.get(p.e.jumpTo))
+		.map((p) => {
+			const to = posById.get(p.e.jumpTo!)!;
+			return {
+				from: p,
+				to,
+				back: to.e.chrono < p.e.chrono,
+				x1: Math.min(p.x, to.x),
+				x2: Math.max(p.x, to.x)
+			};
+		})
+		.sort((a, b) => b.x2 - b.x1 - (a.x2 - a.x1));
+	const levels: { x1: number; x2: number }[][] = [];
+	return js.map((j) => {
+		let lvl = 0;
+		while (levels[lvl] && !levels[lvl].every((iv) => j.x2 < iv.x1 - 6 || j.x1 > iv.x2 + 6)) lvl++;
+		(levels[lvl] ||= []).push({ x1: j.x1, x2: j.x2 });
+		return { from: j.from, to: j.to, back: j.back, level: lvl };
+	});
+}
+
+/** registered moments: one instant touching two or more rows */
+export function registeredMoments(pos: BeatPos[]): Moment[] {
+	const moments: Moment[] = [];
+	const byX = new Map<number, BeatPos[]>();
+	for (const p of pos) {
+		const k = Math.round(p.x * 100) / 100;
+		(byX.get(k) ?? byX.set(k, []).get(k)!).push(p);
+	}
+	for (const [x, ps] of byX) {
+		const lanesHit = new Set(ps.map((p) => p.lane));
+		if (lanesHit.size >= 2 && ps.every((p) => sameMoment(p.e.chrono, ps[0].e.chrono))) {
+			moments.push({
+				x,
+				chrono: ps[0].e.chrono,
+				ys: [...ps.map((p) => p.y)].sort((a, z) => a - z),
+				label: ps[0].e.chronoStartLabel ?? ''
+			});
+		}
+	}
+	return moments;
+}
+
+/** jumps whose other end is off this timeline (another era or work) */
+export function computeOffJumps(pos: BeatPos[]): OffJump[] {
+	const yearIn = (s: string) => {
+		const m = s.match(/\d{3,4}/);
+		return m ? Number(m[0]) : null;
+	};
+	return pos
+		.filter((p) => p.e.jumpToLabel || p.e.jumpFromLabel)
+		.map((p) => {
+			const out = !!p.e.jumpToLabel;
+			const label = (p.e.jumpToLabel ?? p.e.jumpFromLabel)!;
+			const dest = yearIn(label);
+			const back = dest != null && p.e.chrono > 1000 ? dest < p.e.chrono : false;
+			return { p, label, out, back };
+		});
+}
+
+/**
+ * Decay: an endangered/erased branch is overwritten history from the moment
+ * its successor exists (or from an explicit erasedAt).
+ */
+export function computeDecay(branches: Branch[], posById: Map<string, BeatPos>) {
+	const fadeAfter = new Map<string, number>();
+	for (const b of branches) {
+		if (b.erasedAt && posById.has(b.erasedAt)) {
+			fadeAfter.set(b.id, posById.get(b.erasedAt)!.x);
+			continue;
+		}
+		if (b.status === 'endangered' || b.status === 'erased') {
+			const child = branches.find((c) => c.parent === b.id && c.branchAt && posById.has(c.branchAt));
+			if (child) fadeAfter.set(b.id, posById.get(child.branchAt!)!.x);
+		}
+	}
+	return fadeAfter;
+}
+
+/** each named traveller's path through the story, in narrative order */
+export function buildThreads(
+	events: TimelineEvent[],
+	byNarr: TimelineEvent[],
+	posById: Map<string, BeatPos>
+): Thread[] {
+	const travelers = [...new Set(events.filter((e) => e.traveler).map((e) => e.traveler!))];
+	return travelers
+		.map((t) => ({
+			traveler: t,
+			points: byNarr.filter((e) => e.traveler === t).map((e) => posById.get(e.id)!).filter(Boolean)
+		}))
+		.filter((t) => t.points.length >= 2);
+}
+
 export function computeLayout(
 	events: TimelineEvent[],
 	branches: Branch[] = [],
@@ -198,28 +336,10 @@ export function computeLayout(
 		order === 'told'
 			? [...events].sort((a, b) => a.narrative - b.narrative)
 			: [...events].sort((a, b) => a.chrono - b.chrono || a.narrative - b.narrative);
-	const xOf = new Map<string, number>();
-	if (order === 'told' || ordered.length === 0) {
-		ordered.forEach((e, i) => xOf.set(e.id, ml + i * step));
-	} else {
-		// elastic time axis with registration: same instant → same x, unless the
-		// beats share a lane (then they still need their own room)
-		let x = ml;
-		let prev: TimelineEvent | null = null;
-		for (const e of ordered) {
-			if (prev) {
-				const g = e.chrono - prev.chrono;
-				if (sameMoment(e.chrono, prev.chrono)) {
-					// same instant: register to the same x across lanes, nudge apart on one
-					if (branchOf(e.id) === branchOf(prev.id)) x += step * 0.45;
-				} else {
-					x += step * elasticWeight(g);
-				}
-			}
-			xOf.set(e.id, x);
-			prev = e;
-		}
-	}
+	const xOf =
+		order === 'told' || ordered.length === 0
+			? new Map(ordered.map((e, i) => [e.id, ml + i * step]))
+			: elasticXPositions(ordered, branchOf, ml, step);
 	const lastX = Math.max(ml, ...ordered.map((e) => xOf.get(e.id)!));
 	const W = Math.max(minW, lastX + mr);
 
@@ -262,19 +382,7 @@ export function computeLayout(
 	});
 	const posById = new Map(pos.map((p) => [p.e.id, p]));
 
-	// ---- decay: an endangered/erased branch is overwritten history from the
-	// moment its successor exists (or from an explicit erasedAt) ----
-	const fadeAfter = new Map<string, number>();
-	for (const b of branches) {
-		if (b.erasedAt && posById.has(b.erasedAt)) {
-			fadeAfter.set(b.id, posById.get(b.erasedAt)!.x);
-			continue;
-		}
-		if (b.status === 'endangered' || b.status === 'erased') {
-			const child = branches.find((c) => c.parent === b.id && c.branchAt && posById.has(c.branchAt));
-			if (child) fadeAfter.set(b.id, posById.get(child.branchAt!)!.x);
-		}
-	}
+	const fadeAfter = computeDecay(branches, posById);
 
 	const lanes: LaneInfo[] = branches.map((b) => ({
 		id: b.id,
@@ -337,72 +445,12 @@ export function computeLayout(
 		}
 	}
 
-	// ---- registered moments: one instant, several lanes (As Happened only) ----
-	const moments: Moment[] = [];
-	if (order === 'happened') {
-		const byX = new Map<number, BeatPos[]>();
-		for (const p of pos) {
-			const k = Math.round(p.x * 100) / 100;
-			(byX.get(k) ?? byX.set(k, []).get(k)!).push(p);
-		}
-		for (const [x, ps] of byX) {
-			const lanesHit = new Set(ps.map((p) => p.lane));
-			if (lanesHit.size >= 2 && ps.every((p) => sameMoment(p.e.chrono, ps[0].e.chrono))) {
-				moments.push({
-					x,
-					chrono: ps[0].e.chrono,
-					ys: [...ps.map((p) => p.y)].sort((a, z) => a - z),
-					label: ps[0].e.chronoStartLabel ?? ''
-				});
-			}
-		}
-	}
+	// registered moments only mean something on the time-metric axis
+	const moments: Moment[] = order === 'happened' ? registeredMoments(pos) : [];
 
-	// ---- traveller threads: each named traveller's path in narrative order ----
-	const travelers = [...new Set(events.filter((e) => e.traveler).map((e) => e.traveler!))];
-	const threads: Thread[] = travelers
-		.map((t) => ({
-			traveler: t,
-			points: byNarr.filter((e) => e.traveler === t).map((e) => posById.get(e.id)!).filter(Boolean)
-		}))
-		.filter((t) => t.points.length >= 2);
-
-	// ---- time jumps within this timeline, packed into levels so arcs never cross ----
-	const js = pos
-		.filter((p) => p.e.jumpTo && posById.get(p.e.jumpTo))
-		.map((p) => {
-			const to = posById.get(p.e.jumpTo!)!;
-			return {
-				from: p,
-				to,
-				back: to.e.chrono < p.e.chrono,
-				x1: Math.min(p.x, to.x),
-				x2: Math.max(p.x, to.x)
-			};
-		})
-		.sort((a, b) => b.x2 - b.x1 - (a.x2 - a.x1));
-	const levels: { x1: number; x2: number }[][] = [];
-	const jumps: JumpArc[] = js.map((j) => {
-		let lvl = 0;
-		while (levels[lvl] && !levels[lvl].every((iv) => j.x2 < iv.x1 - 6 || j.x1 > iv.x2 + 6)) lvl++;
-		(levels[lvl] ||= []).push({ x1: j.x1, x2: j.x2 });
-		return { from: j.from, to: j.to, back: j.back, level: lvl };
-	});
-
-	// ---- jumps whose other end is off this timeline (another era or work) ----
-	const yearIn = (s: string) => {
-		const m = s.match(/\d{3,4}/);
-		return m ? Number(m[0]) : null;
-	};
-	const offJumps: OffJump[] = pos
-		.filter((p) => p.e.jumpToLabel || p.e.jumpFromLabel)
-		.map((p) => {
-			const out = !!p.e.jumpToLabel;
-			const label = (p.e.jumpToLabel ?? p.e.jumpFromLabel)!;
-			const dest = yearIn(label);
-			const back = dest != null && p.e.chrono > 1000 ? dest < p.e.chrono : false;
-			return { p, label, out, back };
-		});
+	const threads = buildThreads(events, byNarr, posById);
+	const jumps = levelJumps(pos, posById);
+	const offJumps = computeOffJumps(pos);
 
 	// nodes where a time machine fires (a departure) get a portal ring
 	const departureIds = new Set(events.filter((e) => e.jumpTo || e.jumpToLabel).map((e) => e.id));

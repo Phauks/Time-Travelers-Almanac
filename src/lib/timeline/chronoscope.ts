@@ -401,8 +401,9 @@ export class Chronoscope {
 		cctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
 		cctx.clearRect(0, 0, cw, ch);
 		const f = this.makeFrame(cctx, this.cam.x, this.cam.y, cw, ch, now);
-		for (const layer of this.staticLayers) layer.draw(f);
+		// lens layers are ground (the river, the curve): under beats and ribbons
 		for (const layer of this.extraStatic) layer.draw(f);
+		for (const layer of this.staticLayers) layer.draw(f);
 		this.cacheState = { x: this.cam.x, y: this.cam.y, s: this.cam.s, v: this.sceneVersion };
 	}
 

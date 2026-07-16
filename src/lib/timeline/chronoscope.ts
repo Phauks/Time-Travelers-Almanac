@@ -47,7 +47,7 @@ export class Chronoscope {
 
 	private selectedId: string | null = null;
 	private hoverId: string | null = null;
-	private showThreads = false;
+	private visibleTravelers = new Set<string>();
 
 	// interaction
 	private pointers = new Map<number, { x: number; y: number }>();
@@ -135,9 +135,24 @@ export class Chronoscope {
 		this.requestDraw();
 	}
 
-	setShowThreads(on: boolean) {
-		this.showThreads = on;
+	/** which travellers' presence rings are drawn */
+	setVisibleTravelers(names: Iterable<string>) {
+		this.visibleTravelers = new Set(names);
 		this.invalidate();
+		this.requestDraw();
+	}
+
+	/** zoom about the viewport centre (the +/- buttons) */
+	zoomBy(factor: number) {
+		this.cam.zoomAbout(this.vw / 2, this.vh / 2, factor, this.vw, this.vh);
+		this.cam.release();
+		this.requestDraw();
+	}
+
+	/** pan by a screen-space distance (the left/right buttons) */
+	panBy(dxPx: number) {
+		this.cam.x += dxPx / this.cam.s;
+		this.cam.release();
 		this.requestDraw();
 	}
 
@@ -349,7 +364,7 @@ export class Chronoscope {
 			},
 			selectedId: this.selectedId,
 			hoverId: this.hoverId,
-			showThreads: this.showThreads,
+			visibleTravelers: this.visibleTravelers,
 			image: (src) => {
 				const rec = this.images.get(src);
 				return rec?.ok ? rec.img : null;

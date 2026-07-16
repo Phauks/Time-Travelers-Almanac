@@ -176,12 +176,28 @@ describe('births and decay', () => {
 	});
 });
 
-describe('traveller threads', () => {
-	it('builds one thread per named traveller, in narrative order', () => {
+describe('traveller presence', () => {
+	it('collects each traveller and the beats they appear in', () => {
 		const L = computeLayout(EVENTS, BRANCHES, 'traveler');
-		expect(L.threads).toHaveLength(1);
-		expect(L.threads[0].traveler).toBe('Marty');
-		expect(L.threads[0].points.map((p) => p.e.id)).toEqual(['a', 'b', 'e']);
+		expect(L.travelers).toHaveLength(1);
+		expect(L.travelers[0].name).toBe('Marty');
+		expect(L.travelers[0].beats).toEqual(['a', 'b', 'e']);
+	});
+
+	it('keeps variants of a person separate and reads the presence list first', () => {
+		const L = computeLayout(
+			[
+				ev('m1', 0, 1985, { travelers: ['Doc', 'Marty'] }),
+				ev('m2', 1, 1955, { travelers: ['Doc (1955)', 'Marty'] }),
+				// presence list wins over the jump traveller when both exist
+				ev('m3', 2, 1985.1, { traveler: 'Marty', travelers: ['Marty', 'Doc'] })
+			],
+			[{ id: 'main', label: 'Main' }],
+			'traveler'
+		);
+		expect(L.travelers.map((t) => t.name)).toEqual(['Doc', 'Marty', 'Doc (1955)']);
+		expect(L.travelers.find((t) => t.name === 'Doc')!.beats).toEqual(['m1', 'm3']);
+		expect(L.travelers.find((t) => t.name === 'Doc (1955)')!.beats).toEqual(['m2']);
 	});
 });
 

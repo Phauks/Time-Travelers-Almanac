@@ -2,7 +2,7 @@
 // the engine composes them, caches the static ones during pans, and plugins
 // can add layers with engine.use(). No layer holds state.
 
-import type { TimelineLayout } from './layout';
+import { presentAt, type TimelineLayout } from './layout';
 import { shortDate, jumpText } from './display';
 
 export interface ChronoTheme {
@@ -35,7 +35,8 @@ export interface Frame {
 	tiers: { dateA: number; labelA: number; thumbA: number };
 	selectedId: string | null;
 	hoverId: string | null;
-	showThreads: boolean;
+	/** traveller names whose presence is highlighted on the board */
+	visibleTravelers: Set<string>;
 	image: (src: string) => HTMLImageElement | null;
 	/** a world size in screen px, clamped for legibility */
 	px: (v: number, min: number, max?: number) => number;
@@ -51,9 +52,15 @@ export interface Layer {
 /** vertical clearance of a jump arc's apex above its higher endpoint */
 export const arcLift = (level: number) => 36 + level * 26;
 
-/** distinct hues for traveller threads, cycled; none may resemble a branch
- * status colour (grey/red/amber) or the jump blues, or threads read as lanes */
-const THREAD_COLORS = ['#35d6a4', '#c99cff', '#7cc4ff', '#ffd166'];
+/** distinct hues for traveller presence, cycled; none may resemble a branch
+ * status colour (grey/red/amber) or the jump blues */
+export const TRAVELER_COLORS = ['#35d6a4', '#c99cff', '#7cc4ff', '#ffd166'];
+
+/** a traveller's stable colour, by their position in layout.travelers */
+export const travelerColor = (layout: TimelineLayout, name: string) =>
+	TRAVELER_COLORS[
+		Math.max(0, layout.travelers.findIndex((t) => t.name === name)) % TRAVELER_COLORS.length
+	];
 
 // ---------------------------------------------------------------- geometry
 
@@ -281,48 +288,38 @@ const jumpsLayer: Layer = {
 	}
 };
 
-/** each named traveller's path through the story, a thin weaving thread */
-const threadsLayer: Layer = {
-	id: 'threads',
+/**
+ * Traveller presence as a highlight, not a separate line: each enabled
+ * traveller draws a coloured ring around every beat they are present at.
+ * Concentric rings stack when several enabled travellers share a beat.
+ */
+const presenceLayer: Layer = {
+	id: 'presence',
 	draw(f) {
-		if (!f.showThreads || !f.layout.threads.length) return;
-		const { ctx, theme } = f;
-		f.layout.threads.forEach((t, ti) => {
-			const color = THREAD_COLORS[ti % THREAD_COLORS.length];
-			const lift = f.px(7 + ti * 5, 4, 14);
-			ctx.strokeStyle = color;
-			ctx.lineWidth = f.px(1.6, 1.1, 2.4);
-			ctx.globalAlpha = 0.8;
-			ctx.setLineDash([f.px(5, 3), f.px(4, 2.5)]);
-			ctx.beginPath();
-			t.points.forEach((p, i) => {
-				const x = f.sx(p.x);
-				const y = f.sy(p.y) - lift;
-				if (i === 0) ctx.moveTo(x, y);
-				else {
-					const prev = t.points[i - 1];
-					const px0 = f.sx(prev.x);
-					const py0 = f.sy(prev.y) - lift;
-					const mx = (px0 + x) / 2;
-					ctx.bezierCurveTo(mx, py0, mx, y, x, y);
-				}
+		if (!f.visibleTravelers.size || !f.layout.travelers.length) return;
+		const { ctx, layout: L } = f;
+		for (const p of L.pos) {
+			const here = presentAt(p.e).filter((n) => f.visibleTravelers.has(n));
+			if (!here.length) continue;
+			const x = f.sx(p.x);
+			if (x < -60 || x > f.vw + 60) continue;
+			const y = f.sy(p.y);
+			const base = f.px(6, 3.5, 10);
+			here.forEach((name, i) => {
+				const color = travelerColor(L, name);
+				const r = base + f.px(5.5, 3.5, 8) + i * f.px(3.5, 2.4, 5);
+				ctx.save();
+				ctx.strokeStyle = color;
+				ctx.globalAlpha = 0.9;
+				ctx.lineWidth = f.px(2, 1.4, 2.8);
+				ctx.shadowColor = color;
+				ctx.shadowBlur = 6;
+				ctx.beginPath();
+				ctx.arc(x, y, r, 0, 7);
+				ctx.stroke();
+				ctx.restore();
 			});
-			ctx.stroke();
-			ctx.setLineDash([]);
-			if (f.tiers.labelA > 0.03 && t.points[0]) {
-				ctx.globalAlpha = f.tiers.labelA;
-				ctx.fillStyle = color;
-				ctx.font = `${f.px(9, 8, 12)}px ${theme.monoFont}`;
-				ctx.textAlign = 'left';
-				ctx.fillText(
-					t.traveler,
-					f.sx(t.points[0].x) + f.px(8, 5),
-					f.sy(t.points[0].y) - lift - f.px(4, 3)
-				);
-				ctx.textAlign = 'center';
-			}
-			ctx.globalAlpha = 1;
-		});
+		}
 	}
 };
 
@@ -685,7 +682,7 @@ export const STATIC_LAYERS: Layer[] = [
 	splintersLayer,
 	birthsLayer,
 	jumpsLayer,
-	threadsLayer,
+	presenceLayer,
 	beatsLayer,
 	thumbsLayer
 ];

@@ -48,10 +48,14 @@ export const whenLabel = (e: TimelineEvent) => {
 	return e.chronoEndLabel ? `${base} to ${e.chronoEndLabel}${loc}` : `${base}${loc}`;
 };
 
-/** "30 yrs back" / "25 yrs on" between two chrono values (years only) */
+/**
+ * The span of a jump, spelled out in full: "30 Years", "1 Year". Direction
+ * is carried by the arrow itself. Jumps within the same year read "Moments";
+ * index-based chronologies (loops counted 1, 2, 3) read "Jump".
+ */
 export function jumpText(fromC: number, toC: number): string {
-	if (fromC < 1000 || toC < 1000) return 'jump';
-	const d = Math.round(toC) - Math.round(fromC);
-	if (d === 0) return 'jump';
-	return d < 0 ? `${Math.abs(d)} yrs back` : `${d} yrs on`;
+	if (fromC < 1000 || toC < 1000) return 'Jump';
+	const d = Math.abs(Math.round(toC) - Math.round(fromC));
+	if (d === 0) return 'Moments';
+	return `${d} ${d === 1 ? 'Year' : 'Years'}`;
 }

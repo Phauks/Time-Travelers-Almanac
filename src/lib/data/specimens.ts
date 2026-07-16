@@ -134,6 +134,7 @@ export const specimens: MediaEntry[] = [
 			},
 			{
 				id: 'demo',
+				travelers: ['Marty', 'Doc', 'Einstein'],
 				traveler: 'Einstein',
 				label: 'The DeLorean revealed',
 				narrative: 0,
@@ -148,6 +149,7 @@ export const specimens: MediaEntry[] = [
 			},
 			{
 				id: 'einstein',
+				travelers: ['Marty', 'Doc', 'Einstein'],
 				traveler: 'Einstein',
 				label: 'Einstein arrives, one minute on',
 				narrative: 0.5,
@@ -160,6 +162,7 @@ export const specimens: MediaEntry[] = [
 			},
 			{
 				id: 'flee',
+				travelers: ['Marty', 'Doc'],
 				traveler: 'Marty',
 				label: 'Libyans attack  -  Marty flees',
 				narrative: 1,
@@ -173,6 +176,7 @@ export const specimens: MediaEntry[] = [
 			},
 			{
 				id: 'arrive55',
+				travelers: ['Marty'],
 				traveler: 'Marty',
 				label: 'Arrival in 1955',
 				narrative: 2,
@@ -185,6 +189,7 @@ export const specimens: MediaEntry[] = [
 			},
 			{
 				id: 'interfere',
+				travelers: ['Marty'],
 				label: 'The meeting is disrupted',
 				narrative: 3,
 				chrono: 1955.847,
@@ -198,6 +203,7 @@ export const specimens: MediaEntry[] = [
 			},
 			{
 				id: 'finddoc',
+				travelers: ['Marty', 'Doc (1955)'],
 				label: 'Finds the young Doc',
 				narrative: 4,
 				chrono: 1955.848,
@@ -209,6 +215,7 @@ export const specimens: MediaEntry[] = [
 			},
 			{
 				id: 'plan',
+				travelers: ['Marty', 'Doc (1955)'],
 				label: 'Engineering the romance',
 				narrative: 5,
 				chrono: 1955.855,
@@ -222,6 +229,7 @@ export const specimens: MediaEntry[] = [
 			},
 			{
 				id: 'dance',
+				travelers: ['Marty'],
 				label: 'Enchantment Under the Sea',
 				narrative: 6,
 				chrono: 1955.864,
@@ -233,6 +241,7 @@ export const specimens: MediaEntry[] = [
 			},
 			{
 				id: 'depart55',
+				travelers: ['Marty', 'Doc (1955)'],
 				traveler: 'Marty',
 				label: 'The clock-tower lightning',
 				narrative: 7,
@@ -246,6 +255,7 @@ export const specimens: MediaEntry[] = [
 			},
 			{
 				id: 'return85',
+				travelers: ['Marty'],
 				traveler: 'Marty',
 				label: 'Back to 1985',
 				narrative: 8,
@@ -258,6 +268,7 @@ export const specimens: MediaEntry[] = [
 			},
 			{
 				id: 'altered',
+				travelers: ['Marty', 'Doc'],
 				label: 'A better 1985',
 				narrative: 9,
 				chrono: 1985.822,
@@ -269,6 +280,7 @@ export const specimens: MediaEntry[] = [
 			},
 			{
 				id: 'hook',
+				travelers: ['Marty', 'Doc'],
 				label: '“…we don’t need roads.”',
 				narrative: 10,
 				chrono: 1985.823,

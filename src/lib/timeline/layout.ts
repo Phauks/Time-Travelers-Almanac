@@ -82,11 +82,16 @@ export interface Birth {
 	color: string;
 }
 
-/** a traveller's path through their beats, in narrative order */
-export interface Thread {
-	traveler: string;
-	points: BeatPos[];
+/** a person with time-travel significance and the beats they appear in */
+export interface TravelerInfo {
+	name: string;
+	/** beat ids, in narrative order */
+	beats: string[];
 }
+
+/** everyone present at a beat: the presence list, or the jump's traveller */
+export const presentAt = (e: TimelineEvent): string[] =>
+	e.travelers ?? (e.traveler ? [e.traveler] : []);
 
 export interface LaneInfo {
 	id: string;
@@ -110,7 +115,7 @@ export interface TimelineLayout {
 	jumps: JumpArc[];
 	offJumps: OffJump[];
 	births: Birth[];
-	threads: Thread[];
+	travelers: TravelerInfo[];
 	lanes: LaneInfo[];
 	departureIds: Set<string>;
 	rootId: string;
@@ -262,19 +267,23 @@ export function computeDecay(branches: Branch[], posById: Map<string, BeatPos>) 
 	return fadeAfter;
 }
 
-/** each named traveller's path through the story, in narrative order */
-export function buildThreads(
-	events: TimelineEvent[],
-	byNarr: TimelineEvent[],
-	posById: Map<string, BeatPos>
-): Thread[] {
-	const travelers = [...new Set(events.filter((e) => e.traveler).map((e) => e.traveler!))];
-	return travelers
-		.map((t) => ({
-			traveler: t,
-			points: byNarr.filter((e) => e.traveler === t).map((e) => posById.get(e.id)!).filter(Boolean)
-		}))
-		.filter((t) => t.points.length >= 2);
+/**
+ * Every named traveller (and variant of a traveller: "Doc (1955)" is not
+ * "Doc") with the beats they appear in, ordered by first appearance.
+ */
+export function buildTravelers(byNarr: TimelineEvent[]): TravelerInfo[] {
+	const order: string[] = [];
+	const beats = new Map<string, string[]>();
+	for (const e of byNarr) {
+		for (const name of presentAt(e)) {
+			if (!beats.has(name)) {
+				order.push(name);
+				beats.set(name, []);
+			}
+			beats.get(name)!.push(e.id);
+		}
+	}
+	return order.map((name) => ({ name, beats: beats.get(name)! }));
 }
 
 export function computeLayout(
@@ -403,7 +412,7 @@ export function computeLayout(
 		}
 	}
 
-	const threads = buildThreads(events, byNarr, posById);
+	const travelers = buildTravelers(byNarr);
 	const jumps = levelJumps(pos, posById);
 	const offJumps = computeOffJumps(pos);
 
@@ -419,7 +428,7 @@ export function computeLayout(
 		jumps,
 		offJumps,
 		births,
-		threads,
+		travelers,
 		lanes,
 		departureIds,
 		rootId,

@@ -1,9 +1,10 @@
 <script lang="ts">
 	import { untrack } from 'svelte';
 	import { replaceState } from '$app/navigation';
-	import { X, CornersOut, Path, FilmSlate } from 'phosphor-svelte';
+	import { X, CornersOut, FilmSlate, CaretLeft, CaretRight, CaretDown, CaretUp, Plus, Minus } from 'phosphor-svelte';
 	import EventPanel from './EventPanel.svelte';
 	import { Chronoscope, type ChronoTheme } from '$lib/timeline/chronoscope';
+import { TRAVELER_COLORS } from '$lib/timeline/layers';
 	import { computeLayout } from '$lib/timeline/layout';
 	import { stitchTimelines, type SagaPart } from '$lib/timeline/stitch';
 	import type { Branch, TimelineEvent } from '$lib/types';
@@ -34,7 +35,15 @@
 
 	let order = $state<'traveler' | 'happened'>('traveler');
 	let sagaOn = $state(false);
-	let showThreads = $state(false);
+	/** traveller names whose presence rings are shown on the board */
+	let visibleTravelers = $state<string[]>([]);
+	let legendOpen = $state(true);
+
+	function toggleTraveler(name: string) {
+		visibleTravelers = visibleTravelers.includes(name)
+			? visibleTravelers.filter((n) => n !== name)
+			: [...visibleTravelers, name];
+	}
 
 	const canSaga = $derived(saga.length > 1);
 	// the scene on the board: this one story, or the whole stitched saga
@@ -56,6 +65,19 @@
 	let selectedBranch = $derived(
 		selected ? scene.branches.find((br) => br.id === layout.branchOf(selected.id)) : undefined
 	);
+
+	// the legend only shows symbols the current board actually draws
+	let uses = $derived({
+		origin: layout.pos.some((p) => p.e.kind === 'origin' || p.e.origin),
+		fwd: layout.jumps.some((j) => !j.back) || layout.offJumps.some((o) => o.out && !o.back),
+		back: layout.jumps.some((j) => j.back) || layout.offJumps.some((o) => o.back),
+		machine: layout.departureIds.size > 0,
+		splits: layout.births.length > 0,
+		decay: layout.lanes.some((l) => l.fadeAfterX != null),
+		presence: layout.travelers.length > 0,
+		paradox: layout.pos.some((p) => !!p.e.paradox),
+		crossRef: layout.pos.some((p) => !!p.e.crossRef)
+	});
 
 	let rootEl = $state<HTMLElement | null>(null);
 	let canvasEl = $state<HTMLCanvasElement | null>(null);
@@ -157,13 +179,13 @@
 		untrack(() => {
 			if (!layout.posById.has(selectedId)) selectedId = layout.ordered[0]?.id ?? '';
 			engine!.setSelected(selectedId);
-			engine!.setShowThreads(showThreads && layout.threads.length > 0);
+			engine!.setVisibleTravelers(visibleTravelers);
 		});
 	});
 
-	// threads toggle without a full scene rebuild
+	// traveller visibility without a full scene rebuild
 	$effect(() => {
-		engine?.setShowThreads(showThreads && layout.threads.length > 0);
+		engine?.setVisibleTravelers(visibleTravelers);
 	});
 
 	// the engine paints with resolved token values, so a theme flip while the
@@ -219,19 +241,6 @@
 						<FilmSlate size={13} weight="bold" /> Full saga
 					</button>
 				{/if}
-				{#if layout.threads.length}
-					<button
-						class="pill"
-						class:on={showThreads}
-						aria-pressed={showThreads}
-						onclick={() => (showThreads = !showThreads)}
-					>
-						<Path size={13} weight="bold" /> Travelers
-					</button>
-				{/if}
-				<button class="pill" onclick={() => engine?.fitAll()}>
-					<CornersOut size={13} weight="bold" /> Fit
-				</button>
 				<button class="pill close" onclick={close} aria-label="Close full-screen timeline">
 					<X size={15} weight="bold" />
 				</button>
@@ -244,7 +253,24 @@
 					bind:this={canvasEl}
 					aria-label="Timeline board. Drag to pan, scroll to zoom, click a beat to inspect it. Use the arrow keys to step through beats."
 				></canvas>
-				<span class="hint">drag to pan, scroll to zoom, click a beat</span>
+				<div class="controls">
+					<span class="hint">drag to pan, scroll to zoom, click a beat</span>
+					<button class="nav" onclick={() => engine?.panBy(-260)} aria-label="Pan left">
+						<CaretLeft size={15} weight="bold" />
+					</button>
+					<button class="nav" onclick={() => engine?.panBy(260)} aria-label="Pan right">
+						<CaretRight size={15} weight="bold" />
+					</button>
+					<button class="nav" onclick={() => engine?.zoomBy(0.8)} aria-label="Zoom out">
+						<Minus size={15} weight="bold" />
+					</button>
+					<button class="nav" onclick={() => engine?.zoomBy(1.25)} aria-label="Zoom in">
+						<Plus size={15} weight="bold" />
+					</button>
+					<button class="nav fit" onclick={() => engine?.fitAll()} aria-label="Fit the whole timeline">
+						<CornersOut size={14} weight="bold" /> Fit
+					</button>
+				</div>
 			</div>
 			<aside class="side">
 				{#if selected}
@@ -261,20 +287,61 @@
 						{onOpenImage}
 					/>
 				{/if}
+				{#if layout.travelers.length}
+					<div class="travelers" role="group" aria-label="Highlight travelers">
+						<p class="side-title">Travelers</p>
+						<div class="tchips">
+							{#each layout.travelers as t, i (t.name)}
+								<button
+									class="tchip"
+									class:on={visibleTravelers.includes(t.name)}
+									aria-pressed={visibleTravelers.includes(t.name)}
+									style="--tc:{TRAVELER_COLORS[i % TRAVELER_COLORS.length]}"
+									onclick={() => toggleTraveler(t.name)}
+								>
+									<i class="tdot"></i>{t.name}
+								</button>
+							{/each}
+						</div>
+					</div>
+				{/if}
 				<div class="legend" role="note" aria-label="Legend">
-					<p class="legend-title">Legend</p>
-					{#each scene.branches as b (b.id)}
-						<span class="lg"><i class="swatch" style="background:{layout.branchColor(b.id)}"></i>{b.label}</span>
-					{/each}
-					<span class="lg"><svg viewBox="0 0 26 12" aria-hidden="true"><path d="M2 10 Q13 0 22 7" fill="none" stroke="var(--color-jump)" stroke-width="1.8"/><path d="M24 9 L17 8 L21 3 Z" fill="var(--color-jump)"/></svg>jump forward in time</span>
-					<span class="lg"><svg viewBox="0 0 26 12" aria-hidden="true"><path d="M24 10 Q13 0 4 7" fill="none" stroke="#2b93bd" stroke-width="1.8"/><path d="M2 9 L9 8 L5 3 Z" fill="#2b93bd"/></svg>jump back in time</span>
-					<span class="lg"><svg viewBox="0 0 26 12" aria-hidden="true"><circle cx="13" cy="6" r="4.5" fill="none" stroke="var(--color-muted)" stroke-width="1.4" stroke-dasharray="2 2"/></svg>a time machine fires</span>
-					<span class="lg"><svg viewBox="0 0 26 12" aria-hidden="true"><path d="M9 5 A5 5 0 0 1 17 5" fill="none" stroke="var(--color-branching)" stroke-width="1.4"/><path d="M9 8 A5 5 0 0 0 17 8" fill="none" stroke="var(--color-branching)" stroke-width="1.4"/></svg>history splits here</span>
-					<span class="lg"><svg viewBox="0 0 26 12" aria-hidden="true"><path d="M2 6 H24" stroke="#ff6b74" stroke-width="2" stroke-dasharray="2 5" opacity="0.6"/></svg>overwritten, fading away</span>
-					{#if layout.threads.length}
-						<span class="lg"><svg viewBox="0 0 26 12" aria-hidden="true"><path d="M2 9 C8 9 10 3 14 3 S22 8 24 8" fill="none" stroke="#35d6a4" stroke-width="1.6" stroke-dasharray="4 3"/></svg>a traveler's own path</span>
+					<button class="legend-head" aria-expanded={legendOpen} onclick={() => (legendOpen = !legendOpen)}>
+						Legend
+						{#if legendOpen}<CaretUp size={12} weight="bold" />{:else}<CaretDown size={12} weight="bold" />{/if}
+					</button>
+					{#if legendOpen}
+						{#each scene.branches as b (b.id)}
+							<span class="lg"><i class="swatch" style="background:{layout.branchColor(b.id)}"></i>{b.label}</span>
+						{/each}
+						{#if uses.origin}
+							<span class="lg"><svg viewBox="0 0 26 12" aria-hidden="true"><path d="M10 11 V1 L17 3 L10 5.5" fill="none" stroke="var(--color-branching)" stroke-width="1.5"/><path d="M10 1 L17 3 L10 5.5 Z" fill="var(--color-branching)"/></svg>where the story begins</span>
+						{/if}
+						{#if uses.fwd}
+							<span class="lg"><svg viewBox="0 0 26 12" aria-hidden="true"><path d="M2 10 Q13 0 22 7" fill="none" stroke="var(--color-jump)" stroke-width="1.8"/><path d="M24 9 L17 8 L21 3 Z" fill="var(--color-jump)"/></svg>jump forward in time</span>
+						{/if}
+						{#if uses.back}
+							<span class="lg"><svg viewBox="0 0 26 12" aria-hidden="true"><path d="M24 10 Q13 0 4 7" fill="none" stroke="#2b93bd" stroke-width="1.8"/><path d="M2 9 L9 8 L5 3 Z" fill="#2b93bd"/></svg>jump back in time</span>
+						{/if}
+						{#if uses.machine}
+							<span class="lg"><svg viewBox="0 0 26 12" aria-hidden="true"><circle cx="13" cy="6" r="4.5" fill="none" stroke="var(--color-muted)" stroke-width="1.4" stroke-dasharray="2 2"/></svg>a time machine fires</span>
+						{/if}
+						{#if uses.splits}
+							<span class="lg"><svg viewBox="0 0 26 12" aria-hidden="true"><path d="M9 5 A5 5 0 0 1 17 5" fill="none" stroke="var(--color-branching)" stroke-width="1.4"/><path d="M9 8 A5 5 0 0 0 17 8" fill="none" stroke="var(--color-branching)" stroke-width="1.4"/></svg>history splits here</span>
+						{/if}
+						{#if uses.decay}
+							<span class="lg"><svg viewBox="0 0 26 12" aria-hidden="true"><path d="M2 6 H24" stroke="#ff6b74" stroke-width="2" stroke-dasharray="2 5" opacity="0.6"/></svg>overwritten, fading away</span>
+						{/if}
+						{#if uses.presence}
+							<span class="lg"><svg viewBox="0 0 26 12" aria-hidden="true"><circle cx="13" cy="6" r="2.4" fill="var(--color-muted)"/><circle cx="13" cy="6" r="4.6" fill="none" stroke="#35d6a4" stroke-width="1.4"/></svg>a traveler is present here</span>
+						{/if}
+						{#if uses.crossRef}
+							<span class="lg"><svg viewBox="0 0 26 12" aria-hidden="true"><text x="9" y="10" font-size="12" font-weight="700" fill="var(--color-branching)">»</text></svg>crosses into another story</span>
+						{/if}
+						{#if uses.paradox}
+							<span class="lg"><svg viewBox="0 0 26 12" aria-hidden="true"><path d="M13 1 L19 10 L7 10 Z" fill="#ffcc33" stroke="var(--color-ink)" stroke-width="0.8"/></svg>paradox risk</span>
+						{/if}
 					{/if}
-					<span class="lg"><svg viewBox="0 0 26 12" aria-hidden="true"><path d="M13 1 L19 10 L7 10 Z" fill="#ffcc33" stroke="var(--color-ink)" stroke-width="0.8"/></svg>paradox risk</span>
 				</div>
 			</aside>
 		</div>
@@ -398,16 +465,48 @@
 		outline: 2px solid var(--accent);
 		outline-offset: -2px;
 	}
-	.hint {
+	.controls {
 		position: absolute;
 		right: 0.9rem;
 		bottom: 0.7rem;
+		display: flex;
+		align-items: center;
+		gap: 0.4rem;
+	}
+	.hint {
 		font-family: var(--font-mono);
 		font-size: 0.62rem;
 		letter-spacing: 0.08em;
 		text-transform: uppercase;
 		color: var(--color-muted);
-		pointer-events: none;
+		margin-right: 0.5rem;
+	}
+	.nav {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		gap: 0.3rem;
+		min-width: 32px;
+		height: 32px;
+		padding: 0 0.5rem;
+		border: 1px solid var(--color-line);
+		border-radius: 8px;
+		background: color-mix(in srgb, var(--color-panel) 88%, transparent);
+		color: var(--color-paper);
+		cursor: pointer;
+	}
+	.nav:hover {
+		border-color: color-mix(in srgb, var(--color-paper) 40%, var(--color-line));
+	}
+	.nav:focus-visible {
+		outline: 2px solid var(--accent);
+		outline-offset: 2px;
+	}
+	.nav.fit {
+		font-family: var(--font-mono);
+		font-size: 0.64rem;
+		letter-spacing: 0.06em;
+		text-transform: uppercase;
 	}
 	.side {
 		display: flex;
@@ -428,12 +527,74 @@
 		font-size: 0.66rem;
 		color: var(--color-muted);
 	}
-	.legend-title {
-		margin: 0 0 0.15rem;
+	.side-title {
+		margin: 0 0 0.4rem;
+		font-family: var(--font-mono);
 		font-size: 0.6rem;
 		letter-spacing: 0.14em;
 		text-transform: uppercase;
 		color: var(--color-paper);
+	}
+	.travelers {
+		border-top: 1px solid var(--color-line);
+		padding-top: 0.8rem;
+	}
+	.tchips {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.4rem;
+	}
+	.tchip {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.4rem;
+		border: 1px solid var(--color-line);
+		border-radius: 999px;
+		background: transparent;
+		color: var(--color-muted);
+		font-family: var(--font-mono);
+		font-size: 0.66rem;
+		letter-spacing: 0.03em;
+		padding: 0.3rem 0.7rem;
+		cursor: pointer;
+	}
+	.tchip .tdot {
+		width: 9px;
+		height: 9px;
+		border-radius: 50%;
+		background: var(--tc);
+		opacity: 0.45;
+	}
+	.tchip.on {
+		color: var(--color-paper);
+		border-color: var(--tc);
+	}
+	.tchip.on .tdot {
+		opacity: 1;
+		box-shadow: 0 0 6px var(--tc);
+	}
+	.tchip:focus-visible {
+		outline: 2px solid var(--accent);
+		outline-offset: 2px;
+	}
+	.legend-head {
+		display: flex;
+		align-items: center;
+		gap: 0.4rem;
+		border: 0;
+		background: transparent;
+		padding: 0;
+		margin: 0 0 0.15rem;
+		font-family: var(--font-mono);
+		font-size: 0.6rem;
+		letter-spacing: 0.14em;
+		text-transform: uppercase;
+		color: var(--color-paper);
+		cursor: pointer;
+	}
+	.legend-head:focus-visible {
+		outline: 2px solid var(--accent);
+		outline-offset: 2px;
 	}
 	.lg {
 		display: inline-flex;

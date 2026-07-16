@@ -130,6 +130,13 @@ export interface TimelineEvent {
 	jumpFromLabel?: string;
 	/** who makes this jump (for stories with several independent travellers) */
 	traveler?: string;
+	/**
+	 * everyone with time-travel significance present at this beat. Distinct
+	 * variants of the same person get distinct names ("Doc (1955)" vs "Doc"):
+	 * on a time-travel board a person can coexist with their other selves, and
+	 * they must never be conflated.
+	 */
+	travelers?: string[];
 	/** which timeline branch this beat lives on (see MediaEntry.branches) */
 	branch?: string;
 	/** which franchise part this event belongs to (for combined franchise timelines) */

@@ -68,6 +68,37 @@
 	let showLegend = $state(false);
 	let tourTimer: ReturnType<typeof setTimeout> | undefined;
 
+	// ---- the floating event card: anchored to the selected beat by a
+	// world-space offset, so it rides the camera and can be dragged anywhere
+	let floatEl = $state<HTMLDivElement | null>(null);
+	const cardOffset = { x: 70, y: -150 };
+	let draggingCard = false;
+	let dragPrev = { x: 0, y: 0 };
+
+	function positionCard() {
+		if (!floatEl || !engine || !selectedId) return;
+		const p = layout.posById.get(selectedId);
+		if (!p) return;
+		const pt = engine.worldToScreen(p.x + cardOffset.x, p.y + cardOffset.y);
+		floatEl.style.transform = `translate(${Math.round(pt.x)}px, ${Math.round(pt.y)}px)`;
+	}
+
+	function cardDragStart(e: PointerEvent) {
+		draggingCard = true;
+		dragPrev = { x: e.clientX, y: e.clientY };
+		(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+	}
+	function cardDragMove(e: PointerEvent) {
+		if (!draggingCard || !engine) return;
+		cardOffset.x += (e.clientX - dragPrev.x) / engine.cam.s;
+		cardOffset.y += (e.clientY - dragPrev.y) / engine.cam.s;
+		dragPrev = { x: e.clientX, y: e.clientY };
+		engine.setCardOffset(cardOffset); // redraw → leader + card follow
+	}
+	function cardDragEnd() {
+		draggingCard = false;
+	}
+
 	function readTheme(el: HTMLElement): ChronoTheme {
 		const cs = getComputedStyle(el);
 		const v = (name: string, fallback: string) => cs.getPropertyValue(name).trim() || fallback;
@@ -183,8 +214,10 @@
 		if (!open || !canvasEl) return;
 		const eng = new Chronoscope(canvasEl, {
 			onSelect: (id) => select(id),
-			onUserInteract: stopTour
+			onUserInteract: stopTour,
+			onFrame: positionCard
 		});
+		eng.setCardOffset(cardOffset);
 		untrack(() => {
 			const L = layout;
 			selectedId =
@@ -337,22 +370,33 @@
 						{/if}
 					</div>
 				{/if}
-			</div>
-			<aside class="side">
 				{#if selected}
 					{@const b = scene.branches.find((br) => br.id === layout.branchOf(selected.id))}
-					<EventPanel
-						{selected}
-						branchLabel={b?.label}
-						branchColor={layout.branchColor(layout.branchOf(selected.id))}
-						selIndex={selIndex < 0 ? 0 : selIndex}
-						total={layout.ordered.length}
-						onStep={step}
-						{fallbackImage}
-						{onOpenImage}
-					/>
+					<div class="float" bind:this={floatEl}>
+						<div
+							class="float-handle"
+							onpointerdown={cardDragStart}
+							onpointermove={cardDragMove}
+							onpointerup={cardDragEnd}
+							onpointercancel={cardDragEnd}
+						>
+							<span class="grip" aria-hidden="true">⠿</span> drag to move
+						</div>
+						<div class="float-body">
+							<EventPanel
+								{selected}
+								branchLabel={b?.label}
+								branchColor={layout.branchColor(layout.branchOf(selected.id))}
+								selIndex={selIndex < 0 ? 0 : selIndex}
+								total={layout.ordered.length}
+								onStep={step}
+								{fallbackImage}
+								{onOpenImage}
+							/>
+						</div>
+					</div>
 				{/if}
-			</aside>
+			</div>
 		</div>
 
 		<!-- the board as real buttons, for screen readers and Tab users -->
@@ -478,11 +522,52 @@
 		flex: 1;
 		min-height: 0;
 		display: grid;
-		grid-template-columns: minmax(0, 1fr) 360px;
+		grid-template-columns: minmax(0, 1fr);
 	}
 	.board {
 		position: relative;
 		min-width: 0;
+		overflow: hidden;
+	}
+	/* the event card floats beside its beat and can be dragged anywhere */
+	.float {
+		position: absolute;
+		left: 0;
+		top: 0;
+		z-index: 6;
+		width: min(340px, 80vw);
+		border: 1px solid var(--color-line);
+		border-radius: 10px;
+		background: color-mix(in srgb, var(--color-panel) 96%, transparent);
+		box-shadow: 0 14px 40px rgba(0, 0, 0, 0.4);
+		will-change: transform;
+	}
+	.float-handle {
+		display: flex;
+		align-items: center;
+		gap: 0.45rem;
+		padding: 0.32rem 0.65rem;
+		border-bottom: 1px solid var(--color-line);
+		font-family: var(--font-mono);
+		font-size: 0.6rem;
+		letter-spacing: 0.1em;
+		text-transform: uppercase;
+		color: var(--color-muted);
+		cursor: grab;
+		touch-action: none;
+		user-select: none;
+	}
+	.float-handle:active {
+		cursor: grabbing;
+	}
+	.float .grip {
+		font-size: 0.8rem;
+		line-height: 1;
+	}
+	.float-body {
+		padding: 0.7rem 0.8rem;
+		max-height: 46vh;
+		overflow-y: auto;
 	}
 	canvas {
 		display: block;
@@ -543,23 +628,6 @@
 		text-transform: uppercase;
 		color: var(--color-muted);
 		pointer-events: none;
-	}
-	.side {
-		border-left: 1px solid var(--color-line);
-		background: color-mix(in srgb, var(--color-panel) 30%, transparent);
-		padding: 0.9rem;
-		overflow-y: auto;
-	}
-	@media (max-width: 860px) {
-		.stage {
-			grid-template-columns: 1fr;
-			grid-template-rows: minmax(0, 1fr) auto;
-		}
-		.side {
-			border-left: 0;
-			border-top: 1px solid var(--color-line);
-			max-height: 42vh;
-		}
 	}
 	.sr-beats {
 		position: absolute;

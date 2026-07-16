@@ -92,7 +92,7 @@
 				<Info size={13} weight="bold" /> Legend
 			</button>
 			<button class="legend-btn" onclick={() => (scopeOpen = true)}>
-				<ArrowsOutSimple size={13} weight="bold" /> Expand
+				<ArrowsOutSimple size={13} weight="bold" /> Full screen
 			</button>
 		</div>
 	</div>

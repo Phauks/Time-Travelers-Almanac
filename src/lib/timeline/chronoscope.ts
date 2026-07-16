@@ -24,6 +24,8 @@ export interface ChronoCallbacks {
 	onSelect?: (id: string) => void;
 	/** the user grabbed the camera (used to pause a running tour) */
 	onUserInteract?: () => void;
+	/** fired after every drawn frame, so HTML riders (the event card) can track the camera */
+	onFrame?: () => void;
 }
 
 /** smooth 0..1 ramp of v across [a, b] */
@@ -149,6 +151,19 @@ export class Chronoscope {
 		this.showThreads = on;
 		this.invalidate();
 		this.requestDraw();
+	}
+
+	private cardOffset: { x: number; y: number } | null = null;
+
+	/** world-space offset of the floating event card from the selected beat */
+	setCardOffset(offset: { x: number; y: number } | null) {
+		this.cardOffset = offset;
+		this.requestDraw();
+	}
+
+	/** project a world point into canvas coordinates (for HTML riders) */
+	worldToScreen(wx: number, wy: number): { x: number; y: number } {
+		return { x: this.cam.sx(wx, this.vw), y: this.cam.sy(wy, this.vh) };
 	}
 
 	fitAll(animate = true) {
@@ -359,6 +374,7 @@ export class Chronoscope {
 			selectedId: this.selectedId,
 			hoverId: this.hoverId,
 			showThreads: this.showThreads,
+			cardOffset: this.cardOffset,
 			image: (src) => {
 				const rec = this.images.get(src);
 				return rec?.ok ? rec.img : null;
@@ -438,5 +454,6 @@ export class Chronoscope {
 		for (const layer of this.dynamicLayers) layer.draw(f);
 		for (const layer of this.extraDynamic) layer.draw(f);
 		drawMinimapViewport(f, { x: this.cam.x, y: this.cam.y, s: this.cam.s }, this.theme);
+		this.cb.onFrame?.();
 	}
 }

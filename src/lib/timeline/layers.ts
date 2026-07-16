@@ -36,6 +36,8 @@ export interface Frame {
 	selectedId: string | null;
 	hoverId: string | null;
 	showThreads: boolean;
+	/** world-space offset of the floating event card from the selected beat */
+	cardOffset: { x: number; y: number } | null;
 	image: (src: string) => HTMLImageElement | null;
 	/** a world size in screen px, clamped for legibility */
 	px: (v: number, min: number, max?: number) => number;
@@ -589,6 +591,22 @@ const selectionLayer: Layer = {
 		const x = f.sx(p.x);
 		const y = f.sy(p.y);
 		const r = f.px(8, 4.5, 13);
+
+		// leader from the beat to its floating event card
+		if (f.cardOffset) {
+			const ax = f.sx(p.x + f.cardOffset.x);
+			const ay = f.sy(p.y + f.cardOffset.y);
+			ctx.strokeStyle = L.branchColor(p.branch);
+			ctx.globalAlpha = 0.55;
+			ctx.lineWidth = 1.2;
+			ctx.setLineDash([3, 4]);
+			ctx.beginPath();
+			ctx.moveTo(x, y);
+			ctx.lineTo(ax, ay);
+			ctx.stroke();
+			ctx.setLineDash([]);
+			ctx.globalAlpha = 1;
+		}
 
 		// the selected node, re-drawn larger with its ring
 		ctx.beginPath();

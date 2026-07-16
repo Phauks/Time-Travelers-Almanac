@@ -115,6 +115,28 @@ Shared modules (`src/lib/timeline/`):
   tour step (see watch-outs — this is the second time this class of bug
   appeared). URL sync now goes through SvelteKit's `replaceState`.
 
+## Done in the fifth pass (product simplification, from user feedback)
+
+- **One view.** The story-curve and world-lines lenses are deleted (the lens
+  experiment answered its question; the switcher confused more than it
+  offered). `engine.use(layer)` remains as the plugin point if a second view
+  ever earns its way back.
+- **Docked panel + legend.** The floating event card is gone; details live
+  in a right sidebar with an always-visible legend beneath them.
+- **Slim arrows.** Jump arrows are constant-width arcs with a compact head
+  (`jumpArrow` in layers.ts); the comet ribbons are retired.
+- **Less dashing.** Lane segments are solid (only overwritten history fades
+  to dashes); the same-moment dotted connectors are removed; traveller
+  threads are off by default behind a Travelers toggle. Einstein is tagged
+  on his two beats, so BTTF I shows Einstein and Marty.
+- **Traveler's Path.** `TimelineOrder` is now `'traveler' | 'happened'`; the
+  first walks beats in the order the time traveller lives them (narrative
+  order), and every toggle is relabelled accordingly.
+- **Hovers.** Paradox, Rule, Mode, and Loop on the dossier, and the kind /
+  timeline-status badges in the event panel, all explain themselves on
+  hover; every tooltip opens down-and-left so it can never leave the screen.
+- No Tour button (removed with its machinery).
+
 ## Done in the fourth pass (the world-lines lens)
 
 - **World-lines lens** (`worldlines.ts`): each branch is a flowing line that

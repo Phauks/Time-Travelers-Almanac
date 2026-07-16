@@ -51,8 +51,9 @@ export interface Layer {
 /** vertical clearance of a jump arc's apex above its higher endpoint */
 export const arcLift = (level: number) => 36 + level * 26;
 
-/** distinct hues for traveller threads, cycled */
-const THREAD_COLORS = ['#35d6a4', '#ff8ad0', '#7cc4ff', '#ffd166'];
+/** distinct hues for traveller threads, cycled; none may resemble a branch
+ * status colour (grey/red/amber) or the jump blues, or threads read as lanes */
+const THREAD_COLORS = ['#35d6a4', '#c99cff', '#7cc4ff', '#ffd166'];
 
 // ---------------------------------------------------------------- geometry
 

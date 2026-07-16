@@ -115,16 +115,36 @@ Shared modules (`src/lib/timeline/`):
   tour step (see watch-outs — this is the second time this class of bug
   appeared). URL sync now goes through SvelteKit's `replaceState`.
 
+## Done in the fourth pass (the world-lines lens)
+
+- **World-lines lens** (`worldlines.ts`): each branch is a flowing line that
+  rides its parent's path until its `branchAt` moment, then peels away to
+  its own level (smoothstep over ~260px) — the Endgame river view. The axis
+  is always the elastic chronological one with registration; the As Told /
+  As Happened toggle only re-orders stepping and the tour. Overwritten
+  branches decay into fading dashes past their supersession point; jumps,
+  moments, threads, minimap and the tour all work unchanged. The full-saga
+  river (the trilogy as eight lines) is the current showpiece.
+- `computeLayout`'s guts extracted as shared helpers (`elasticXPositions`,
+  `levelJumps`, `registeredMoments`, `computeOffJumps`, `computeDecay`,
+  `buildThreads`) — a new lens is now ~150 lines of geometry plus a layer.
+- Lens extra layers draw as *ground* (beneath beats/ribbons); thumbnails
+  moved to their own top-most static pass so nothing draws across a photo.
+- Lens switcher now reads Lanes / World-lines / Story curve.
+- 24 vitest tests.
+
 ## Known gaps / next candidates
 
 - `svelte-check` currently crashes in this environment (TypeScript 7 pin vs
   svelte-check expecting ≤6) — pre-existing, not from this change.
 - Mobile pinch is implemented but untested on a real device.
-- Thumbnail draw order can overlap a ribbon at extreme zoom; consider a
-  dedicated overlay pass.
 - The story curve could show jump ribbons ghosted (its `jumps` are empty by
   design; a curve-specific variant is possible).
-- A world-lines lens (Endgame click-to-trace) is the natural third lens.
+- World-lines saga view gets dense around the 1955 cluster; a per-lens
+  legend row ("a line = a world") and label collision-avoidance would help.
+- Click-to-trace (dim everything but one traveller's world-line journey) is
+  the remaining piece of the Endgame grammar — the threads data already
+  supports it.
 
 ## Where this goes next (see docs/CHRONOSCOPE.md)
 

@@ -4,7 +4,7 @@
 //
 // As Told uses a uniform step per beat. As Happened uses an elastic
 // time-metric axis: spacing grows with the log of the real time gap, and
-// beats that share an instant across branches share an x — "temporal
+// beats that share an instant across branches share an x  -  "temporal
 // registration", which makes a split legible as one moment with two futures.
 
 import type { Branch, TimelineEvent } from '$lib/types';
@@ -194,7 +194,7 @@ export function makeBranchColor(branches: Branch[]) {
 
 /**
  * Elastic time-metric x positions with temporal registration: spacing grows
- * with the log of the real gap, and beats sharing an instant share an x —
+ * with the log of the real gap, and beats sharing an instant share an x  - 
  * unless they share a branch, where they still need their own room. Expects
  * events pre-sorted by chrono. Shared by the lanes and world-lines lenses.
  */

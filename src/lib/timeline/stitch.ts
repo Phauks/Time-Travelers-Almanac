@@ -39,7 +39,7 @@ export function stitchTimelines(parts: SagaPart[]): StitchedTimeline {
 				branchAt: local(b.branchAt),
 				erasedAt: local(b.erasedAt),
 				restoredAt: local(b.restoredAt),
-				label: `${short} · ${b.label}`
+				label: `${short} - ${b.label}`
 			});
 		}
 		for (const e of part.events) {

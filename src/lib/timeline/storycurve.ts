@@ -1,6 +1,6 @@
 // The story-curve lens: every beat plotted at (narrative order, chronological
 // rank). A linear telling draws a clean diagonal; flashbacks and time jumps
-// bend the curve — As Told and As Happened become one picture. After Kim et
+// bend the curve  -  As Told and As Happened become one picture. After Kim et
 // al.'s "Visualizing Nonlinear Narratives with Story Curves".
 
 import type { Branch, TimelineEvent } from '$lib/types';

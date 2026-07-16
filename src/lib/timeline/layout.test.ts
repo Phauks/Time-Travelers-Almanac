@@ -298,7 +298,7 @@ describe('saga stitching', () => {
 		const s = stitchTimelines([partI, partII]);
 		expect(s.events.map((e) => e.id)).toEqual(['s0:start', 's0:hook', 's1:landing', 's1:end']);
 		expect(s.branches.map((b) => b.id)).toEqual(['s0:prime', 's1:prime']);
-		expect(s.branches.map((b) => b.label)).toEqual(['I · Timeline 1', 'II · Timeline 1']);
+		expect(s.branches.map((b) => b.label)).toEqual(['I - Timeline 1', 'II - Timeline 1']);
 		expect(s.events[2].narrative).toBeGreaterThan(s.events[1].narrative);
 	});
 

@@ -187,7 +187,7 @@
 	}
 
 	// deep-linking: ?view=scope&beat=<id> mirrors the open state and selection.
-	// isOpen is explicit — call sites in teardown paths must not depend on
+	// isOpen is explicit  -  call sites in teardown paths must not depend on
 	// reading the bindable prop mid-transition.
 	function syncUrl(isOpen: boolean) {
 		if (typeof window === 'undefined') return;
@@ -202,13 +202,13 @@
 		try {
 			replaceState(url, {});
 		} catch {
-			// router not ready yet (first paint) — the plain API is fine here
+			// router not ready yet (first paint)  -  the plain API is fine here
 			history.replaceState(history.state, '', url);
 		}
 	}
 
 	// engine lifecycle: created when the overlay mounts its canvas. Selection
-	// and layout are read untracked here — this effect must only rerun when the
+	// and layout are read untracked here  -  this effect must only rerun when the
 	// overlay itself opens or closes, never on selection changes.
 	$effect(() => {
 		if (!open || !canvasEl) return;
@@ -289,10 +289,10 @@
 		style="--accent:{accent}"
 		role="dialog"
 		aria-modal="true"
-		aria-label="{title} — full-screen timeline"
+		aria-label="{title}  -  full-screen timeline"
 	>
 		<header class="bar">
-			<span class="ttl">{sagaOn && canSaga ? `${title} — full saga` : title}</span>
+			<span class="ttl">{sagaOn && canSaga ? `${title}  -  full saga` : title}</span>
 			<div class="acts">
 				{#if LENSES.length > 1}
 					<div class="toggle" role="group" aria-label="Lens">
@@ -345,7 +345,7 @@
 					bind:this={canvasEl}
 					aria-label="Timeline board. Drag to pan, scroll to zoom, click a beat to inspect it. Use the arrow keys to step through beats."
 				></canvas>
-				<span class="hint">drag to pan · scroll to zoom · click a beat · scrub the minimap</span>
+				<span class="hint">drag to pan, scroll to zoom, click a beat, scrub the minimap</span>
 				{#if showLegend}
 					<div class="legend" role="note" aria-label="Legend">
 						{#each scene.branches as b (b.id)}

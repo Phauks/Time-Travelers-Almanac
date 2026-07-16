@@ -1,6 +1,6 @@
 // The world-lines lens: each branch is a flowing line that shares its
 // parent's path until the moment history splits, then peels away to its own
-// level — the Endgame-style river view. The axis is always chronological
+// level  -  the Endgame-style river view. The axis is always chronological
 // (elastic, with temporal registration); the As Told / As Happened toggle
 // changes only the stepping/tour order, never the picture.
 

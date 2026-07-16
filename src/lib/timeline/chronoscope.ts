@@ -1,5 +1,5 @@
 // The Chronoscope: the Almanac's own Canvas 2D timeline engine.
-// Orchestration only — geometry lives in layout.ts, the viewpoint in
+// Orchestration only  -  geometry lives in layout.ts, the viewpoint in
 // camera.ts, and every draw pass in layers.ts. Static layers render into an
 // offscreen cache that is blitted during pans; dynamic layers (selection,
 // pulse, lane labels, minimap) draw live every frame. See docs/CHRONOSCOPE.md.
@@ -386,7 +386,7 @@ export class Chronoscope {
 	/** true while something is in motion and needs another frame */
 	private animating(): boolean {
 		if (this.cam.mode === 'fly' || this.cam.mode === 'spring') return true;
-		// a selected departure keeps its ribbon pulse alive — but only when the
+		// a selected departure keeps its ribbon pulse alive  -  but only when the
 		// active lens actually draws that ribbon (the story curve has none)
 		if (!this.reduced && this.selectedId) {
 			if (this.layout?.jumps.some((j) => j.from.e.id === this.selectedId)) return true;

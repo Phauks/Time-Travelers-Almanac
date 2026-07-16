@@ -91,6 +91,18 @@ export const MODE_META: Record<Mode, string> = {
 	precognition: 'Vision of fate'
 };
 
+/** one-line hover explanations for each travel mode */
+export const MODE_BLURB: Record<Mode, string> = {
+	contraption: 'A built machine does the travelling: a car, a booth, a chamber.',
+	anomaly: 'A natural rift or place where time misbehaves; nobody built it.',
+	relic: 'An object or rite with power over time: a watch, a book, a ritual.',
+	relativistic: 'Physics does it honestly: near-light speed or deep gravity wells.',
+	sleep: 'The traveller simply outsleeps the calendar and wakes in the future.',
+	mind: 'Only consciousness travels; the body stays where (and when) it was.',
+	inverted: 'Entropy runs backwards; the traveller moves against time itself.',
+	precognition: 'No body moves at all: the future arrives as visions of fate.'
+};
+
 export const LOOP_META: Record<Loop, string> = {
 	groundhog: 'Groundhog loop',
 	deathloop: 'Death loop',

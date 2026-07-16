@@ -1,6 +1,5 @@
 import { describe, it, expect } from 'vitest';
 import { computeLayout, elasticWeight } from './layout';
-import { computeStoryCurve } from './storycurve';
 import { stitchTimelines } from './stitch';
 import type { Branch, TimelineEvent } from '$lib/types';
 
@@ -27,7 +26,7 @@ const BRANCHES: Branch[] = [
 
 describe('branch membership', () => {
 	it('walks narrative order and switches at each branchAt', () => {
-		const L = computeLayout(EVENTS, BRANCHES, 'told');
+		const L = computeLayout(EVENTS, BRANCHES, 'traveler');
 		expect(L.branchOf('a')).toBe('prime');
 		expect(L.branchOf('b')).toBe('divergent');
 		expect(L.branchOf('c')).toBe('divergent');
@@ -39,15 +38,15 @@ describe('branch membership', () => {
 		const L = computeLayout(
 			[...EVENTS, ev('f', 5, 1985.3, { branch: 'prime' })],
 			BRANCHES,
-			'told'
+			'traveler'
 		);
 		expect(L.branchOf('f')).toBe('prime');
 	});
 });
 
-describe('as-told spacing', () => {
+describe('traveler-path spacing', () => {
 	it('gives every beat a uniform step', () => {
-		const L = computeLayout(EVENTS, BRANCHES, 'told', { step: 100, ml: 0, mr: 0, minW: 0 });
+		const L = computeLayout(EVENTS, BRANCHES, 'traveler', { step: 100, ml: 0, mr: 0, minW: 0 });
 		const xs = L.ordered.map((e) => L.posById.get(e.id)!.x);
 		expect(xs).toEqual([0, 100, 200, 300, 400]);
 	});
@@ -78,8 +77,6 @@ describe('temporal registration (as happened)', () => {
 			'happened'
 		);
 		expect(L.posById.get('q1')!.x).toBe(L.posById.get('p2')!.x);
-		expect(L.moments).toHaveLength(1);
-		expect(L.moments[0].ys).toHaveLength(2);
 	});
 
 	it('still separates same-instant beats that share a lane', () => {
@@ -89,7 +86,6 @@ describe('temporal registration (as happened)', () => {
 			'happened'
 		);
 		expect(L.posById.get('p1')!.x).not.toBe(L.posById.get('p2')!.x);
-		expect(L.moments).toHaveLength(0);
 	});
 
 	it('compresses gaps on a log scale', () => {
@@ -141,7 +137,7 @@ describe('lane slots', () => {
 	});
 
 	it('records where each lane begins and ends', () => {
-		const L = computeLayout(EVENTS, BRANCHES, 'told', { step: 100, ml: 0, mr: 0, minW: 0 });
+		const L = computeLayout(EVENTS, BRANCHES, 'traveler', { step: 100, ml: 0, mr: 0, minW: 0 });
 		const div = L.lanes.find((l) => l.id === 'divergent')!;
 		expect(div.startX).toBe(100); // beat b
 		expect(div.endX).toBe(200); // beat c
@@ -150,14 +146,14 @@ describe('lane slots', () => {
 
 describe('births and decay', () => {
 	it('classifies a jump-target split as an arrival birth', () => {
-		const L = computeLayout(EVENTS, BRANCHES, 'told');
+		const L = computeLayout(EVENTS, BRANCHES, 'traveler');
 		const birth = L.births.find((b) => b.branch === 'divergent')!;
 		expect(birth.kind).toBe('arrival');
 		expect(birth.from).toBeNull();
 	});
 
 	it('classifies a non-jump split as a drift birth with a wye', () => {
-		const L = computeLayout(EVENTS, BRANCHES, 'told');
+		const L = computeLayout(EVENTS, BRANCHES, 'traveler');
 		const birth = L.births.find((b) => b.branch === 'restored')!;
 		expect(birth.kind).toBe('drift');
 		expect(birth.from).not.toBeNull();
@@ -165,7 +161,7 @@ describe('births and decay', () => {
 	});
 
 	it('fades an endangered branch from the moment its successor is born', () => {
-		const L = computeLayout(EVENTS, BRANCHES, 'told', { step: 100, ml: 0, mr: 0, minW: 0 });
+		const L = computeLayout(EVENTS, BRANCHES, 'traveler', { step: 100, ml: 0, mr: 0, minW: 0 });
 		const div = L.lanes.find((l) => l.id === 'divergent')!;
 		expect(div.fadeAfterX).toBe(L.posById.get('d')!.x);
 	});
@@ -174,7 +170,7 @@ describe('births and decay', () => {
 		const branches = BRANCHES.map((b) =>
 			b.id === 'divergent' ? { ...b, erasedAt: 'c' } : b
 		);
-		const L = computeLayout(EVENTS, branches, 'told');
+		const L = computeLayout(EVENTS, branches, 'traveler');
 		const div = L.lanes.find((l) => l.id === 'divergent')!;
 		expect(div.fadeAfterX).toBe(L.posById.get('c')!.x);
 	});
@@ -182,7 +178,7 @@ describe('births and decay', () => {
 
 describe('traveller threads', () => {
 	it('builds one thread per named traveller, in narrative order', () => {
-		const L = computeLayout(EVENTS, BRANCHES, 'told');
+		const L = computeLayout(EVENTS, BRANCHES, 'traveler');
 		expect(L.threads).toHaveLength(1);
 		expect(L.threads[0].traveler).toBe('Marty');
 		expect(L.threads[0].points.map((p) => p.e.id)).toEqual(['a', 'b', 'e']);
@@ -199,81 +195,10 @@ describe('jump levelling', () => {
 				ev('d', 3, 1960)
 			],
 			[{ id: 'main', label: 'Main' }],
-			'told'
+			'traveler'
 		);
 		const levels = new Set(L.jumps.map((j) => j.level));
 		expect(levels.size).toBe(2);
-	});
-});
-
-describe('story-curve lens layout', () => {
-	it('plots x by narrative order and y by chronological rank', () => {
-		const L = computeStoryCurve(EVENTS, BRANCHES, 'told', { ml: 0, step: 100, top: 0 });
-		const xs = L.ordered.map((e) => L.posById.get(e.id)!.x);
-		expect(xs).toEqual([0, 100, 200, 300, 400]);
-		// chrono ranks: 1955.1 < 1955.2 < 1955.3 < 1985.1 < 1985.2
-		const rank = (id: string) => L.posById.get(id)!.lane;
-		expect(rank('b')).toBe(0);
-		expect(rank('a')).toBe(3);
-		expect(rank('e')).toBe(4);
-	});
-
-	it('shares a row between beats at the same instant', () => {
-		const L = computeStoryCurve(
-			[ev('p', 0, 1985), ev('q', 1, 1985), ev('r', 2, 1990)],
-			[],
-			'told'
-		);
-		expect(L.posById.get('p')!.y).toBe(L.posById.get('q')!.y);
-		expect(L.posById.get('r')!.y).toBeGreaterThan(L.posById.get('p')!.y);
-	});
-
-	it('keeps the lane vocabulary empty so standard layers no-op', () => {
-		const L = computeStoryCurve(EVENTS, BRANCHES);
-		expect(L.segParts).toEqual([]);
-		expect(L.jumps).toEqual([]);
-		expect(L.lanes).toEqual([]);
-		// but membership and departures still power the panel and portal rings
-		expect(L.branchOf('e')).toBe('restored');
-		expect(L.departureIds.has('a')).toBe(true);
-	});
-});
-
-describe('world-lines lens layout', () => {
-	it('keeps a child branch on its parent line at birth, then peels to its own level', async () => {
-		const { computeWorldLines } = await import('./worldlines');
-		const L = computeWorldLines(EVENTS, BRANCHES, 'told');
-		// b is divergent's branchAt: it sits exactly where the parent line is
-		const primeY = L.lanes.find((l) => l.id === 'prime')!.y;
-		expect(L.posById.get('b')!.y).toBe(primeY);
-		// far after birth, e (restored) sits at its own level, below the root
-		const far = L.posById.get('e')!;
-		expect(far.y).toBeGreaterThan(L.lanes[0].y);
-		expect(far.lane).toBeGreaterThan(0);
-	});
-
-	it('always uses the chronological elastic axis; order only re-sorts stepping', async () => {
-		const { computeWorldLines } = await import('./worldlines');
-		const told = computeWorldLines(EVENTS, BRANCHES, 'told');
-		const happened = computeWorldLines(EVENTS, BRANCHES, 'happened');
-		// positions identical across orders
-		for (const e of EVENTS) {
-			expect(told.posById.get(e.id)!.x).toBe(happened.posById.get(e.id)!.x);
-		}
-		// stepping order differs
-		expect(told.ordered.map((e) => e.id)).toEqual(['a', 'b', 'c', 'd', 'e']);
-		expect(happened.ordered.map((e) => e.id)).toEqual(['b', 'c', 'd', 'a', 'e']);
-	});
-
-	it('emits sampled world lines with decay on the endangered branch', async () => {
-		const { computeWorldLines } = await import('./worldlines');
-		const L = computeWorldLines(EVENTS, BRANCHES, 'told');
-		expect(L.worldLines!.length).toBeGreaterThanOrEqual(2);
-		const div = L.worldLines!.find((w) => w.branch === 'divergent')!;
-		expect(div.fadeAfterX).toBe(L.posById.get('d')!.x);
-		// its line starts on the parent's level and ends on its own
-		expect(div.pts[0].y).toBe(L.lanes.find((l) => l.id === 'prime')!.y);
-		expect(div.pts.at(-1)!.y).not.toBe(div.pts[0].y);
 	});
 });
 

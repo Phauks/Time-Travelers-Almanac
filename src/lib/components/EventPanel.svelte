@@ -1,12 +1,14 @@
 <script lang="ts">
 	import { Warning, CaretLeft, CaretRight, ArrowSquareOut } from 'phosphor-svelte';
 	import { base } from '$app/paths';
-	import { kindMeta, whenLabel } from '$lib/timeline/display';
+	import { kindMeta, whenLabel, STATUS_BLURB } from '$lib/timeline/display';
 	import type { TimelineEvent } from '$lib/types';
 
 	let {
 		selected,
 		branchLabel = undefined,
+		branchNote = undefined,
+		branchStatus = undefined,
 		branchColor,
 		selIndex,
 		total,
@@ -17,6 +19,10 @@
 		selected: TimelineEvent;
 		/** shown as a badge when the fiction names the timeline */
 		branchLabel?: string;
+		/** one line on what this branch is, shown on hover */
+		branchNote?: string;
+		/** the branch's fate (original / endangered / erased / restored) */
+		branchStatus?: string;
 		/** lane colour of the selected beat's branch */
 		branchColor: string;
 		selIndex: number;
@@ -79,10 +85,20 @@
 		</div>
 	</div>
 	<div class="badges">
-		<span class="badge" style="--c:{branchColor}">
+		<span class="badge tip-host" tabindex="0" style="--c:{branchColor}">
 			{#if M.icon}{@const Icon = M.icon}<Icon size={12} weight="fill" />{/if}{M.label}
+			<span class="tip" role="tooltip">{M.blurb}</span>
 		</span>
-		{#if branchLabel}<span class="badge branch">{branchLabel}</span>{/if}
+		{#if branchLabel}
+			<span class="badge branch tip-host" tabindex="0">
+				{branchLabel}
+				<span class="tip" role="tooltip">
+					{#if branchStatus}<b class="cap">{branchStatus}.</b> {STATUS_BLURB[branchStatus] ?? ''}{/if}
+					{#if branchNote}{branchNote}{/if}
+					{#if !branchStatus && !branchNote}One of this story's timelines.{/if}
+				</span>
+			</span>
+		{/if}
 		{#if selected.source}<span class="badge src">{selected.source}</span>{/if}
 	</div>
 </div>
@@ -209,6 +225,47 @@
 	}
 	.badge.branch {
 		--c: var(--color-muted);
+	}
+	/* hover explanations open DOWN and LEFT so they always stay on screen */
+	.tip-host {
+		position: relative;
+		cursor: help;
+	}
+	.tip-host .tip {
+		position: absolute;
+		top: calc(100% + 8px);
+		right: 0;
+		z-index: 40;
+		width: max-content;
+		max-width: min(240px, 60vw);
+		background: var(--color-panel);
+		border: 1px solid var(--color-line);
+		border-radius: 6px;
+		padding: 0.5rem 0.6rem;
+		font-family: var(--font-sans);
+		font-size: 0.78rem;
+		line-height: 1.45;
+		letter-spacing: normal;
+		text-transform: none;
+		color: color-mix(in srgb, var(--color-paper) 92%, var(--color-muted));
+		box-shadow: 0 10px 28px rgba(0, 0, 0, 0.35);
+		opacity: 0;
+		transform: translateY(-4px);
+		pointer-events: none;
+		transition:
+			opacity 0.15s,
+			transform 0.15s;
+	}
+	.tip-host:hover .tip,
+	.tip-host:focus-visible .tip {
+		opacity: 1;
+		transform: translateY(0);
+	}
+	.tip-host .tip b {
+		color: var(--color-paper);
+	}
+	.tip-host .tip .cap {
+		text-transform: capitalize;
 	}
 	.badge.src {
 		--c: var(--accent);

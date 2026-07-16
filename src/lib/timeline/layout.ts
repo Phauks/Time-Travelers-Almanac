@@ -2,14 +2,19 @@
 // canvas engine. One layout, two renderers: everything here is a function of
 // (events, branches, order) with no DOM and no Svelte state.
 //
-// As Told uses a uniform step per beat. As Happened uses an elastic
-// time-metric axis: spacing grows with the log of the real time gap, and
-// beats that share an instant across branches share an x  -  "temporal
-// registration", which makes a split legible as one moment with two futures.
+// The traveler's path uses a uniform step per beat (narrative order, the
+// order the traveller lives it). As Happened uses an elastic time-metric
+// axis: spacing grows with the log of the real time gap, and beats that
+// share an instant across branches share an x.
 
 import type { Branch, TimelineEvent } from '$lib/types';
 
-export type TimelineOrder = 'told' | 'happened';
+/**
+ * 'traveler' walks the beats in the order the time traveller lives them
+ * (the story's narrative order); 'happened' lays them on the elastic
+ * chronological axis with temporal registration.
+ */
+export type TimelineOrder = 'traveler' | 'happened';
 
 export interface LayoutOpts {
 	/** left margin before the first beat */
@@ -39,7 +44,6 @@ export interface SegPart {
 	x2: number;
 	y: number;
 	color: string;
-	dashed: boolean;
 	/** this stretch of history has been overwritten and is decaying */
 	fading: boolean;
 }
@@ -78,14 +82,6 @@ export interface Birth {
 	color: string;
 }
 
-/** one instant shared by beats on two or more lanes (As Happened only) */
-export interface Moment {
-	x: number;
-	chrono: number;
-	ys: number[];
-	label: string;
-}
-
 /** a traveller's path through their beats, in narrative order */
 export interface Thread {
 	traveler: string;
@@ -114,7 +110,6 @@ export interface TimelineLayout {
 	jumps: JumpArc[];
 	offJumps: OffJump[];
 	births: Birth[];
-	moments: Moment[];
 	threads: Thread[];
 	lanes: LaneInfo[];
 	departureIds: Set<string>;
@@ -123,18 +118,6 @@ export interface TimelineLayout {
 	branchOf: (eventId: string) => string;
 	W: number;
 	H: number;
-	/**
-	 * world-lines lens only: one sampled line per branch, sharing its parent's
-	 * path until the split then peeling away; drawn by the lens's extra layer
-	 */
-	worldLines?: WorldLine[];
-}
-
-export interface WorldLine {
-	branch: string;
-	color: string;
-	pts: { x: number; y: number }[];
-	fadeAfterX: number | null;
 }
 
 /** branch status → lane colour (the violet fallback marks unknown branches) */
@@ -148,8 +131,6 @@ export const STATUS_COLORS: Record<string, string> = {
 const FALLBACK_BRANCH_COLOR = '#b57cff';
 
 const DEFAULTS: Required<LayoutOpts> = { ml: 104, mr: 56, top: 98, gap: 86, step: 150, minW: 680 };
-
-const bigGap = (a: number, b: number) => a > 1000 && b > 1000 && Math.abs(a - b) >= 2;
 
 /** two chrono values that count as the same instant */
 const sameMoment = (a: number, b: number) => Math.abs(a - b) < 1e-6;
@@ -196,7 +177,7 @@ export function makeBranchColor(branches: Branch[]) {
  * Elastic time-metric x positions with temporal registration: spacing grows
  * with the log of the real gap, and beats sharing an instant share an x  - 
  * unless they share a branch, where they still need their own room. Expects
- * events pre-sorted by chrono. Shared by the lanes and world-lines lenses.
+ * events pre-sorted by chrono.
  */
 export function elasticXPositions(
 	byChrono: TimelineEvent[],
@@ -243,28 +224,6 @@ export function levelJumps(pos: BeatPos[], posById: Map<string, BeatPos>): JumpA
 		(levels[lvl] ||= []).push({ x1: j.x1, x2: j.x2 });
 		return { from: j.from, to: j.to, back: j.back, level: lvl };
 	});
-}
-
-/** registered moments: one instant touching two or more rows */
-export function registeredMoments(pos: BeatPos[]): Moment[] {
-	const moments: Moment[] = [];
-	const byX = new Map<number, BeatPos[]>();
-	for (const p of pos) {
-		const k = Math.round(p.x * 100) / 100;
-		(byX.get(k) ?? byX.set(k, []).get(k)!).push(p);
-	}
-	for (const [x, ps] of byX) {
-		const lanesHit = new Set(ps.map((p) => p.lane));
-		if (lanesHit.size >= 2 && ps.every((p) => sameMoment(p.e.chrono, ps[0].e.chrono))) {
-			moments.push({
-				x,
-				chrono: ps[0].e.chrono,
-				ys: [...ps.map((p) => p.y)].sort((a, z) => a - z),
-				label: ps[0].e.chronoStartLabel ?? ''
-			});
-		}
-	}
-	return moments;
 }
 
 /** jumps whose other end is off this timeline (another era or work) */
@@ -321,7 +280,7 @@ export function buildThreads(
 export function computeLayout(
 	events: TimelineEvent[],
 	branches: Branch[] = [],
-	order: TimelineOrder = 'told',
+	order: TimelineOrder = 'traveler',
 	opts: LayoutOpts = {}
 ): TimelineLayout {
 	const { ml, mr, top, gap, step, minW } = { ...DEFAULTS, ...opts };
@@ -333,11 +292,11 @@ export function computeLayout(
 
 	// ---- x positions ----
 	const ordered =
-		order === 'told'
+		order === 'traveler'
 			? [...events].sort((a, b) => a.narrative - b.narrative)
 			: [...events].sort((a, b) => a.chrono - b.chrono || a.narrative - b.narrative);
 	const xOf =
-		order === 'told' || ordered.length === 0
+		order === 'traveler' || ordered.length === 0
 			? new Map(ordered.map((e, i) => [e.id, ml + i * step]))
 			: elasticXPositions(ordered, branchOf, ml, step);
 	const lastX = Math.max(ml, ...ordered.map((e) => xOf.get(e.id)!));
@@ -395,7 +354,7 @@ export function computeLayout(
 		status: b.status
 	}));
 
-	// ---- base line per adjacent same-branch pair; dashed across a big time gap ----
+	// ---- base line per adjacent same-branch pair ----
 	const segParts: SegPart[] = [];
 	for (const b of branches) {
 		const ps = pos.filter((p) => p.branch === b.id).sort((a, z) => a.x - z.x);
@@ -409,7 +368,6 @@ export function computeLayout(
 				x2: z.x,
 				y: laneY(b.id),
 				color: branchColor(b.id),
-				dashed: bigGap(a.e.chrono, z.e.chrono),
 				fading: fadeX != null && a.x >= fadeX
 			});
 		}
@@ -445,9 +403,6 @@ export function computeLayout(
 		}
 	}
 
-	// registered moments only mean something on the time-metric axis
-	const moments: Moment[] = order === 'happened' ? registeredMoments(pos) : [];
-
 	const threads = buildThreads(events, byNarr, posById);
 	const jumps = levelJumps(pos, posById);
 	const offJumps = computeOffJumps(pos);
@@ -464,7 +419,6 @@ export function computeLayout(
 		jumps,
 		offJumps,
 		births,
-		moments,
 		threads,
 		lanes,
 		departureIds,

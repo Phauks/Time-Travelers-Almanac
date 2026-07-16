@@ -36,8 +36,6 @@ export interface Frame {
 	selectedId: string | null;
 	hoverId: string | null;
 	showThreads: boolean;
-	/** world-space offset of the floating event card from the selected beat */
-	cardOffset: { x: number; y: number } | null;
 	image: (src: string) => HTMLImageElement | null;
 	/** a world size in screen px, clamped for legibility */
 	px: (v: number, min: number, max?: number) => number;
@@ -59,67 +57,55 @@ const THREAD_COLORS = ['#35d6a4', '#ff8ad0', '#7cc4ff', '#ffd166'];
 // ---------------------------------------------------------------- geometry
 
 /**
- * A comet ribbon: the whole jump is one filled shape that swells from the
- * departure, thins, and flares into a barbed head at the arrival.
+ * A jump arrow: a slim constant-width arc with a compact filled head at the
+ * arrival. Width never balloons with distance, so long jumps stay graceful
+ * and never smother the lanes beneath them.
  */
-export function ribbon(
+export function jumpArrow(
 	ctx: CanvasRenderingContext2D,
 	from: { x: number; y: number },
 	to: { x: number; y: number },
 	apexY: number,
 	color: string,
 	alpha: number,
-	base: number,
-	glow = 8
+	width: number,
+	glow = 4
 ): { x: number; y: number } {
 	const cx = (from.x + to.x) / 2;
-	const N = 44;
-	const pts: { x: number; y: number; t: number }[] = [];
-	for (let i = 0; i <= N; i++) {
-		const t = i / N;
-		const u = 1 - t;
-		pts.push({
-			x: u * u * from.x + 2 * u * t * cx + t * t * to.x,
-			y: u * u * from.y + 2 * u * t * apexY + t * t * to.y,
-			t
-		});
-	}
-	const w = (t: number) =>
-		t < 0.86
-			? base * (0.28 + 0.9 * Math.sin(Math.PI * (t / 0.86)) ** 0.7)
-			: base * 2.6 * (1 - (t - 0.86) / 0.14);
-	const L: { x: number; y: number }[] = [];
-	const R: { x: number; y: number }[] = [];
-	for (let i = 0; i <= N; i++) {
-		const p = pts[i];
-		const q = pts[Math.min(i + 1, N)];
-		const r = pts[Math.max(i - 1, 0)];
-		let nx = -(q.y - r.y);
-		let ny = q.x - r.x;
-		const len = Math.hypot(nx, ny) || 1;
-		nx /= len;
-		ny /= len;
-		const hw = w(p.t) / 2;
-		L.push({ x: p.x + nx * hw, y: p.y + ny * hw });
-		R.push({ x: p.x - nx * hw, y: p.y - ny * hw });
-	}
-	ctx.beginPath();
-	ctx.moveTo(L[0].x, L[0].y);
-	for (const p of L) ctx.lineTo(p.x, p.y);
-	for (let i = N; i >= 0; i--) ctx.lineTo(R[i].x, R[i].y);
-	ctx.closePath();
 	ctx.save();
+	ctx.strokeStyle = color;
+	ctx.globalAlpha = alpha;
+	ctx.lineWidth = width;
+	ctx.lineCap = 'round';
 	ctx.shadowColor = color;
 	ctx.shadowBlur = glow;
+	ctx.beginPath();
+	ctx.moveTo(from.x, from.y);
+	ctx.quadraticCurveTo(cx, apexY, to.x, to.y);
+	ctx.stroke();
+
+	// head aligned to the end tangent (quadratic derivative at t=1)
+	const dx = to.x - cx;
+	const dy = to.y - apexY;
+	const len = Math.hypot(dx, dy) || 1;
+	const ux = dx / len;
+	const uy = dy / len;
+	const h = Math.max(7, width * 3.6);
+	const w = h * 0.42;
 	ctx.fillStyle = color;
-	ctx.globalAlpha = alpha;
+	ctx.beginPath();
+	ctx.moveTo(to.x, to.y);
+	ctx.lineTo(to.x - ux * h - uy * w, to.y - uy * h + ux * w);
+	ctx.lineTo(to.x - ux * h + uy * w, to.y - uy * h - ux * w);
+	ctx.closePath();
 	ctx.fill();
 	ctx.restore();
-	return pts[Math.floor(N / 2)];
+	// the arc's midpoint (t = 0.5), where the label sits
+	return { x: (from.x + 2 * cx + to.x) / 4, y: (from.y + 2 * apexY + to.y) / 4 };
 }
 
-/** a point along the same quadratic the ribbon follows */
-export function ribbonPoint(
+/** a point along the same quadratic the arrow follows */
+export function arcPoint(
 	from: { x: number; y: number },
 	to: { x: number; y: number },
 	apexY: number,
@@ -139,43 +125,6 @@ const offJumpCap = (f: Frame, o: { p: { x: number; y: number }; out: boolean }) 
 });
 
 // ------------------------------------------------------------ static layers
-
-/** registered moments: one instant crossing several lanes (As Happened) */
-const momentsLayer: Layer = {
-	id: 'moments',
-	draw(f) {
-		const { ctx, theme } = f;
-		for (const m of f.layout.moments) {
-			const x = f.sx(m.x);
-			if (x < -20 || x > f.vw + 20) continue;
-			const y0 = f.sy(m.ys[0]) - f.px(26, 14, 40);
-			const y1 = f.sy(m.ys[m.ys.length - 1]) + f.px(26, 14, 40);
-			ctx.strokeStyle = theme.muted;
-			ctx.globalAlpha = 0.4;
-			ctx.lineWidth = 1;
-			ctx.setLineDash([2, 4]);
-			ctx.beginPath();
-			ctx.moveTo(x, y0);
-			ctx.lineTo(x, y1);
-			ctx.stroke();
-			ctx.setLineDash([]);
-			// a small diamond where the instant touches each lane
-			ctx.fillStyle = theme.muted;
-			for (const wy of m.ys) {
-				const y = f.sy(wy);
-				const r = f.px(3, 2, 4.5);
-				ctx.beginPath();
-				ctx.moveTo(x, y - r);
-				ctx.lineTo(x + r, y);
-				ctx.lineTo(x, y + r);
-				ctx.lineTo(x - r, y);
-				ctx.closePath();
-				ctx.fill();
-			}
-			ctx.globalAlpha = 1;
-		}
-	}
-};
 
 /** lane base lines; overwritten stretches decay into fading dashes */
 const lanesLayer: Layer = {
@@ -199,14 +148,13 @@ const lanesLayer: Layer = {
 			} else {
 				ctx.strokeStyle = g.color;
 				ctx.globalAlpha = 0.92;
-				ctx.setLineDash(g.dashed ? [f.px(6, 3), f.px(7, 3.5)] : []);
 			}
 			ctx.beginPath();
 			ctx.moveTo(x1, y);
 			ctx.lineTo(x2, y);
 			ctx.stroke();
+			ctx.setLineDash([]);
 		}
-		ctx.setLineDash([]);
 		ctx.globalAlpha = 1;
 	}
 };
@@ -278,26 +226,27 @@ const birthsLayer: Layer = {
 	}
 };
 
-/** jump ribbons with their labels, plus off-timeline stubs */
-const ribbonsLayer: Layer = {
-	id: 'ribbons',
+/** jump arrows with their labels, plus off-timeline stubs */
+const jumpsLayer: Layer = {
+	id: 'jumps',
 	draw(f) {
 		const { ctx, theme } = f;
 		ctx.textAlign = 'center';
+		const width = f.px(2.2, 1.5, 3.2);
 		for (const j of f.layout.jumps) {
 			const xa = f.sx(j.from.x);
 			const xb = f.sx(j.to.x);
 			if (Math.max(xa, xb) < -40 || Math.min(xa, xb) > f.vw + 40) continue;
 			const color = j.back ? theme.jumpBack : theme.jump;
 			const apexY = f.sy(Math.min(j.from.y, j.to.y) - arcLift(j.level));
-			const mid = ribbon(
+			const mid = jumpArrow(
 				ctx,
 				{ x: xa, y: f.sy(j.from.y) },
 				{ x: xb, y: f.sy(j.to.y) },
 				apexY,
 				color,
 				0.9,
-				f.px(5, 2.6, 9)
+				width
 			);
 			if (f.tiers.dateA > 0.03) {
 				ctx.globalAlpha = f.tiers.dateA;
@@ -306,7 +255,7 @@ const ribbonsLayer: Layer = {
 				ctx.fillText(
 					`${j.back ? '◀' : '▶'} ${jumpText(j.from.e.chrono, j.to.e.chrono)}`,
 					mid.x,
-					apexY - f.px(6, 4, 9)
+					mid.y - f.px(8, 5, 12)
 				);
 				ctx.globalAlpha = 1;
 			}
@@ -318,8 +267,8 @@ const ribbonsLayer: Layer = {
 			const color = o.back ? theme.jumpBack : theme.jump;
 			const cap = offJumpCap(f, o);
 			const apexY = Math.min(ny, cap.y) - f.px(14, 6, 24);
-			if (o.out) ribbon(ctx, { x: nx, y: ny }, cap, apexY, color, 0.9, f.px(4, 2.2, 7));
-			else ribbon(ctx, cap, { x: nx, y: ny }, apexY, color, 0.9, f.px(4, 2.2, 7));
+			if (o.out) jumpArrow(ctx, { x: nx, y: ny }, cap, apexY, color, 0.9, width);
+			else jumpArrow(ctx, cap, { x: nx, y: ny }, apexY, color, 0.9, width);
 			if (f.tiers.dateA > 0.03) {
 				ctx.globalAlpha = f.tiers.dateA;
 				ctx.fillStyle = color;
@@ -364,7 +313,11 @@ const threadsLayer: Layer = {
 				ctx.fillStyle = color;
 				ctx.font = `${f.px(9, 8, 12)}px ${theme.monoFont}`;
 				ctx.textAlign = 'left';
-				ctx.fillText(t.traveler, f.sx(t.points[0].x) + f.px(8, 5), f.sy(t.points[0].y) - lift - f.px(4, 3));
+				ctx.fillText(
+					t.traveler,
+					f.sx(t.points[0].x) + f.px(8, 5),
+					f.sy(t.points[0].y) - lift - f.px(4, 3)
+				);
 				ctx.textAlign = 'center';
 			}
 			ctx.globalAlpha = 1;
@@ -372,7 +325,7 @@ const threadsLayer: Layer = {
 	}
 };
 
-/** the beats: nodes, origin flags, portal rings, paradox marks, dates, titles, thumbnails */
+/** the beats: nodes, origin flags, portal rings, paradox marks, dates, titles */
 const beatsLayer: Layer = {
 	id: 'beats',
 	draw(f) {
@@ -474,8 +427,8 @@ const beatsLayer: Layer = {
 };
 
 /**
- * Beat thumbnails in their own pass, above every other static layer, so a
- * ribbon or a neighbouring node can never draw across a photo at close zoom.
+ * Beat thumbnails in their own pass, above every other static layer, so an
+ * arrow or a neighbouring node can never draw across a photo at close zoom.
  */
 const thumbsLayer: Layer = {
 	id: 'thumbs',
@@ -542,12 +495,13 @@ const laneLabelsLayer: Layer = {
 	}
 };
 
-/** selection ring, re-glowed ribbon, the travelling pulse, and hover-pair glow */
+/** selection ring, re-glowed arrow, the travelling pulse, and hover-pair glow */
 const selectionLayer: Layer = {
 	id: 'selection',
 	dynamic: true,
 	draw(f) {
 		const { ctx, theme, layout: L } = f;
+		const width = f.px(2.2, 1.5, 3.2);
 
 		// hovering a jump endpoint lights up BOTH ends of the travel together
 		if (f.hoverId && f.hoverId !== f.selectedId) {
@@ -563,23 +517,21 @@ const selectionLayer: Layer = {
 					ctx.globalAlpha = 1;
 				};
 				ring(h.x, h.y, L.branchColor(h.branch), 0.55);
-				const j = L.jumps.find(
-					(jj) => jj.from.e.id === f.hoverId || jj.to.e.id === f.hoverId
-				);
+				const j = L.jumps.find((jj) => jj.from.e.id === f.hoverId || jj.to.e.id === f.hoverId);
 				if (j) {
 					const other = j.from.e.id === f.hoverId ? j.to : j.from;
 					const color = j.back ? theme.jumpBack : theme.jump;
 					ring(other.x, other.y, color, 0.7);
 					const apexY = f.sy(Math.min(j.from.y, j.to.y) - arcLift(j.level));
-					ribbon(
+					jumpArrow(
 						ctx,
 						{ x: f.sx(j.from.x), y: f.sy(j.from.y) },
 						{ x: f.sx(j.to.x), y: f.sy(j.to.y) },
 						apexY,
 						color,
 						1,
-						f.px(5, 2.6, 9),
-						16
+						width,
+						9
 					);
 				}
 			}
@@ -591,22 +543,6 @@ const selectionLayer: Layer = {
 		const x = f.sx(p.x);
 		const y = f.sy(p.y);
 		const r = f.px(8, 4.5, 13);
-
-		// leader from the beat to its floating event card
-		if (f.cardOffset) {
-			const ax = f.sx(p.x + f.cardOffset.x);
-			const ay = f.sy(p.y + f.cardOffset.y);
-			ctx.strokeStyle = L.branchColor(p.branch);
-			ctx.globalAlpha = 0.55;
-			ctx.lineWidth = 1.2;
-			ctx.setLineDash([3, 4]);
-			ctx.beginPath();
-			ctx.moveTo(x, y);
-			ctx.lineTo(ax, ay);
-			ctx.stroke();
-			ctx.setLineDash([]);
-			ctx.globalAlpha = 1;
-		}
 
 		// the selected node, re-drawn larger with its ring
 		ctx.beginPath();
@@ -622,21 +558,21 @@ const selectionLayer: Layer = {
 		ctx.lineWidth = 1.2;
 		ctx.stroke();
 
-		// its outgoing ribbon glows brighter and carries the pulse
+		// its outgoing arrow glows brighter and carries the pulse
 		const j = L.jumps.find((jj) => jj.from.e.id === f.selectedId);
 		if (j) {
 			const color = j.back ? theme.jumpBack : theme.jump;
 			const from = { x: f.sx(j.from.x), y: f.sy(j.from.y) };
 			const to = { x: f.sx(j.to.x), y: f.sy(j.to.y) };
 			const apexY = f.sy(Math.min(j.from.y, j.to.y) - arcLift(j.level));
-			ribbon(ctx, from, to, apexY, color, 1, f.px(5, 2.6, 9), 14);
-			const t = ((f.now % 1600) + 1600) % 1600 / 1600;
-			const sp = ribbonPoint(from, to, apexY, t);
+			jumpArrow(ctx, from, to, apexY, color, 1, width, 8);
+			const t = (((f.now % 1600) + 1600) % 1600) / 1600;
+			const sp = arcPoint(from, to, apexY, t);
 			ctx.save();
 			ctx.shadowColor = color;
-			ctx.shadowBlur = 14;
+			ctx.shadowBlur = 12;
 			ctx.beginPath();
-			ctx.arc(sp.x, sp.y, 3.2, 0, 7);
+			ctx.arc(sp.x, sp.y, 3, 0, 7);
 			ctx.fillStyle = theme.paper;
 			ctx.fill();
 			ctx.restore();
@@ -744,11 +680,10 @@ export function drawMinimapViewport(
 }
 
 export const STATIC_LAYERS: Layer[] = [
-	momentsLayer,
 	lanesLayer,
 	splintersLayer,
 	birthsLayer,
-	ribbonsLayer,
+	jumpsLayer,
 	threadsLayer,
 	beatsLayer,
 	thumbsLayer

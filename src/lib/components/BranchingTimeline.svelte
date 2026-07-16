@@ -36,7 +36,7 @@
 		saga?: SagaPart[];
 	} = $props();
 
-	let order = $state<'told' | 'happened'>('told');
+	let order = $state<'traveler' | 'happened'>('traveler');
 	let showLegend = $state(false);
 	let scopeOpen = $state(false);
 
@@ -85,7 +85,7 @@
 		</span>
 		<div class="tlx-head-actions">
 			<div class="toggle" role="group" aria-label="Timeline ordering">
-				<button class:on={order === 'told'} aria-pressed={order === 'told'} onclick={() => (order = 'told')}>As Told</button>
+				<button class:on={order === 'traveler'} aria-pressed={order === 'traveler'} onclick={() => (order = 'traveler')}>Traveler's Path</button>
 				<button class:on={order === 'happened'} aria-pressed={order === 'happened'} onclick={() => (order = 'happened')}>As Happened</button>
 			</div>
 			<button class="legend-btn" class:on={showLegend} aria-pressed={showLegend} onclick={() => (showLegend = !showLegend)}>
@@ -138,7 +138,7 @@
 					stroke={s.color}
 					stroke-width="2.5"
 					stroke-linecap="round"
-					stroke-dasharray={s.fading ? '3 8' : s.dashed ? '6 7' : '0'}
+					stroke-dasharray={s.fading ? '3 8' : '0'}
 					opacity={s.fading ? 0.35 : 0.92}
 				/>
 			{/each}
@@ -162,7 +162,6 @@
 					d="M {j.from.x} {j.from.y} C {j.from.x} {apex}, {j.to.x} {apex}, {j.to.x} {j.to.y}"
 					fill="none"
 					stroke-width="2"
-					stroke-dasharray="7 6"
 					marker-end="url(#jarrow)"
 					opacity="0.95"
 				/>
@@ -181,7 +180,6 @@
 						: `M ${capX} ${capY} C ${capX} ${capY + 8}, ${o.p.x} ${capY}, ${o.p.x} ${o.p.y}`}
 					fill="none"
 					stroke-width="2"
-					stroke-dasharray="7 6"
 					marker-end="url(#jarrow)"
 					opacity="0.95"
 				/>
@@ -235,6 +233,8 @@
 		<EventPanel
 			{selected}
 			branchLabel={b?.label}
+			branchNote={b?.note}
+			branchStatus={b?.status}
 			branchColor={L.branchColor(L.branchOf(selected.id))}
 			selIndex={selIndex < 0 ? 0 : selIndex}
 			total={L.ordered.length}
@@ -505,7 +505,7 @@
 	.lg .line {
 		width: 20px;
 		height: 0;
-		border-top: 2px dashed var(--color-jump);
+		border-top: 2px solid var(--color-jump);
 	}
 	.lg .line.fwd {
 		border-top-color: var(--color-jump);

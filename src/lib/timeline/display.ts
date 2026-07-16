@@ -11,13 +11,25 @@ import {
 } from 'phosphor-svelte';
 import type { EventKind, TimelineEvent } from '$lib/types';
 
-export const KIND_META: Record<EventKind, { label: string; icon: unknown | null }> = {
-	origin: { label: 'Origin', icon: Flag },
-	departure: { label: 'Time jump', icon: Lightning },
-	arrival: { label: 'Arrival', icon: MapPin },
-	return: { label: 'Return', icon: ArrowUUpLeft },
-	loop: { label: 'Loop', icon: ArrowsClockwise },
-	event: { label: 'Event', icon: DotOutline }
+export const KIND_META: Record<
+	EventKind,
+	{ label: string; icon: unknown | null; blurb: string }
+> = {
+	origin: { label: 'Origin', icon: Flag, blurb: "The story's starting point in time." },
+	departure: { label: 'Time jump', icon: Lightning, blurb: 'A time machine fires here; the traveller leaves this moment.' },
+	arrival: { label: 'Arrival', icon: MapPin, blurb: 'A traveller lands here from another time.' },
+	return: { label: 'Return', icon: ArrowUUpLeft, blurb: 'The traveller comes back to their home era.' },
+	loop: { label: 'Loop', icon: ArrowsClockwise, blurb: 'A repeat or reset; this moment happens more than once.' },
+	event: { label: 'Event', icon: DotOutline, blurb: 'An ordinary beat of the story; no travel here.' }
+};
+
+/** one-line meaning of each branch status, for hovers */
+export const STATUS_BLURB: Record<string, string> = {
+	original: 'The unaltered history, as it stood before any meddling.',
+	active: 'A live timeline; events here are still in play.',
+	endangered: 'This history is being overwritten; it is fading from existence.',
+	erased: 'Overwritten history; this timeline no longer exists.',
+	restored: 'A repaired line; history set right (or close to it) again.'
 };
 
 export const kindMeta = (e: TimelineEvent) => KIND_META[e.kind ?? 'event'];

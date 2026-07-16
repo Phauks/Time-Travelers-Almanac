@@ -1,10 +1,10 @@
 <script lang="ts">
 	import { untrack } from 'svelte';
 	import { replaceState } from '$app/navigation';
-	import { X, Play, Pause, CornersOut, Path, FilmSlate, Info } from 'phosphor-svelte';
+	import { X, CornersOut, Path, FilmSlate } from 'phosphor-svelte';
 	import EventPanel from './EventPanel.svelte';
 	import { Chronoscope, type ChronoTheme } from '$lib/timeline/chronoscope';
-	import { LENSES, lanesLens } from '$lib/timeline/lens';
+	import { computeLayout } from '$lib/timeline/layout';
 	import { stitchTimelines, type SagaPart } from '$lib/timeline/stitch';
 	import type { Branch, TimelineEvent } from '$lib/types';
 
@@ -32,20 +32,16 @@
 		saga?: SagaPart[];
 	} = $props();
 
-	let order = $state<'told' | 'happened'>('told');
-	let lens = $state.raw(lanesLens);
+	let order = $state<'traveler' | 'happened'>('traveler');
 	let sagaOn = $state(false);
-	let showThreads = $state(true);
-	let tourTraveler = $state('all');
+	let showThreads = $state(false);
 
 	const canSaga = $derived(saga.length > 1);
-	// the scene under the lens: this one story, or the whole stitched saga
-	let scene = $derived(
-		sagaOn && canSaga ? stitchTimelines(saga) : { events, branches }
-	);
+	// the scene on the board: this one story, or the whole stitched saga
+	let scene = $derived(sagaOn && canSaga ? stitchTimelines(saga) : { events, branches });
 	// roomier spacing than the in-card board: the full screen can afford it
 	let layout = $derived(
-		lens.compute(scene.events, scene.branches, order, {
+		computeLayout(scene.events, scene.branches, order, {
 			step: 210,
 			gap: 130,
 			top: 120,
@@ -57,47 +53,15 @@
 	let selectedId = $state('');
 	let selected = $derived(scene.events.find((e) => e.id === selectedId));
 	let selIndex = $derived(layout.ordered.findIndex((e) => e.id === selectedId));
+	let selectedBranch = $derived(
+		selected ? scene.branches.find((br) => br.id === layout.branchOf(selected.id)) : undefined
+	);
 
 	let rootEl = $state<HTMLElement | null>(null);
 	let canvasEl = $state<HTMLCanvasElement | null>(null);
 	// $state.raw so the scene effect re-runs once the engine exists; the class
 	// instance itself must not be proxied
 	let engine = $state.raw<Chronoscope | null>(null);
-
-	let touring = $state(false);
-	let showLegend = $state(false);
-	let tourTimer: ReturnType<typeof setTimeout> | undefined;
-
-	// ---- the floating event card: anchored to the selected beat by a
-	// world-space offset, so it rides the camera and can be dragged anywhere
-	let floatEl = $state<HTMLDivElement | null>(null);
-	const cardOffset = { x: 70, y: -150 };
-	let draggingCard = false;
-	let dragPrev = { x: 0, y: 0 };
-
-	function positionCard() {
-		if (!floatEl || !engine || !selectedId) return;
-		const p = layout.posById.get(selectedId);
-		if (!p) return;
-		const pt = engine.worldToScreen(p.x + cardOffset.x, p.y + cardOffset.y);
-		floatEl.style.transform = `translate(${Math.round(pt.x)}px, ${Math.round(pt.y)}px)`;
-	}
-
-	function cardDragStart(e: PointerEvent) {
-		draggingCard = true;
-		dragPrev = { x: e.clientX, y: e.clientY };
-		(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
-	}
-	function cardDragMove(e: PointerEvent) {
-		if (!draggingCard || !engine) return;
-		cardOffset.x += (e.clientX - dragPrev.x) / engine.cam.s;
-		cardOffset.y += (e.clientY - dragPrev.y) / engine.cam.s;
-		dragPrev = { x: e.clientX, y: e.clientY };
-		engine.setCardOffset(cardOffset); // redraw → leader + card follow
-	}
-	function cardDragEnd() {
-		draggingCard = false;
-	}
 
 	function readTheme(el: HTMLElement): ChronoTheme {
 		const cs = getComputedStyle(el);
@@ -126,55 +90,7 @@
 		if (i >= 0 && i < layout.ordered.length) select(layout.ordered[i].id, true);
 	}
 
-	// the tour walks either every beat, or one traveller's beats only
-	let tourList = $derived(
-		tourTraveler === 'all'
-			? layout.ordered
-			: layout.ordered.filter((e) => e.traveler === tourTraveler)
-	);
-
-	function stopTour() {
-		touring = false;
-		clearTimeout(tourTimer);
-	}
-
-	// the tour paces itself by distance: a 70-year sweep takes visibly longer
-	// to fly than a same-night hop, and the dwell starts when the flight lands
-	const TOUR_DWELL = 2100;
-	function flightFor(fromId: string, toId: string): number {
-		const dist = engine?.beatDistance(fromId, toId) ?? 400;
-		return Math.min(1400, Math.max(450, dist * 0.9));
-	}
-
-	function tourStep() {
-		const i = tourList.findIndex((e) => e.id === selectedId);
-		if (i >= tourList.length - 1) {
-			stopTour();
-			return;
-		}
-		const nextId = tourList[i + 1].id;
-		const flight = flightFor(selectedId, nextId);
-		selectedId = nextId;
-		engine?.setSelected(nextId);
-		engine?.flyToBeat(nextId, flight);
-		syncUrl(open);
-		tourTimer = setTimeout(tourStep, flight + TOUR_DWELL);
-	}
-
-	function toggleTour() {
-		if (touring) {
-			stopTour();
-			return;
-		}
-		if (!tourList.length) return;
-		touring = true;
-		const at = tourList.findIndex((e) => e.id === selectedId);
-		select(tourList[at >= 0 && at < tourList.length - 1 ? at : 0].id, true);
-		tourTimer = setTimeout(tourStep, 650 + TOUR_DWELL);
-	}
-
 	function close() {
-		stopTour();
 		open = false;
 		syncUrl(false);
 	}
@@ -202,22 +118,19 @@
 		try {
 			replaceState(url, {});
 		} catch {
-			// router not ready yet (first paint)  -  the plain API is fine here
+			// router not ready yet (first paint); the plain API is fine here
 			history.replaceState(history.state, '', url);
 		}
 	}
 
 	// engine lifecycle: created when the overlay mounts its canvas. Selection
-	// and layout are read untracked here  -  this effect must only rerun when the
-	// overlay itself opens or closes, never on selection changes.
+	// and layout are read untracked here  -  this effect must only rerun when
+	// the overlay itself opens or closes, never on selection changes.
 	$effect(() => {
 		if (!open || !canvasEl) return;
 		const eng = new Chronoscope(canvasEl, {
-			onSelect: (id) => select(id),
-			onUserInteract: stopTour,
-			onFrame: positionCard
+			onSelect: (id) => select(id)
 		});
-		eng.setCardOffset(cardOffset);
 		untrack(() => {
 			const L = layout;
 			selectedId =
@@ -236,8 +149,8 @@
 		};
 	});
 
-	// keep the scene fresh when ordering, lens, or saga mode changes; selection
-	// that no longer exists in the new scene falls back to the first beat
+	// keep the scene fresh when ordering or saga mode changes; selection that
+	// no longer exists in the new scene falls back to the first beat
 	$effect(() => {
 		if (!engine || !rootEl) return;
 		engine.setScene(layout, readTheme(rootEl));
@@ -251,11 +164,6 @@
 	// threads toggle without a full scene rebuild
 	$effect(() => {
 		engine?.setShowThreads(showThreads && layout.threads.length > 0);
-	});
-
-	// the active lens supplies its own render passes (e.g. the story curve)
-	$effect(() => {
-		engine?.setExtraLayers(lens.extraLayers ?? []);
 	});
 
 	// the engine paints with resolved token values, so a theme flip while the
@@ -289,21 +197,22 @@
 		style="--accent:{accent}"
 		role="dialog"
 		aria-modal="true"
-		aria-label="{title}  -  full-screen timeline"
+		aria-label="{title}: full-screen timeline"
 	>
 		<header class="bar">
-			<span class="ttl">{sagaOn && canSaga ? `${title}  -  full saga` : title}</span>
+			<span class="ttl">{sagaOn && canSaga ? `${title}: the full saga` : title}</span>
 			<div class="acts">
-				{#if LENSES.length > 1}
-					<div class="toggle" role="group" aria-label="Lens">
-						{#each LENSES as l (l.id)}
-							<button class:on={lens.id === l.id} onclick={() => (lens = l)}>{l.label}</button>
-						{/each}
-					</div>
-				{/if}
 				<div class="toggle" role="group" aria-label="Timeline ordering">
-					<button class:on={order === 'told'} aria-pressed={order === 'told'} onclick={() => (order = 'told')}>As Told</button>
-					<button class:on={order === 'happened'} aria-pressed={order === 'happened'} onclick={() => (order = 'happened')}>As Happened</button>
+					<button
+						class:on={order === 'traveler'}
+						aria-pressed={order === 'traveler'}
+						onclick={() => (order = 'traveler')}>Traveler's Path</button
+					>
+					<button
+						class:on={order === 'happened'}
+						aria-pressed={order === 'happened'}
+						onclick={() => (order = 'happened')}>As Happened</button
+					>
 				</div>
 				{#if canSaga}
 					<button class="pill" class:on={sagaOn} aria-pressed={sagaOn} onclick={() => (sagaOn = !sagaOn)}>
@@ -311,25 +220,15 @@
 					</button>
 				{/if}
 				{#if layout.threads.length}
-					<button class="pill" class:on={showThreads} aria-pressed={showThreads} onclick={() => (showThreads = !showThreads)}>
-						<Path size={13} weight="bold" /> Threads
+					<button
+						class="pill"
+						class:on={showThreads}
+						aria-pressed={showThreads}
+						onclick={() => (showThreads = !showThreads)}
+					>
+						<Path size={13} weight="bold" /> Travelers
 					</button>
-					<label class="who">
-						<span class="sr-only">Tour follows</span>
-						<select bind:value={tourTraveler}>
-							<option value="all">Everyone</option>
-							{#each layout.threads as t (t.traveler)}
-								<option value={t.traveler}>{t.traveler}</option>
-							{/each}
-						</select>
-					</label>
 				{/if}
-				<button class="pill" class:on={showLegend} aria-pressed={showLegend} onclick={() => (showLegend = !showLegend)}>
-					<Info size={13} weight="bold" /> Legend
-				</button>
-				<button class="pill" onclick={toggleTour} aria-pressed={touring}>
-					{#if touring}<Pause size={13} weight="fill" /> Pause tour{:else}<Play size={13} weight="fill" /> Tour{/if}
-				</button>
 				<button class="pill" onclick={() => engine?.fitAll()}>
 					<CornersOut size={13} weight="bold" /> Fit
 				</button>
@@ -345,58 +244,39 @@
 					bind:this={canvasEl}
 					aria-label="Timeline board. Drag to pan, scroll to zoom, click a beat to inspect it. Use the arrow keys to step through beats."
 				></canvas>
-				<span class="hint">drag to pan, scroll to zoom, click a beat, scrub the minimap</span>
-				{#if showLegend}
-					<div class="legend" role="note" aria-label="Legend">
-						{#each scene.branches as b (b.id)}
-							<span class="lg"><i class="swatch" style="background:{layout.branchColor(b.id)}"></i>{b.label}</span>
-						{/each}
-						{#if lens.id === 'curve'}
-							<span class="lg"><svg viewBox="0 0 26 12" aria-hidden="true"><path d="M2 6 H24" stroke="var(--color-muted)" stroke-width="2"/></svg>time flows on</span>
-							<span class="lg"><svg viewBox="0 0 26 12" aria-hidden="true"><path d="M2 10 C10 10 16 2 24 2" stroke="var(--color-jump)" stroke-width="2.4" fill="none"/></svg>leap forward</span>
-							<span class="lg"><svg viewBox="0 0 26 12" aria-hidden="true"><path d="M2 2 C10 2 16 10 24 10" stroke="#2b93bd" stroke-width="2.4" fill="none"/></svg>flashback / jump back</span>
-							<span class="lg"><svg viewBox="0 0 26 12" aria-hidden="true"><path d="M2 10 L24 2" stroke="var(--color-line)" stroke-width="1.4" stroke-dasharray="3 3"/></svg>a linear telling</span>
-						{:else}
-							<span class="lg"><svg viewBox="0 0 26 12" aria-hidden="true"><path d="M2 9 C8 2 16 2 21 6 L24 4 L22 9 Z" fill="var(--color-jump)"/></svg>jump forward</span>
-							<span class="lg"><svg viewBox="0 0 26 12" aria-hidden="true"><path d="M24 9 C18 2 10 2 5 6 L2 4 L4 9 Z" fill="#2b93bd"/></svg>jump back</span>
-							<span class="lg"><svg viewBox="0 0 26 12" aria-hidden="true"><circle cx="13" cy="6" r="4.5" fill="none" stroke="var(--color-muted)" stroke-width="1.4" stroke-dasharray="2 2"/></svg>time machine fires</span>
-							<span class="lg"><svg viewBox="0 0 26 12" aria-hidden="true"><path d="M9 5 A5 5 0 0 1 17 5" fill="none" stroke="var(--color-branching)" stroke-width="1.4"/><path d="M9 8 A5 5 0 0 0 17 8" fill="none" stroke="var(--color-branching)" stroke-width="1.4"/></svg>history splits here</span>
-							<span class="lg"><svg viewBox="0 0 26 12" aria-hidden="true"><path d="M2 6 H24" stroke="#ff6b74" stroke-width="2" stroke-dasharray="2 5" opacity="0.6"/></svg>overwritten, decaying</span>
-							<span class="lg"><svg viewBox="0 0 26 12" aria-hidden="true"><path d="M13 1 V11" stroke="var(--color-muted)" stroke-width="1" stroke-dasharray="2 3"/><path d="M13 2 L15 4 L13 6 L11 4 Z" fill="var(--color-muted)"/><path d="M13 7 L15 9 L13 11 L11 9 Z" fill="var(--color-muted)"/></svg>same moment, two worlds</span>
-							{#if layout.threads.length}
-								<span class="lg"><svg viewBox="0 0 26 12" aria-hidden="true"><path d="M2 9 C8 9 10 3 14 3 S22 8 24 8" fill="none" stroke="#35d6a4" stroke-width="1.6" stroke-dasharray="4 3"/></svg>a traveller's path</span>
-							{/if}
-							<span class="lg"><svg viewBox="0 0 26 12" aria-hidden="true"><path d="M13 1 L19 10 L7 10 Z" fill="#ffcc33" stroke="var(--color-ink)" stroke-width="0.8"/></svg>paradox / continuity risk</span>
-						{/if}
-					</div>
-				{/if}
-				{#if selected}
-					{@const b = scene.branches.find((br) => br.id === layout.branchOf(selected.id))}
-					<div class="float" bind:this={floatEl}>
-						<div
-							class="float-handle"
-							onpointerdown={cardDragStart}
-							onpointermove={cardDragMove}
-							onpointerup={cardDragEnd}
-							onpointercancel={cardDragEnd}
-						>
-							<span class="grip" aria-hidden="true">⠿</span> drag to move
-						</div>
-						<div class="float-body">
-							<EventPanel
-								{selected}
-								branchLabel={b?.label}
-								branchColor={layout.branchColor(layout.branchOf(selected.id))}
-								selIndex={selIndex < 0 ? 0 : selIndex}
-								total={layout.ordered.length}
-								onStep={step}
-								{fallbackImage}
-								{onOpenImage}
-							/>
-						</div>
-					</div>
-				{/if}
+				<span class="hint">drag to pan, scroll to zoom, click a beat</span>
 			</div>
+			<aside class="side">
+				{#if selected}
+					<EventPanel
+						{selected}
+						branchLabel={selectedBranch?.label}
+						branchNote={selectedBranch?.note}
+						branchStatus={selectedBranch?.status}
+						branchColor={layout.branchColor(layout.branchOf(selected.id))}
+						selIndex={selIndex < 0 ? 0 : selIndex}
+						total={layout.ordered.length}
+						onStep={step}
+						{fallbackImage}
+						{onOpenImage}
+					/>
+				{/if}
+				<div class="legend" role="note" aria-label="Legend">
+					<p class="legend-title">Legend</p>
+					{#each scene.branches as b (b.id)}
+						<span class="lg"><i class="swatch" style="background:{layout.branchColor(b.id)}"></i>{b.label}</span>
+					{/each}
+					<span class="lg"><svg viewBox="0 0 26 12" aria-hidden="true"><path d="M2 10 Q13 0 22 7" fill="none" stroke="var(--color-jump)" stroke-width="1.8"/><path d="M24 9 L17 8 L21 3 Z" fill="var(--color-jump)"/></svg>jump forward in time</span>
+					<span class="lg"><svg viewBox="0 0 26 12" aria-hidden="true"><path d="M24 10 Q13 0 4 7" fill="none" stroke="#2b93bd" stroke-width="1.8"/><path d="M2 9 L9 8 L5 3 Z" fill="#2b93bd"/></svg>jump back in time</span>
+					<span class="lg"><svg viewBox="0 0 26 12" aria-hidden="true"><circle cx="13" cy="6" r="4.5" fill="none" stroke="var(--color-muted)" stroke-width="1.4" stroke-dasharray="2 2"/></svg>a time machine fires</span>
+					<span class="lg"><svg viewBox="0 0 26 12" aria-hidden="true"><path d="M9 5 A5 5 0 0 1 17 5" fill="none" stroke="var(--color-branching)" stroke-width="1.4"/><path d="M9 8 A5 5 0 0 0 17 8" fill="none" stroke="var(--color-branching)" stroke-width="1.4"/></svg>history splits here</span>
+					<span class="lg"><svg viewBox="0 0 26 12" aria-hidden="true"><path d="M2 6 H24" stroke="#ff6b74" stroke-width="2" stroke-dasharray="2 5" opacity="0.6"/></svg>overwritten, fading away</span>
+					{#if layout.threads.length}
+						<span class="lg"><svg viewBox="0 0 26 12" aria-hidden="true"><path d="M2 9 C8 9 10 3 14 3 S22 8 24 8" fill="none" stroke="#35d6a4" stroke-width="1.6" stroke-dasharray="4 3"/></svg>a traveler's own path</span>
+					{/if}
+					<span class="lg"><svg viewBox="0 0 26 12" aria-hidden="true"><path d="M13 1 L19 10 L7 10 Z" fill="#ffcc33" stroke="var(--color-ink)" stroke-width="0.8"/></svg>paradox risk</span>
+				</div>
+			</aside>
 		</div>
 
 		<!-- the board as real buttons, for screen readers and Tab users -->
@@ -494,80 +374,15 @@
 	.pill.close {
 		padding: 0.38rem 0.5rem;
 	}
-	.who select {
-		border: 1px solid var(--color-line);
-		border-radius: 999px;
-		background: transparent;
-		color: var(--color-muted);
-		font-family: var(--font-mono);
-		font-size: 0.66rem;
-		letter-spacing: 0.04em;
-		text-transform: uppercase;
-		padding: 0.35rem 0.6rem;
-		cursor: pointer;
-	}
-	.who select:focus-visible {
-		outline: 2px solid var(--accent);
-		outline-offset: 2px;
-	}
-	.sr-only {
-		position: absolute;
-		width: 1px;
-		height: 1px;
-		overflow: hidden;
-		clip-path: inset(50%);
-		white-space: nowrap;
-	}
 	.stage {
 		flex: 1;
 		min-height: 0;
 		display: grid;
-		grid-template-columns: minmax(0, 1fr);
+		grid-template-columns: minmax(0, 1fr) 360px;
 	}
 	.board {
 		position: relative;
 		min-width: 0;
-		overflow: hidden;
-	}
-	/* the event card floats beside its beat and can be dragged anywhere */
-	.float {
-		position: absolute;
-		left: 0;
-		top: 0;
-		z-index: 6;
-		width: min(340px, 80vw);
-		border: 1px solid var(--color-line);
-		border-radius: 10px;
-		background: color-mix(in srgb, var(--color-panel) 96%, transparent);
-		box-shadow: 0 14px 40px rgba(0, 0, 0, 0.4);
-		will-change: transform;
-	}
-	.float-handle {
-		display: flex;
-		align-items: center;
-		gap: 0.45rem;
-		padding: 0.32rem 0.65rem;
-		border-bottom: 1px solid var(--color-line);
-		font-family: var(--font-mono);
-		font-size: 0.6rem;
-		letter-spacing: 0.1em;
-		text-transform: uppercase;
-		color: var(--color-muted);
-		cursor: grab;
-		touch-action: none;
-		user-select: none;
-	}
-	.float-handle:active {
-		cursor: grabbing;
-	}
-	.float .grip {
-		font-size: 0.8rem;
-		line-height: 1;
-	}
-	.float-body {
-		padding: 0.7rem 0.8rem;
-		max-height: 46vh;
-		overflow-y: auto;
 	}
 	canvas {
 		display: block;
@@ -583,23 +398,42 @@
 		outline: 2px solid var(--accent);
 		outline-offset: -2px;
 	}
-	.legend {
+	.hint {
 		position: absolute;
-		top: 0.8rem;
-		left: 0.9rem;
-		z-index: 5;
+		right: 0.9rem;
+		bottom: 0.7rem;
+		font-family: var(--font-mono);
+		font-size: 0.62rem;
+		letter-spacing: 0.08em;
+		text-transform: uppercase;
+		color: var(--color-muted);
+		pointer-events: none;
+	}
+	.side {
+		display: flex;
+		flex-direction: column;
+		gap: 1rem;
+		border-left: 1px solid var(--color-line);
+		background: color-mix(in srgb, var(--color-panel) 30%, transparent);
+		padding: 0.9rem;
+		overflow-y: auto;
+	}
+	.legend {
 		display: flex;
 		flex-direction: column;
 		gap: 0.45rem;
-		max-width: 300px;
-		padding: 0.6rem 0.75rem;
-		border: 1px solid var(--color-line);
-		border-radius: 8px;
-		background: color-mix(in srgb, var(--color-panel) 92%, transparent);
-		box-shadow: 0 8px 22px rgba(0, 0, 0, 0.3);
+		border-top: 1px solid var(--color-line);
+		padding-top: 0.8rem;
 		font-family: var(--font-mono);
 		font-size: 0.66rem;
 		color: var(--color-muted);
+	}
+	.legend-title {
+		margin: 0 0 0.15rem;
+		font-size: 0.6rem;
+		letter-spacing: 0.14em;
+		text-transform: uppercase;
+		color: var(--color-paper);
 	}
 	.lg {
 		display: inline-flex;
@@ -618,16 +452,16 @@
 		flex: none;
 		margin: 0 8px;
 	}
-	.hint {
-		position: absolute;
-		right: 0.9rem;
-		bottom: 0.7rem;
-		font-family: var(--font-mono);
-		font-size: 0.62rem;
-		letter-spacing: 0.08em;
-		text-transform: uppercase;
-		color: var(--color-muted);
-		pointer-events: none;
+	@media (max-width: 860px) {
+		.stage {
+			grid-template-columns: 1fr;
+			grid-template-rows: minmax(0, 1fr) auto;
+		}
+		.side {
+			border-left: 0;
+			border-top: 1px solid var(--color-line);
+			max-height: 46vh;
+		}
 	}
 	.sr-beats {
 		position: absolute;

@@ -134,6 +134,7 @@ export const specimens: MediaEntry[] = [
 			},
 			{
 				id: 'demo',
+				traveler: 'Einstein',
 				label: 'The DeLorean revealed',
 				narrative: 0,
 				chrono: 1985.82,
@@ -147,6 +148,7 @@ export const specimens: MediaEntry[] = [
 			},
 			{
 				id: 'einstein',
+				traveler: 'Einstein',
 				label: 'Einstein arrives, one minute on',
 				narrative: 0.5,
 				chrono: 1985.8201,

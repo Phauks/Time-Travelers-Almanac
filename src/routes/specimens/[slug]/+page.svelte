@@ -9,6 +9,7 @@
 	import {
 		RULE_META,
 		MODE_META,
+		MODE_BLURB,
 		LOOP_META,
 		MEDIUM_META,
 		ruleColorVar,
@@ -49,6 +50,11 @@
 	let videoOpen = $state(false);
 
 	const riskPct = { low: 33, medium: 66, high: 100 } as const;
+	const PARADOX_BLURB = {
+		low: 'Low risk: this story keeps its causality tidy; few contradictions to worry about.',
+		medium: 'Medium risk: the rules bend in places; watch for loops with no first cause.',
+		high: 'High risk: causality is under real strain here; paradoxes are part of the story.'
+	} as const;
 	const LINK_META: Record<string, string> = {
 		steam: 'Steam',
 		watch: 'JustWatch',
@@ -214,10 +220,11 @@
 		</div>
 
 		<aside class="col-tt">
-			<div class="tt para" style="--c:var(--color-mutable)">
+			<div class="tt para tip-host" style="--c:var(--color-mutable)">
 				<p class="k"><Warning size={12} weight="fill" /> Paradox</p>
 				<p class="v cap">{s.paradoxRisk}</p>
 				<span class="bar"><i style="width:{riskPct[s.paradoxRisk]}%"></i></span>
+				<span class="tip">{PARADOX_BLURB[s.paradoxRisk]}</span>
 			</div>
 			<div class="tt rule tip-host" style="--c:var(--color-{s.rules[0]})">
 				<p class="k">The Rule</p>
@@ -228,9 +235,14 @@
 					<a class="tip-more" href="{base}/rules/{s.rules[0]}/">See more <ArrowRight size={11} weight="bold" /></a>
 				</span>
 			</div>
-			<div class="tt mode">
+			<div class="tt mode tip-host">
 				<p class="k">The Mode</p>
 				<p class="v">{s.mode.map((m) => MODE_META[m]).join(', ')}</p>
+				<span class="tip">
+					{#each s.mode as m (m)}
+						<b>{MODE_META[m]}.</b> {MODE_BLURB[m]}<br />
+					{/each}
+				</span>
 			</div>
 			<div class="tt loop tip-host">
 				<p class="k">Loop status</p>
@@ -549,10 +561,10 @@
 	}
 	.tip-host .tip {
 		position: absolute;
-		/* these boxes sit in the right column, so open the popup leftward to keep
-		   it on-screen (it was overflowing the viewport and adding a scrollbar) */
+		/* these boxes sit in the right column near the top of the viewport, so
+		   the popup opens DOWNWARD and LEFTWARD to always stay on-screen */
 		right: 0;
-		bottom: calc(100% + 8px);
+		top: calc(100% + 8px);
 		width: max-content;
 		max-width: min(260px, 62vw);
 		background: var(--color-panel);

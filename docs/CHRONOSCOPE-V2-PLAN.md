@@ -131,12 +131,18 @@ following the time stream." Two readings:
 Reading 1 is assumed for planning (it matches "following the time
 stream"), but this changes navigation behaviour and needs a yes.
 
-## Build order
+## Build order and status
 
-1. A: corner layout, controls, panel height (fast, no risk)
-2. C: cast schema + avatar presence (replaces rings; unlocks images)
-3. D: photo nodes + label collision (biggest visual payoff)
-4. B: structured time (deepest change; alignment, notches, exact labels)
-5. E: saga identity (blocked on the canon mapping above)
+1. A: corner layout, controls, panel height  -  SHIPPED
+2. C: cast schema + token presence (symbols/emoji, portraits)  -  SHIPPED
+3. D: photo nodes + label collision  -  SHIPPED
+4. B: structured time (when field, day alignment, notches, exact spans)  -  SHIPPED
+5. E: saga identity (sameAs union-find; BTTF mapping confirmed)  -  SHIPPED
 
-Each step lands green (tests, content gate, build) and deploys on its own.
+Also shipped from feedback: causal As Happened stepping (walk each timeline
+through before the next branch), minimap jump arcs, all-travelers toggles,
+end-of-film Doc as the lived-through variant.
+
+Remaining candidates: portraits for the BTTF cast (schema ready, needs
+image URLs), `when` data for the rest of the catalogue, and the master
+timeline of every specimen.

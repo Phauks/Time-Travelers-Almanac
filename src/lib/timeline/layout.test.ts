@@ -1,8 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import { chronoFromWhen, computeLayout, elasticWeight } from './layout';
+import { chronoFromWhen, computeLayout, elasticWeight, makeBranchColor } from './layout';
 import { jumpText } from './display';
 import { stitchTimelines } from './stitch';
-import type { Branch, TimelineEvent } from '$lib/types';
+import { masterScene, slugOfBeat } from './master';
+import type { Branch, MediaEntry, TimelineEvent } from '$lib/types';
 
 const ev = (
 	id: string,
@@ -421,5 +422,77 @@ describe('saga identity (sameAs)', () => {
 	it('remaps a surviving branch parent through the merge', () => {
 		const s = stitchTimelines([I, II, III]);
 		expect(s.branches.find((b) => b.id === 's1:fixed')!.parent).toBe('s0:repaired');
+	});
+});
+
+describe('branch colour override', () => {
+	it('an explicit branch colour beats the status colour', () => {
+		const color = makeBranchColor([
+			{ id: 'a', label: 'A', status: 'erased', color: '#123456' },
+			{ id: 'b', label: 'B', status: 'restored' }
+		]);
+		expect(color('a')).toBe('#123456');
+		expect(color('b')).not.toBe('#123456');
+	});
+});
+
+describe('master timeline', () => {
+	const entry = (
+		slug: string,
+		rule: MediaEntry['rules'][0],
+		timeline: TimelineEvent[]
+	): MediaEntry => ({
+		slug,
+		title: slug.toUpperCase(),
+		year: 1985,
+		medium: 'film',
+		rules: [rule],
+		mode: ['contraption'],
+		loop: null,
+		destEra: 0.5,
+		destLabel: '1955',
+		logline: '',
+		mechanism: '',
+		paradoxes: [],
+		paradoxRisk: 'low',
+		timeline
+	});
+
+	const RULE_COLOR = { fixed: '#00f', mutable: '#f80', branching: '#b0f' };
+	const CATALOGUE = [
+		entry('bttf', 'mutable', [
+			ev('a', 0, 1985.1, { jumpTo: 'b', traveler: 'Marty', travelers: ['Marty'] }),
+			ev('b', 1, 1955.1)
+		]),
+		entry('tenet', 'fixed', [ev('a', 0, 2020.1)]),
+		entry('essay', 'branching', []) // no timeline: stays off the board
+	];
+
+	it('gives each specimen with a timeline one lane, coloured by its first rule', () => {
+		const s = masterScene(CATALOGUE, (r) => RULE_COLOR[r]);
+		expect(s.branches.map((b) => b.id)).toEqual(['bttf', 'tenet']);
+		expect(s.branches[0].color).toBe(RULE_COLOR.mutable);
+		expect(s.branches[1].color).toBe(RULE_COLOR.fixed);
+	});
+
+	it('prefixes ids by slug and remaps jumpTo so identical local ids never collide', () => {
+		const s = masterScene(CATALOGUE, (r) => RULE_COLOR[r]);
+		const ids = s.events.map((e) => e.id);
+		expect(ids).toEqual(['bttf:a', 'bttf:b', 'tenet:a']);
+		expect(s.events[0].jumpTo).toBe('bttf:b');
+		expect(slugOfBeat('bttf:a')).toBe('bttf');
+	});
+
+	it('collapses each story to one lane and strips presence chips', () => {
+		const s = masterScene(CATALOGUE, (r) => RULE_COLOR[r]);
+		for (const e of s.events) expect(e.branch).toBe(slugOfBeat(e.id));
+		expect(s.events.every((e) => !e.traveler && !e.travelers)).toBe(true);
+	});
+
+	it('lays out as one lane per specimen with the lane colour applied', () => {
+		const s = masterScene(CATALOGUE, (r) => RULE_COLOR[r]);
+		const L = computeLayout(s.events, s.branches, 'happened');
+		expect(L.lanes.map((l) => l.id).sort()).toEqual(['bttf', 'tenet']);
+		expect(L.lanes.find((l) => l.id === 'bttf')!.color).toBe(RULE_COLOR.mutable);
 	});
 });

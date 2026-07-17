@@ -209,8 +209,9 @@ export function branchMembership(events: TimelineEvent[], branches: Branch[]) {
 export function makeBranchColor(branches: Branch[]) {
 	const branchById = new Map(branches.map((b) => [b.id, b]));
 	return (id: string) => {
-		const st = branchById.get(id)?.status;
-		return (st && STATUS_COLORS[st]) || FALLBACK_BRANCH_COLOR;
+		const b = branchById.get(id);
+		if (b?.color) return b.color;
+		return (b?.status && STATUS_COLORS[b.status]) || FALLBACK_BRANCH_COLOR;
 	};
 }
 

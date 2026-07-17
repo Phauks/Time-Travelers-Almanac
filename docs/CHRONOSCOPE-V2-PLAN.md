@@ -143,6 +143,11 @@ Also shipped from feedback: causal As Happened stepping (walk each timeline
 through before the next branch), minimap jump arcs, all-travelers toggles,
 end-of-film Doc as the lived-through variant.
 
+6. The master timeline (/timeline/): every specimen as one lane on a
+   single chronological board, coloured by rule, with a peek panel that
+   deep-links into the specimen's own dossier board  -  SHIPPED
+
 Remaining candidates: portraits for the BTTF cast (schema ready, needs
-image URLs), `when` data for the rest of the catalogue, and the master
-timeline of every specimen.
+image URLs), and `when` data for the rest of the catalogue (the parser
+only trusts labels with month precision; the other entries carry bare
+years, so they keep fractional `chrono` until someone writes real dates).

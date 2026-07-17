@@ -41,6 +41,7 @@
 			<a href="{base}/specimens/">Specimens</a>
 			<a href="{base}/rules/">Rules</a>
 			<a href="{base}/history/">History</a>
+			<a href="{base}/timeline/">Timeline</a>
 			<button
 				class="icon-link theme-btn"
 				onclick={toggleTheme}

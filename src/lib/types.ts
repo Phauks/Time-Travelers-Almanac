@@ -187,6 +187,9 @@ export interface Branch {
 	 * the earlier one; the saga view merges such branches onto one lane.
 	 */
 	sameAs?: { entry: string; branch: string };
+	/** explicit lane colour, overriding the status-derived one (the master
+	 * timeline colours lanes by rule, for example) */
+	color?: string;
 	/** one line on what this branch is */
 	note?: string;
 }

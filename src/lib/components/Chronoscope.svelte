@@ -3,8 +3,9 @@
 	import { replaceState } from '$app/navigation';
 	import { X, CornersOut, FilmSlate, CaretLeft, CaretRight, CaretDown, CaretUp, Plus, Minus } from 'phosphor-svelte';
 	import EventPanel from './EventPanel.svelte';
-	import { Chronoscope, type ChronoTheme } from '$lib/timeline/chronoscope';
-import { TRAVELER_COLORS } from '$lib/timeline/layers';
+	import { Chronoscope } from '$lib/timeline/chronoscope';
+	import { TRAVELER_COLORS } from '$lib/timeline/layers';
+	import { readChronoTheme } from '$lib/timeline/theme';
 	import { computeLayout } from '$lib/timeline/layout';
 	import { stitchTimelines, type SagaPart } from '$lib/timeline/stitch';
 	import type { Branch, TimelineEvent } from '$lib/types';
@@ -87,22 +88,6 @@ import { TRAVELER_COLORS } from '$lib/timeline/layers';
 	// instance itself must not be proxied
 	let engine = $state.raw<Chronoscope | null>(null);
 
-	function readTheme(el: HTMLElement): ChronoTheme {
-		const cs = getComputedStyle(el);
-		const v = (name: string, fallback: string) => cs.getPropertyValue(name).trim() || fallback;
-		return {
-			ink: v('--color-ink', '#05060c'),
-			panel: v('--color-panel', '#0d1120'),
-			paper: v('--color-paper', '#eef1f8'),
-			muted: v('--color-muted', '#8b93a8'),
-			line: v('--color-line', '#1c2233'),
-			jump: v('--color-jump', '#ffd9a0'),
-			jumpBack: '#2b93bd',
-			accent: v('--color-branching', '#b57cff'),
-			monoFont: v('--font-mono', 'ui-monospace, Menlo, monospace')
-		};
-	}
-
 	function select(id: string, fly = false) {
 		selectedId = id;
 		engine?.setSelected(id, fly);
@@ -177,7 +162,7 @@ import { TRAVELER_COLORS } from '$lib/timeline/layers';
 	// no longer exists in the new scene falls back to the first beat
 	$effect(() => {
 		if (!engine || !rootEl) return;
-		engine.setScene(layout, readTheme(rootEl));
+		engine.setScene(layout, readChronoTheme(rootEl));
 		untrack(() => {
 			if (!layout.posById.has(selectedId)) selectedId = layout.ordered[0]?.id ?? '';
 			engine!.setSelected(selectedId);
@@ -195,7 +180,7 @@ import { TRAVELER_COLORS } from '$lib/timeline/layers';
 	$effect(() => {
 		if (!open || !engine) return;
 		const mo = new MutationObserver(() => {
-			if (engine && rootEl) engine.setScene(layout, readTheme(rootEl));
+			if (engine && rootEl) engine.setScene(layout, readChronoTheme(rootEl));
 		});
 		mo.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
 		return () => mo.disconnect();

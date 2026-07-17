@@ -337,15 +337,16 @@ import { TRAVELER_COLORS } from '$lib/timeline/layers';
 							</span>
 						</p>
 						<div class="tchips">
-							{#each layout.travelers as t, i (t.name)}
+							{#each layout.travelers as t, i (t.id)}
 								<button
 									class="tchip"
-									class:on={visibleTravelers.includes(t.name)}
-									aria-pressed={visibleTravelers.includes(t.name)}
-									style="--tc:{TRAVELER_COLORS[i % TRAVELER_COLORS.length]}"
-									onclick={() => toggleTraveler(t.name)}
+									class:on={visibleTravelers.includes(t.id)}
+									aria-pressed={visibleTravelers.includes(t.id)}
+									style="--tc:{t.color ?? TRAVELER_COLORS[i % TRAVELER_COLORS.length]}"
+									title={t.variant ?? ''}
+									onclick={() => toggleTraveler(t.id)}
 								>
-									<i class="tdot"></i>{t.name}
+									<i class="tdot"></i>{#if t.symbol}<span class="tsym">{t.symbol}</span>{/if}{t.name}
 								</button>
 							{/each}
 						</div>

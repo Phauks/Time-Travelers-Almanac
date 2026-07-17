@@ -174,6 +174,13 @@ export interface Branch {
 	erasedAt?: string;
 	/** event id at which an erased branch was re-established, if the story restores it */
 	restoredAt?: string;
+	/**
+	 * Franchise-level identity: this branch is canonically the SAME timeline
+	 * as a branch in another entry (e.g. the repaired 1985 that ends Part I is
+	 * the line Part II departs from). Declared on the LATER part, pointing at
+	 * the earlier one; the saga view merges such branches onto one lane.
+	 */
+	sameAs?: { entry: string; branch: string };
 	/** one line on what this branch is */
 	note?: string;
 }

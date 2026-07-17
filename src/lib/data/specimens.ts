@@ -333,6 +333,7 @@ export const specimens: MediaEntry[] = [
 				id: 'prime',
 				label: 'Timeline 1',
 				status: 'original',
+				sameAs: { entry: 'back-to-the-future', branch: 'restored' },
 				note: 'the 1985 and 2015 the travellers set out from'
 			},
 			{
@@ -551,6 +552,7 @@ export const specimens: MediaEntry[] = [
 				id: 'original',
 				label: 'Timeline 1',
 				status: 'endangered',
+				sameAs: { entry: 'back-to-the-future-part-ii', branch: 'restored' },
 				note: 'the history Marty found: Buford Tannen shoots Doc dead in 1885'
 			},
 			{

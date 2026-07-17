@@ -300,16 +300,38 @@ export function computeLayout(
 	const branchColor = makeBranchColor(branches);
 
 	// ---- x positions ----
-	const ordered =
-		order === 'traveler'
-			? [...events].sort((a, b) => a.narrative - b.narrative)
-			: [...events].sort((a, b) => a.chrono - b.chrono || a.narrative - b.narrative);
+	const byChrono = [...events].sort((a, b) => a.chrono - b.chrono || a.narrative - b.narrative);
+	const positioned = order === 'traveler' ? byNarr : byChrono;
 	const xOf =
-		order === 'traveler' || ordered.length === 0
-			? new Map(ordered.map((e, i) => [e.id, ml + i * step]))
-			: elasticXPositions(ordered, branchOf, ml, step);
-	const lastX = Math.max(ml, ...ordered.map((e) => xOf.get(e.id)!));
+		order === 'traveler' || positioned.length === 0
+			? new Map(positioned.map((e, i) => [e.id, ml + i * step]))
+			: elasticXPositions(byChrono, branchOf, ml, step);
+	const lastX = Math.max(ml, ...positioned.map((e) => xOf.get(e.id)!));
 	const W = Math.max(minW, lastX + mr);
+
+	// ---- stepping order ----
+	// traveler: the order the time traveller lives it (narrative). happened:
+	// follow the time stream, walking each timeline through its beats before
+	// moving to the next branch (branches ranked by their earliest moment).
+	let ordered: TimelineEvent[];
+	if (order === 'traveler') {
+		ordered = byNarr;
+	} else {
+		const laneFirst = new Map<string, number>();
+		for (const e of byChrono) {
+			const b = branchOf(e.id);
+			if (!laneFirst.has(b)) laneFirst.set(b, e.chrono);
+		}
+		const laneRank = new Map(
+			[...laneFirst.entries()].sort((a, z) => a[1] - z[1]).map(([id], i) => [id, i])
+		);
+		ordered = [...byChrono].sort(
+			(a, z) =>
+				(laneRank.get(branchOf(a.id)) ?? 0) - (laneRank.get(branchOf(z.id)) ?? 0) ||
+				a.chrono - z.chrono ||
+				a.narrative - z.narrative
+		);
+	}
 
 	// ---- lane slots: a branch occupies a row only while it is alive, and a
 	// freed row can be reused by a later branch (git-graph compaction) ----
@@ -323,15 +345,15 @@ export function computeLayout(
 	{
 		const margin = step * 1.5;
 		const slotEnd: number[] = [];
-		// the root keeps row 0; the rest claim rows in order of birth
-		const rest = branches
-			.filter((b) => b.id !== rootId && span.has(b.id))
+		// rows are claimed strictly in order of each timeline's earliest moment,
+		// so lanes read top-to-bottom from earliest to latest; a freed row may be
+		// reused, which never disturbs that reading (its next occupant is later)
+		const inBirthOrder = branches
+			.filter((b) => span.has(b.id))
 			.sort((a, z) => span.get(a.id)!.startX - span.get(z.id)!.startX);
-		slotOf.set(rootId, 0);
-		slotEnd[0] = span.get(rootId)?.endX ?? Infinity;
-		for (const b of rest) {
+		for (const b of inBirthOrder) {
 			const s = span.get(b.id)!;
-			let slot = 1;
+			let slot = 0;
 			while (slotEnd[slot] !== undefined && slotEnd[slot] + margin > s.startX) slot++;
 			slotOf.set(b.id, slot);
 			slotEnd[slot] = s.endX;

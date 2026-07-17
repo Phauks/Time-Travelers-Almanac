@@ -53,10 +53,12 @@ describe('traveler-path spacing', () => {
 });
 
 describe('temporal registration (as happened)', () => {
-	it('orders beats by chrono and spaces them elastically', () => {
+	it('positions beats elastically but steps through one timeline at a time', () => {
 		const L = computeLayout(EVENTS, BRANCHES, 'happened');
+		// stepping follows the stream: each branch walked through its beats
+		// (branches ranked by earliest moment) instead of strict calendar order
 		const ids = L.ordered.map((e) => e.id);
-		expect(ids).toEqual(['b', 'c', 'd', 'a', 'e']);
+		expect(ids).toEqual(['b', 'c', 'd', 'e', 'a']);
 		// the 30-year hop from d (1955.3) to a (1985.1) gets more room than
 		// the same-week hop from b to c
 		const x = (id: string) => L.posById.get(id)!.x;
@@ -256,5 +258,75 @@ describe('saga stitching', () => {
 		stitchTimelines([partI, partII]);
 		expect(partI.events[1].jumpToLabel).toBe('1885');
 		expect(partII.events[0].jumpFromLabel).toBe('1955');
+	});
+});
+
+describe('saga identity (sameAs)', () => {
+	const mk = (slug: string, branches: Branch[], events: TimelineEvent[]) => ({
+		slug,
+		title: slug,
+		events,
+		branches
+	});
+	// I: prime splits into repaired; II departs from that repaired line and its
+	// own repaired line is the one III endangers
+	const I = mk(
+		'one',
+		[
+			{ id: 'prime', label: 'Timeline 1', status: 'original' },
+			{ id: 'repaired', label: 'Timeline 2', parent: 'prime', branchAt: 'i2', status: 'restored' }
+		],
+		[ev('i1', 0, 1985), ev('i2', 1, 1985.1)]
+	);
+	const II = mk(
+		'two',
+		[
+			{
+				id: 'prime',
+				label: 'Timeline 1',
+				status: 'original',
+				sameAs: { entry: 'one', branch: 'repaired' }
+			},
+			{ id: 'fixed', label: 'Timeline 2', parent: 'prime', branchAt: 'j2', status: 'restored' }
+		],
+		[ev('j1', 0, 2015), ev('j2', 1, 2015.1)]
+	);
+	const III = mk(
+		'three',
+		[
+			{
+				id: 'start',
+				label: 'Timeline 1',
+				status: 'endangered',
+				sameAs: { entry: 'two', branch: 'fixed' }
+			}
+		],
+		[ev('k1', 0, 1885)]
+	);
+
+	it('merges declared identities onto one lane, transitively', () => {
+		const s = stitchTimelines([I, II, III]);
+		// I.repaired absorbs II.prime; II.fixed absorbs III.start
+		expect(s.branches.map((b) => b.id)).toEqual(['s0:prime', 's0:repaired', 's1:fixed']);
+	});
+
+	it('stamps every event with its resolved canonical lane', () => {
+		const s = stitchTimelines([I, II, III]);
+		const branchOf = (id: string) => s.events.find((e) => e.id === id)!.branch;
+		expect(branchOf('s1:j1')).toBe('s0:repaired'); // II opens on I's repaired line
+		expect(branchOf('s2:k1')).toBe('s1:fixed'); // III opens on II's repaired line
+	});
+
+	it("a merged lane's fate comes from the latest part that touched it", () => {
+		const s = stitchTimelines([I, II, III]);
+		// III declares the line II repaired to be endangered
+		expect(s.branches.find((b) => b.id === 's1:fixed')!.status).toBe('endangered');
+		// II declares I's repaired line its baseline
+		expect(s.branches.find((b) => b.id === 's0:repaired')!.status).toBe('original');
+	});
+
+	it('remaps a surviving branch parent through the merge', () => {
+		const s = stitchTimelines([I, II, III]);
+		expect(s.branches.find((b) => b.id === 's1:fixed')!.parent).toBe('s0:repaired');
 	});
 });

@@ -596,10 +596,11 @@ export function minimapGeom(f: { vw: number; vh: number; layout: TimelineLayout 
 	const maxLevel = f.layout.jumps.reduce((m, j) => Math.max(m, j.level), 0);
 	const wy0 = -(arcLift(maxLevel) + 60);
 	const wy1 = f.layout.H + 20;
+	// top-right corner, spaced off the edges (the sidebar sits beyond vw)
 	const w = Math.min(280, Math.max(160, f.vw * 0.24));
 	const h = 44;
-	const x = 12;
-	const y = f.vh - h - 12;
+	const x = f.vw - w - 22;
+	const y = 22;
 	const kx = w / f.layout.W;
 	const ky = h / (wy1 - wy0);
 	return {

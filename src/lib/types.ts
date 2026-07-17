@@ -102,6 +102,12 @@ export interface TimelineEvent {
 	narrative: number;
 	/** sortable "real" time the beat starts: a year (may be fractional) or an index */
 	chrono: number;
+	/**
+	 * structured calendar time. When present it overrides `chrono` as the
+	 * sort key, lets the same calendar day align across timelines, and makes
+	 * jump spans exact. `time` is "HH:MM" 24-hour, display and ordering only.
+	 */
+	when?: { year: number; month?: number; day?: number; time?: string };
 	/** for beats that span time, the sortable end point (a year or index) */
 	chronoEnd?: number;
 	/** how to display the start of the moment, e.g. "Nov 12, 1955, 10:04 PM" */

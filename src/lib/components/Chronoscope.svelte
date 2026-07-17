@@ -15,7 +15,6 @@ import { TRAVELER_COLORS } from '$lib/timeline/layers';
 		events,
 		branches = [],
 		accent = 'var(--color-branching)',
-		fallbackImage = undefined,
 		onOpenImage,
 		initialSelected = undefined,
 		cast = [],
@@ -26,8 +25,7 @@ import { TRAVELER_COLORS } from '$lib/timeline/layers';
 		events: TimelineEvent[];
 		branches?: Branch[];
 		accent?: string;
-		fallbackImage?: string;
-		onOpenImage?: (src: string) => void;
+			onOpenImage?: (src: string) => void;
 		/** beat to select when the view opens (the card's current selection) */
 		initialSelected?: string;
 		/** this entry's cast registry (traveller identities, symbols, portraits) */
@@ -322,7 +320,6 @@ import { TRAVELER_COLORS } from '$lib/timeline/layers';
 						selIndex={selIndex < 0 ? 0 : selIndex}
 						total={layout.ordered.length}
 						onStep={step}
-						{fallbackImage}
 						{onOpenImage}
 					/>
 					</div>

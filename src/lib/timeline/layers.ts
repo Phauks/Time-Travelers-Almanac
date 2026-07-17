@@ -31,8 +31,8 @@ export interface Frame {
 	sy: (wy: number) => number;
 	layout: TimelineLayout;
 	theme: ChronoTheme;
-	/** semantic zoom tiers: dates, beat titles, thumbnails */
-	tiers: { dateA: number; labelA: number; thumbA: number };
+	/** semantic zoom tiers: dates fade in first, then beat titles */
+	tiers: { dateA: number; labelA: number };
 	selectedId: string | null;
 	hoverId: string | null;
 	/** traveller names whose presence is highlighted on the board */
@@ -127,6 +127,11 @@ export function arcPoint(
 	};
 }
 
+/** a beat's on-board radius: photo nodes are larger than plain dots */
+export function nodeRadius(f: Frame, e: { image?: string }): number {
+	return e.image && f.image(e.image) ? f.px(15, 10, 24) : f.px(6, 3.5, 10);
+}
+
 const offJumpCap = (f: Frame, o: { p: { x: number; y: number }; out: boolean }) => ({
 	x: f.sx(o.p.x) + (o.out ? 1 : -1) * f.px(34, 18, 60),
 	y: f.sy(o.p.y) - f.px(52, 26, 90)
@@ -157,11 +162,33 @@ const lanesLayer: Layer = {
 				ctx.strokeStyle = g.color;
 				ctx.globalAlpha = 0.92;
 			}
-			ctx.beginPath();
-			ctx.moveTo(x1, y);
-			ctx.lineTo(x2, y);
-			ctx.stroke();
-			ctx.setLineDash([]);
+			if (!g.fading && g.gapYears >= 2 && x2 - x1 > 60) {
+				// a large stretch of real time is compressed here: break the line
+				// with a short dashed notch at its centre
+				const notch = Math.min(30, (x2 - x1) * 0.28);
+				const m1 = (x1 + x2) / 2 - notch / 2;
+				const m2 = (x1 + x2) / 2 + notch / 2;
+				ctx.beginPath();
+				ctx.moveTo(x1, y);
+				ctx.lineTo(m1, y);
+				ctx.moveTo(m2, y);
+				ctx.lineTo(x2, y);
+				ctx.stroke();
+				ctx.setLineDash([f.px(3, 2), f.px(4, 2.5)]);
+				ctx.globalAlpha = 0.55;
+				ctx.beginPath();
+				ctx.moveTo(m1, y);
+				ctx.lineTo(m2, y);
+				ctx.stroke();
+				ctx.setLineDash([]);
+				ctx.globalAlpha = 1;
+			} else {
+				ctx.beginPath();
+				ctx.moveTo(x1, y);
+				ctx.lineTo(x2, y);
+				ctx.stroke();
+				ctx.setLineDash([]);
+			}
 		}
 		ctx.globalAlpha = 1;
 	}
@@ -326,7 +353,7 @@ const presenceLayer: Layer = {
 			const x = f.sx(p.x);
 			if (x < -80 || x > f.vw + 80) continue;
 			const y = f.sy(p.y);
-			const nodeR = f.px(6, 3.5, 10);
+			const nodeR = nodeRadius(f, p.e);
 			const total = here.length * (tr * 2 + gap) - gap;
 			let tx = x - total / 2 + tr;
 			const ty = y + nodeR + tr + f.px(5, 3, 8);
@@ -367,7 +394,8 @@ const presenceLayer: Layer = {
 	}
 };
 
-/** the beats: nodes, origin flags, portal rings, paradox marks, dates, titles */
+/** the beats: photo or dot nodes, origin flags, portal rings, paradox marks,
+ * and collision-resolved date/title labels (no label may overlap another) */
 const beatsLayer: Layer = {
 	id: 'beats',
 	draw(f) {
@@ -375,12 +403,15 @@ const beatsLayer: Layer = {
 		ctx.textAlign = 'center';
 		const tokened = beatsWithTokens(f);
 		const rowH = tokenRowHeight(f);
+		type Lbl = { x: number; y: number; text: string; font: string; alpha: number; fill: string; row: string };
+		const labels: Lbl[] = [];
 		for (const p of L.pos) {
 			const x = f.sx(p.x);
 			if (x < -80 || x > f.vw + 80) continue;
 			const y = f.sy(p.y);
 			const color = L.branchColor(p.branch);
-			const r = f.px(6, 3.5, 10);
+			const img = p.e.image ? f.image(p.e.image) : null;
+			const r = nodeRadius(f, p.e);
 			const dropY = tokened.has(p.e.id) ? rowH : 0;
 
 			if (L.departureIds.has(p.e.id)) {
@@ -396,7 +427,7 @@ const beatsLayer: Layer = {
 			}
 
 			if (p.e.kind === 'origin' || p.e.origin) {
-				const fx = x - f.px(11, 6, 16);
+				const fx = x - r - f.px(6, 3, 9);
 				ctx.strokeStyle = theme.accent;
 				ctx.fillStyle = theme.accent;
 				ctx.lineWidth = f.px(1.5, 1, 2.2);
@@ -412,17 +443,35 @@ const beatsLayer: Layer = {
 				ctx.fill();
 			}
 
-			ctx.beginPath();
-			ctx.arc(x, y, r, 0, 7);
-			ctx.fillStyle = color;
-			ctx.fill();
-			ctx.lineWidth = f.px(3, 1.8, 4.5);
-			ctx.strokeStyle = theme.ink;
-			ctx.stroke();
+			if (img) {
+				// the still IS the node: circle-cropped, ringed in the lane colour
+				ctx.save();
+				ctx.beginPath();
+				ctx.arc(x, y, r, 0, 7);
+				ctx.clip();
+				const iw = img.naturalWidth;
+				const ih = img.naturalHeight;
+				const k = Math.max((r * 2) / iw, (r * 2) / ih);
+				ctx.drawImage(img, x - (iw * k) / 2, y - (ih * k) / 2, iw * k, ih * k);
+				ctx.restore();
+				ctx.beginPath();
+				ctx.arc(x, y, r, 0, 7);
+				ctx.lineWidth = f.px(2.2, 1.5, 3.2);
+				ctx.strokeStyle = color;
+				ctx.stroke();
+			} else {
+				ctx.beginPath();
+				ctx.arc(x, y, r, 0, 7);
+				ctx.fillStyle = color;
+				ctx.fill();
+				ctx.lineWidth = f.px(3, 1.8, 4.5);
+				ctx.strokeStyle = theme.ink;
+				ctx.stroke();
+			}
 
 			if (p.e.paradox) {
-				const wx = x + f.px(10, 6, 15);
-				const wy = y - f.px(11, 7, 17);
+				const wx = x + r + f.px(4, 2, 6);
+				const wy = y - r - f.px(2, 1, 4);
 				const w = f.px(7, 4.5, 10);
 				ctx.beginPath();
 				ctx.moveTo(wx, wy - w * 0.93);
@@ -442,73 +491,59 @@ const beatsLayer: Layer = {
 			if (p.e.crossRef) {
 				ctx.fillStyle = theme.accent;
 				ctx.font = `bold ${f.px(15, 10, 21)}px ${theme.monoFont}`;
-				ctx.fillText('»', x - f.px(12, 7, 17), y - f.px(6, 4, 9));
+				ctx.fillText('»', x - r - f.px(6, 3, 9), y - f.px(6, 4, 9));
 			}
 
 			if (f.tiers.dateA > 0.03) {
-				ctx.globalAlpha = f.tiers.dateA;
-				ctx.fillStyle = theme.muted;
-				ctx.font = `${f.px(9, 8, 12.5)}px ${theme.monoFont}`;
-				ctx.fillText(shortDate(p.e), x, y + r + dropY + f.px(15, 11, 21));
-				ctx.globalAlpha = 1;
+				labels.push({
+					x,
+					y: y + r + dropY + f.px(15, 11, 21),
+					text: shortDate(p.e),
+					font: `${f.px(9, 8, 12.5)}px ${theme.monoFont}`,
+					alpha: f.tiers.dateA,
+					fill: theme.muted,
+					row: 'date'
+				});
 			}
 			if (f.tiers.labelA > 0.03) {
-				ctx.globalAlpha = f.tiers.labelA;
-				ctx.fillStyle = theme.paper;
-				ctx.font = `${f.px(10.5, 9, 14)}px ${theme.monoFont}`;
 				const t = p.e.label.length > 30 ? p.e.label.slice(0, 28) + '…' : p.e.label;
-				ctx.fillText(t, x, y + r + dropY + f.px(30, 22, 40));
-				ctx.globalAlpha = 1;
+				labels.push({
+					x,
+					y: y + r + dropY + f.px(30, 22, 40),
+					text: t,
+					font: `${f.px(10.5, 9, 14)}px ${theme.monoFont}`,
+					alpha: f.tiers.labelA,
+					fill: theme.paper,
+					row: 'title'
+				});
 			}
 			if (p.e.source && f.tiers.labelA > 0.03) {
-				ctx.globalAlpha = f.tiers.labelA * 0.85;
-				ctx.fillStyle = theme.accent;
-				ctx.font = `${f.px(8, 7, 11)}px ${theme.monoFont}`;
-				ctx.fillText(p.e.source.toUpperCase(), x, y + r + dropY + f.px(43, 32, 56));
-				ctx.globalAlpha = 1;
+				labels.push({
+					x,
+					y: y + r + dropY + f.px(43, 32, 56),
+					text: p.e.source.toUpperCase(),
+					font: `${f.px(8, 7, 11)}px ${theme.monoFont}`,
+					alpha: f.tiers.labelA * 0.85,
+					fill: theme.accent,
+					row: 'source'
+				});
 			}
 		}
-	}
-};
 
-/**
- * Beat thumbnails in their own pass, above every other static layer, so an
- * arrow or a neighbouring node can never draw across a photo at close zoom.
- */
-const thumbsLayer: Layer = {
-	id: 'thumbs',
-	draw(f) {
-		if (f.tiers.thumbA <= 0.02) return;
-		const { ctx, theme, layout: L } = f;
-		for (const p of L.pos) {
-			if (!p.e.image) continue;
-			const x = f.sx(p.x);
-			if (x < -80 || x > f.vw + 80) continue;
-			const y = f.sy(p.y);
-			const r = f.px(6, 3.5, 10);
-			const img = f.image(p.e.image);
-			const tw = f.px(88, 40, 132);
-			const th = tw * 0.62;
-			const ty = y - th - r - f.px(14, 8, 22);
-			ctx.globalAlpha = f.tiers.thumbA;
-			ctx.fillStyle = theme.panel;
-			ctx.strokeStyle = theme.line;
-			ctx.lineWidth = 1;
-			ctx.beginPath();
-			ctx.roundRect(x - tw / 2, ty, tw, th, 5);
-			ctx.fill();
-			if (img) {
-				ctx.save();
-				ctx.clip();
-				const iw = img.naturalWidth;
-				const ih = img.naturalHeight;
-				const k = Math.max(tw / iw, th / ih);
-				ctx.drawImage(img, x - (iw * k) / 2, ty + th / 2 - (ih * k) / 2, iw * k, ih * k);
-				ctx.restore();
-				ctx.beginPath();
-				ctx.roundRect(x - tw / 2, ty, tw, th, 5);
-			}
-			ctx.stroke();
+		// collision sweep: within each text row (same band of y), a label that
+		// would overlap the previous one is dropped rather than drawn on top
+		labels.sort((a, z) => a.x - z.x);
+		const lastEnd = new Map<string, number>();
+		for (const lb of labels) {
+			ctx.font = lb.font;
+			const w = ctx.measureText(lb.text).width;
+			const key = `${lb.row}|${Math.round(lb.y / 10)}`;
+			const prev = lastEnd.get(key);
+			if (prev !== undefined && lb.x - w / 2 < prev + 6) continue;
+			lastEnd.set(key, lb.x + w / 2);
+			ctx.globalAlpha = lb.alpha;
+			ctx.fillStyle = lb.fill;
+			ctx.fillText(lb.text, lb.x, lb.y);
 			ctx.globalAlpha = 1;
 		}
 	}
@@ -745,8 +780,7 @@ export const STATIC_LAYERS: Layer[] = [
 	birthsLayer,
 	jumpsLayer,
 	presenceLayer,
-	beatsLayer,
-	thumbsLayer
+	beatsLayer
 ];
 
 export const DYNAMIC_LAYERS: Layer[] = [laneLabelsLayer, selectionLayer, minimapLayer];

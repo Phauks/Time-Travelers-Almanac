@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { computeLayout, elasticWeight } from './layout';
+import { chronoFromWhen, computeLayout, elasticWeight } from './layout';
+import { jumpText } from './display';
 import { stitchTimelines } from './stitch';
 import type { Branch, TimelineEvent } from '$lib/types';
 
@@ -258,6 +259,58 @@ describe('saga stitching', () => {
 		stitchTimelines([partI, partII]);
 		expect(partI.events[1].jumpToLabel).toBe('1885');
 		expect(partII.events[0].jumpFromLabel).toBe('1955');
+	});
+});
+
+describe('structured calendar time', () => {
+	it('derives an ordered sort key from year, month, day, and time', () => {
+		const a = chronoFromWhen({ year: 1955, month: 11, day: 5, time: '06:00' });
+		const b = chronoFromWhen({ year: 1955, month: 11, day: 5, time: '20:30' });
+		const c = chronoFromWhen({ year: 1955, month: 11, day: 12 });
+		const d = chronoFromWhen({ year: 1955, month: 11 });
+		expect(a).toBeLessThan(b);
+		expect(b).toBeLessThan(c);
+		expect(d).toBeLessThan(a); // month-only sorts before its dated days
+		expect(Math.floor(a)).toBe(1955);
+	});
+
+	it('aligns the same calendar day across timelines to one column', () => {
+		const L = computeLayout(
+			[
+				ev('p1', 0, 0, { when: { year: 1955, month: 11, day: 5, time: '06:00' } }),
+				ev('q1', 1, 0, {
+					when: { year: 1955, month: 11, day: 5, time: '15:00' },
+					branch: 'other'
+				}),
+				ev('p2', 2, 0, { when: { year: 1985, month: 10, day: 26 } })
+			],
+			[
+				{ id: 'main', label: 'Main' },
+				{ id: 'other', label: 'Other', parent: 'main', branchAt: 'q1' }
+			],
+			'happened'
+		);
+		// same day, different lanes: one column even though the times differ
+		expect(L.posById.get('p1')!.x).toBe(L.posById.get('q1')!.x);
+		expect(L.posById.get('p2')!.x).toBeGreaterThan(L.posById.get('p1')!.x);
+	});
+
+	it('marks large real gaps on lane segments for the notch', () => {
+		const L = computeLayout(
+			[ev('a', 0, 1955), ev('b', 1, 1985), ev('c', 2, 1985.01)],
+			[{ id: 'main', label: 'Main' }],
+			'traveler'
+		);
+		expect(L.segParts[0].gapYears).toBeCloseTo(30);
+		expect(L.segParts[1].gapYears).toBeLessThan(1);
+	});
+
+	it('spells out jump spans in the best whole unit', () => {
+		expect(jumpText(1955, 1985)).toBe('30 Years');
+		expect(jumpText(1955, 1955 + 7 / 365.25)).toBe('1 Week');
+		expect(jumpText(1955, 1955 + 2 / 365.25)).toBe('2 Days');
+		expect(jumpText(1955, 1955 + 90 / 365.25)).toBe('3 Months');
+		expect(jumpText(1955, 1955.0000019)).toBe('Moments');
 	});
 });
 

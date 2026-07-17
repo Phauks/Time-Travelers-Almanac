@@ -16,7 +16,6 @@
 		accent = 'var(--color-branching)',
 		continuesFrom = null,
 		continuesTo = null,
-		fallbackImage = undefined,
 		onOpenImage,
 		cast = [],
 		saga = []
@@ -29,8 +28,6 @@
 		continuesFrom?: { slug: string; title: string } | null;
 		/** the media this timeline continues into, shown at the end */
 		continuesTo?: { slug: string; title: string } | null;
-		/** poster to show in the event panel when a beat has no still of its own */
-		fallbackImage?: string;
 		/** open a given image in the page's gallery lightbox */
 		onOpenImage?: (src: string) => void;
 		/** this entry's cast registry, passed through to the Chronoscope */
@@ -242,7 +239,6 @@
 			selIndex={selIndex < 0 ? 0 : selIndex}
 			total={L.ordered.length}
 			onStep={step}
-			{fallbackImage}
 			{onOpenImage}
 		/>
 	{/if}
@@ -257,7 +253,6 @@
 	{events}
 	{branches}
 	{accent}
-	{fallbackImage}
 	{onOpenImage}
 	{cast}
 	{saga}

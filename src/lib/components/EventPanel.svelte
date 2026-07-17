@@ -1,7 +1,8 @@
 <script lang="ts">
-	import { Warning, CaretLeft, CaretRight, ArrowSquareOut } from 'phosphor-svelte';
+	import { Warning, CaretLeft, CaretRight, ArrowSquareOut, MagnifyingGlassPlus } from 'phosphor-svelte';
 	import { base } from '$app/paths';
 	import { kindMeta, whenLabel, STATUS_BLURB } from '$lib/timeline/display';
+	import { KIND_ICONS } from '$lib/timeline/kindIcons';
 	import type { TimelineEvent } from '$lib/types';
 
 	let {
@@ -13,7 +14,6 @@
 		selIndex,
 		total,
 		onStep,
-		fallbackImage = undefined,
 		onOpenImage
 	}: {
 		selected: TimelineEvent;
@@ -28,13 +28,12 @@
 		selIndex: number;
 		total: number;
 		onStep: (delta: number) => void;
-		/** poster to show when a beat has no still of its own */
-		fallbackImage?: string;
 		/** open a given image in the page's gallery lightbox */
 		onOpenImage?: (src: string) => void;
 	} = $props();
 
 	let M = $derived(kindMeta(selected));
+	let KindIcon = $derived(KIND_ICONS[selected.kind ?? 'event'] as typeof import('phosphor-svelte').Flag);
 	const pretty = (slug: string) => slug.replace(/-/g, ' ');
 </script>
 
@@ -54,28 +53,17 @@
 		</button>
 	</div>
 	<div class="det-main">
-		<div class="media">
-			{#if selected.image}
-				<button
-					class="shot"
-					onclick={() => onOpenImage?.(selected.image!)}
-					aria-label="Open {selected.label} in the gallery"
-				>
-					<img src={selected.image} alt={selected.label} />
-				</button>
-			{:else if fallbackImage}
-				<img class="shot-fallback" src={fallbackImage} alt="" />
-				<span class="media-note">no still yet</span>
-			{:else}
-				<span class="media-note">no image</span>
-			{/if}
-		</div>
 		<div class="det-text">
 			<h4>{selected.label}</h4>
 			<p class="when">{whenLabel(selected)}</p>
 			{#if selected.description}<p class="desc">{selected.description}</p>{/if}
 			{#if selected.paradox}
 				<p class="para"><Warning size={13} weight="fill" /> {selected.paradox}</p>
+			{/if}
+			{#if selected.image}
+				<button class="viewstill" onclick={() => onOpenImage?.(selected.image!)}>
+					<MagnifyingGlassPlus size={13} weight="bold" /> View still
+				</button>
 			{/if}
 			{#if selected.crossRef}
 				<a class="xref-link" href="{base}/specimens/{selected.crossRef.entry}/">
@@ -86,7 +74,7 @@
 	</div>
 	<div class="badges">
 		<span class="badge tip-host" tabindex="0" style="--c:{branchColor}">
-			{#if M.icon}{@const Icon = M.icon}<Icon size={12} weight="fill" />{/if}{M.label}
+			<KindIcon size={12} weight="fill" />{M.label}
 			<span class="tip" role="tooltip">{M.blurb}</span>
 		</span>
 		{#if branchLabel}
@@ -148,61 +136,12 @@
 		outline: 2px solid var(--accent);
 		outline-offset: 2px;
 	}
-	/* three regions: image left, text right, tags beneath */
 	.det-main {
 		display: grid;
-		grid-template-columns: 120px minmax(0, 1fr);
-		gap: 0.7rem;
-		align-items: start;
+		grid-template-columns: minmax(0, 1fr);
 	}
 	.det-text {
 		min-width: 0;
-	}
-	/* always-reserved image slot: still, poster, or blank */
-	.media {
-		position: relative;
-		aspect-ratio: 3 / 4;
-		border: 1px solid var(--color-line);
-		border-radius: 6px;
-		overflow: hidden;
-		background: color-mix(in srgb, var(--color-panel) 70%, #000);
-		display: flex;
-		align-items: center;
-		justify-content: center;
-	}
-	.media .shot {
-		display: block;
-		width: 100%;
-		height: 100%;
-		padding: 0;
-		border: 0;
-		background: transparent;
-		cursor: zoom-in;
-	}
-	.media .shot img {
-		width: 100%;
-		height: 100%;
-		object-fit: cover;
-		display: block;
-	}
-	.media .shot:focus-visible {
-		outline: 2px solid var(--accent);
-		outline-offset: -2px;
-	}
-	.media .shot-fallback {
-		width: 100%;
-		height: 100%;
-		object-fit: cover;
-		opacity: 0.28;
-		filter: grayscale(0.3);
-	}
-	.media-note {
-		position: absolute;
-		font-family: var(--font-mono);
-		font-size: 0.6rem;
-		letter-spacing: 0.08em;
-		text-transform: uppercase;
-		color: var(--color-muted);
 	}
 	.badges {
 		display: flex;
@@ -285,6 +224,26 @@
 		margin: 0;
 		font-size: 1rem;
 		line-height: 1.6;
+	}
+	.viewstill {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.35rem;
+		margin: 0.6rem 0.5rem 0 0;
+		border: 1px solid var(--color-line);
+		border-radius: 999px;
+		background: transparent;
+		color: var(--color-muted);
+		font-family: var(--font-mono);
+		font-size: 0.66rem;
+		letter-spacing: 0.06em;
+		text-transform: uppercase;
+		padding: 0.28rem 0.65rem;
+		cursor: pointer;
+	}
+	.viewstill:hover {
+		color: var(--color-paper);
+		border-color: color-mix(in srgb, var(--color-paper) 35%, var(--color-line));
 	}
 	.xref-link {
 		display: inline-flex;

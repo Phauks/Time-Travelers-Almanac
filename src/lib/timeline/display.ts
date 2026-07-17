@@ -1,26 +1,17 @@
 // Shared presentation helpers for timeline beats, used by the SVG card,
 // the event panel, and the Chronoscope.
 
-import {
-	Flag,
-	Lightning,
-	MapPin,
-	ArrowUUpLeft,
-	ArrowsClockwise,
-	DotOutline
-} from 'phosphor-svelte';
 import type { EventKind, TimelineEvent } from '$lib/types';
 
-export const KIND_META: Record<
-	EventKind,
-	{ label: string; icon: unknown | null; blurb: string }
-> = {
-	origin: { label: 'Origin', icon: Flag, blurb: "The story's starting point in time." },
-	departure: { label: 'Time jump', icon: Lightning, blurb: 'A time machine fires here; the traveller leaves this moment.' },
-	arrival: { label: 'Arrival', icon: MapPin, blurb: 'A traveller lands here from another time.' },
-	return: { label: 'Return', icon: ArrowUUpLeft, blurb: 'The traveller comes back to their home era.' },
-	loop: { label: 'Loop', icon: ArrowsClockwise, blurb: 'A repeat or reset; this moment happens more than once.' },
-	event: { label: 'Event', icon: DotOutline, blurb: 'An ordinary beat of the story; no travel here.' }
+// icons live in kindIcons.ts so this module stays free of Svelte imports
+// (it is consumed by pure layout code and by the unit tests)
+export const KIND_META: Record<EventKind, { label: string; blurb: string }> = {
+	origin: { label: 'Origin', blurb: "The story's starting point in time." },
+	departure: { label: 'Time jump', blurb: 'A time machine fires here; the traveller leaves this moment.' },
+	arrival: { label: 'Arrival', blurb: 'A traveller lands here from another time.' },
+	return: { label: 'Return', blurb: 'The traveller comes back to their home era.' },
+	loop: { label: 'Loop', blurb: 'A repeat or reset; this moment happens more than once.' },
+	event: { label: 'Event', blurb: 'An ordinary beat of the story; no travel here.' }
 };
 
 /** one-line meaning of each branch status, for hovers */
@@ -55,7 +46,20 @@ export const whenLabel = (e: TimelineEvent) => {
  */
 export function jumpText(fromC: number, toC: number): string {
 	if (fromC < 1000 || toC < 1000) return 'Jump';
-	const d = Math.abs(Math.round(toC) - Math.round(fromC));
-	if (d === 0) return 'Moments';
-	return `${d} ${d === 1 ? 'Year' : 'Years'}`;
+	const days = Math.abs(toC - fromC) * 365.25;
+	if (days < 0.9) return 'Moments';
+	if (days < 6.5) {
+		const d = Math.round(days);
+		return `${d} ${d === 1 ? 'Day' : 'Days'}`;
+	}
+	if (days < 29) {
+		const w = Math.round(days / 7);
+		return `${w} ${w === 1 ? 'Week' : 'Weeks'}`;
+	}
+	if (days < 350) {
+		const m = Math.round(days / 30.4375);
+		return `${m} ${m === 1 ? 'Month' : 'Months'}`;
+	}
+	const y = Math.round(days / 365.25);
+	return `${y} ${y === 1 ? 'Year' : 'Years'}`;
 }

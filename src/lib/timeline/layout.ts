@@ -48,6 +48,8 @@ export interface SegPart {
 	color: string;
 	/** this stretch of history has been overwritten and is decaying */
 	fading: boolean;
+	/** the real time this hop spans, in years (large gaps get a notch) */
+	gapYears: number;
 }
 
 export interface Splinter {
@@ -152,6 +154,28 @@ const DEFAULTS: Required<LayoutOpts> = { ml: 104, mr: 56, top: 98, gap: 86, step
 /** two chrono values that count as the same instant */
 const sameMoment = (a: number, b: number) => Math.abs(a - b) < 1e-6;
 
+/** a fractional-year sort key derived from structured calendar time */
+export function chronoFromWhen(w: NonNullable<TimelineEvent['when']>): number {
+	const hours = w.time ? Number(w.time.slice(0, 2)) + Number(w.time.slice(3, 5)) / 60 : 0;
+	const dayOfYear = ((w.month ?? 1) - 1) * 30.4375 + ((w.day ?? 1) - 1) + hours / 24;
+	return w.year + dayOfYear / 365.25;
+}
+
+/**
+ * The registration key: beats sharing a calendar day (or month, when the day
+ * is unknown) share a column across timelines. Without structured time the
+ * key falls back to the exact chrono instant.
+ */
+export function dayKeyOf(e: TimelineEvent): string {
+	if (e.when) return `${e.when.year}-${e.when.month ?? 'x'}-${e.when.day ?? 'x'}`;
+	return `c${e.chrono}`;
+}
+
+/** shallow copies with chrono derived from `when` where present */
+export function normalizeTime(events: TimelineEvent[]): TimelineEvent[] {
+	return events.map((e) => (e.when ? { ...e, chrono: chronoFromWhen(e.when) } : e));
+}
+
 /**
  * Elastic spacing weight for a real time gap (in chrono units, usually
  * years): a beat three hours later sits close; a beat thirty years later
@@ -207,7 +231,10 @@ export function elasticXPositions(
 	let prev: TimelineEvent | null = null;
 	for (const e of byChrono) {
 		if (prev) {
-			if (sameMoment(e.chrono, prev.chrono)) {
+			const sameColumn = e.when
+				? dayKeyOf(e) === dayKeyOf(prev)
+				: sameMoment(e.chrono, prev.chrono);
+			if (sameColumn) {
 				if (branchOf(e.id) === branchOf(prev.id)) x += step * 0.45;
 			} else {
 				x += step * elasticWeight(e.chrono - prev.chrono);
@@ -332,6 +359,7 @@ export function computeLayout(
 	opts: LayoutOpts = {}
 ): TimelineLayout {
 	const { ml, mr, top, gap, step, minW } = { ...DEFAULTS, ...opts };
+	events = normalizeTime(events);
 
 	const { byNarr, rootId, memberOf, branchOf } = branchMembership(events, branches);
 	const narrIndex = new Map(byNarr.map((e, i) => [e.id, i]));
@@ -438,7 +466,8 @@ export function computeLayout(
 				x2: z.x,
 				y: laneY(b.id),
 				color: branchColor(b.id),
-				fading: fadeX != null && a.x >= fadeX
+				fading: fadeX != null && a.x >= fadeX,
+				gapYears: Math.abs(z.e.chrono - a.e.chrono)
 			});
 		}
 	}

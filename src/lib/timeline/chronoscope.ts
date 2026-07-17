@@ -360,8 +360,7 @@ export class Chronoscope {
 			theme: this.theme!,
 			tiers: {
 				dateA: ramp(s, 0.45, 0.7),
-				labelA: ramp(s, 0.85, 1.15),
-				thumbA: ramp(s, 1.3, 1.7)
+				labelA: ramp(s, 0.85, 1.15)
 			},
 			selectedId: this.selectedId,
 			hoverId: this.hoverId,

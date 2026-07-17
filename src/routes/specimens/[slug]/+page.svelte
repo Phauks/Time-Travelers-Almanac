@@ -272,7 +272,6 @@
 				accent={ruleColorVar(s.rules[0])}
 				continuesFrom={prevPart}
 				continuesTo={nextPart}
-				fallbackImage={s.poster}
 				onOpenImage={openImageBySrc}
 				cast={s.cast ?? []}
 				{saga}

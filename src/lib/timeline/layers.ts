@@ -2,7 +2,7 @@
 // the engine composes them, caches the static ones during pans, and plugins
 // can add layers with engine.use(). No layer holds state.
 
-import { presentAt, type TimelineLayout } from './layout';
+import type { TimelineLayout } from './layout';
 import { shortDate, jumpText } from './display';
 
 export interface ChronoTheme {
@@ -57,9 +57,9 @@ export const arcLift = (level: number) => 36 + level * 26;
 export const TRAVELER_COLORS = ['#35d6a4', '#c99cff', '#7cc4ff', '#ffd166'];
 
 /** a traveller's stable colour, by their position in layout.travelers */
-export const travelerColor = (layout: TimelineLayout, name: string) =>
+export const travelerColor = (layout: TimelineLayout, id: string) =>
 	TRAVELER_COLORS[
-		Math.max(0, layout.travelers.findIndex((t) => t.name === name)) % TRAVELER_COLORS.length
+		Math.max(0, layout.travelers.findIndex((t) => t.id === id)) % TRAVELER_COLORS.length
 	];
 
 // ---------------------------------------------------------------- geometry
@@ -288,37 +288,81 @@ const jumpsLayer: Layer = {
 	}
 };
 
+/** the beats whose enabled travellers will draw a token row */
+export function beatsWithTokens(f: Frame): Set<string> {
+	const out = new Set<string>();
+	for (const t of f.layout.travelers) {
+		if (!f.visibleTravelers.has(t.id)) continue;
+		for (const id of t.beats) out.add(id);
+	}
+	return out;
+}
+
+/** vertical room the token row occupies beneath a beat */
+export const tokenRowHeight = (f: Frame) => f.px(9, 7, 13) * 2 + f.px(7, 4, 10);
+
 /**
- * Traveller presence as a highlight, not a separate line: each enabled
- * traveller draws a coloured ring around every beat they are present at.
- * Concentric rings stack when several enabled travellers share a beat.
+ * Traveller presence as a row of tokens beneath each beat: a portrait when
+ * the cast member has one active at that point in the story, else their
+ * symbol or emoji, else an initial. Several travellers stack side by side,
+ * so presence stays readable at distance and never encodes by colour alone.
  */
 const presenceLayer: Layer = {
 	id: 'presence',
 	draw(f) {
 		if (!f.visibleTravelers.size || !f.layout.travelers.length) return;
-		const { ctx, layout: L } = f;
+		const { ctx, theme, layout: L } = f;
+		const visible = L.travelers.filter((t) => f.visibleTravelers.has(t.id));
+		if (!visible.length) return;
+		const atBeat = new Map<string, typeof visible>();
+		for (const t of visible) {
+			for (const id of t.beats) (atBeat.get(id) ?? atBeat.set(id, []).get(id)!).push(t);
+		}
+		const tr = f.px(9, 7, 13);
+		const gap = 3;
 		for (const p of L.pos) {
-			const here = presentAt(p.e).filter((n) => f.visibleTravelers.has(n));
-			if (!here.length) continue;
+			const here = atBeat.get(p.e.id);
+			if (!here) continue;
 			const x = f.sx(p.x);
-			if (x < -60 || x > f.vw + 60) continue;
+			if (x < -80 || x > f.vw + 80) continue;
 			const y = f.sy(p.y);
-			const base = f.px(6, 3.5, 10);
-			here.forEach((name, i) => {
-				const color = travelerColor(L, name);
-				const r = base + f.px(5.5, 3.5, 8) + i * f.px(3.5, 2.4, 5);
-				ctx.save();
-				ctx.strokeStyle = color;
-				ctx.globalAlpha = 0.9;
-				ctx.lineWidth = f.px(2, 1.4, 2.8);
-				ctx.shadowColor = color;
-				ctx.shadowBlur = 6;
+			const nodeR = f.px(6, 3.5, 10);
+			const total = here.length * (tr * 2 + gap) - gap;
+			let tx = x - total / 2 + tr;
+			const ty = y + nodeR + tr + f.px(5, 3, 8);
+			for (const t of here) {
+				const color = t.color ?? travelerColor(L, t.id);
 				ctx.beginPath();
-				ctx.arc(x, y, r, 0, 7);
+				ctx.arc(tx, ty, tr, 0, 7);
+				ctx.fillStyle = theme.panel;
+				ctx.fill();
+				ctx.lineWidth = 1.6;
+				ctx.strokeStyle = color;
 				ctx.stroke();
-				ctx.restore();
-			});
+				const active = t.images.filter((im) => im.fromNarr <= p.e.narrative).at(-1);
+				const img = active ? f.image(active.src) : null;
+				if (img) {
+					ctx.save();
+					ctx.beginPath();
+					ctx.arc(tx, ty, tr - 1, 0, 7);
+					ctx.clip();
+					const iw = img.naturalWidth;
+					const ih = img.naturalHeight;
+					const k = Math.max((tr * 2) / iw, (tr * 2) / ih);
+					ctx.drawImage(img, tx - (iw * k) / 2, ty - (ih * k) / 2, iw * k, ih * k);
+					ctx.restore();
+				} else {
+					ctx.fillStyle = theme.paper;
+					ctx.textAlign = 'center';
+					ctx.textBaseline = 'middle';
+					ctx.font = t.symbol
+						? `${Math.round(tr * 1.35)}px ${theme.monoFont}`
+						: `bold ${Math.round(tr * 1.05)}px ${theme.monoFont}`;
+					ctx.fillText(t.symbol ?? t.name.slice(0, 1).toUpperCase(), tx, ty + 0.5);
+					ctx.textBaseline = 'alphabetic';
+				}
+				tx += tr * 2 + gap;
+			}
 		}
 	}
 };
@@ -329,12 +373,15 @@ const beatsLayer: Layer = {
 	draw(f) {
 		const { ctx, theme, layout: L } = f;
 		ctx.textAlign = 'center';
+		const tokened = beatsWithTokens(f);
+		const rowH = tokenRowHeight(f);
 		for (const p of L.pos) {
 			const x = f.sx(p.x);
 			if (x < -80 || x > f.vw + 80) continue;
 			const y = f.sy(p.y);
 			const color = L.branchColor(p.branch);
 			const r = f.px(6, 3.5, 10);
+			const dropY = tokened.has(p.e.id) ? rowH : 0;
 
 			if (L.departureIds.has(p.e.id)) {
 				ctx.strokeStyle = theme.muted;
@@ -402,7 +449,7 @@ const beatsLayer: Layer = {
 				ctx.globalAlpha = f.tiers.dateA;
 				ctx.fillStyle = theme.muted;
 				ctx.font = `${f.px(9, 8, 12.5)}px ${theme.monoFont}`;
-				ctx.fillText(shortDate(p.e), x, y + r + f.px(15, 11, 21));
+				ctx.fillText(shortDate(p.e), x, y + r + dropY + f.px(15, 11, 21));
 				ctx.globalAlpha = 1;
 			}
 			if (f.tiers.labelA > 0.03) {
@@ -410,14 +457,14 @@ const beatsLayer: Layer = {
 				ctx.fillStyle = theme.paper;
 				ctx.font = `${f.px(10.5, 9, 14)}px ${theme.monoFont}`;
 				const t = p.e.label.length > 30 ? p.e.label.slice(0, 28) + '…' : p.e.label;
-				ctx.fillText(t, x, y + r + f.px(30, 22, 40));
+				ctx.fillText(t, x, y + r + dropY + f.px(30, 22, 40));
 				ctx.globalAlpha = 1;
 			}
 			if (p.e.source && f.tiers.labelA > 0.03) {
 				ctx.globalAlpha = f.tiers.labelA * 0.85;
 				ctx.fillStyle = theme.accent;
 				ctx.font = `${f.px(8, 7, 11)}px ${theme.monoFont}`;
-				ctx.fillText(p.e.source.toUpperCase(), x, y + r + f.px(43, 32, 56));
+				ctx.fillText(p.e.source.toUpperCase(), x, y + r + dropY + f.px(43, 32, 56));
 				ctx.globalAlpha = 1;
 			}
 		}
@@ -637,6 +684,20 @@ const minimapLayer: Layer = {
 			ctx.beginPath();
 			ctx.moveTo(g.mx(ln.startX), g.my(ln.y));
 			ctx.lineTo(g.mx(ln.endX), g.my(ln.y));
+			ctx.stroke();
+		}
+		// the jumps themselves, so time travel is visible in miniature
+		for (const j of f.layout.jumps) {
+			const x1 = g.mx(j.from.x);
+			const x2 = g.mx(j.to.x);
+			const yy1 = g.my(j.from.y);
+			const yy2 = g.my(j.to.y);
+			ctx.strokeStyle = j.back ? theme.jumpBack : theme.jump;
+			ctx.globalAlpha = 0.85;
+			ctx.lineWidth = 1;
+			ctx.beginPath();
+			ctx.moveTo(x1, yy1);
+			ctx.quadraticCurveTo((x1 + x2) / 2, Math.min(yy1, yy2) - 6, x2, yy2);
 			ctx.stroke();
 		}
 		ctx.globalAlpha = 1;

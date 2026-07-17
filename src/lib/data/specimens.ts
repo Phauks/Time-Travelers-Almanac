@@ -120,6 +120,24 @@ export const specimens: MediaEntry[] = [
 				note: 'the repaired 1955 and the altered 1985 he returns to'
 			}
 		],
+		cast: [
+			{ id: 'marty', name: 'Marty', person: 'Marty McFly', symbol: '🛹' },
+			{
+				id: 'doc',
+				name: 'Doc',
+				person: 'Doc Brown',
+				symbol: '⚡',
+				variant: 'the 1985 Doc who builds the machine and is gunned down at the mall'
+			},
+			{
+				id: 'doc-1955',
+				name: 'Doc (1955)',
+				person: 'Doc Brown',
+				symbol: '🔧',
+				variant: 'the Doc who meets Marty in 1955 and lives the long way around to 1985, letter in pocket'
+			},
+			{ id: 'einstein', name: 'Einstein', person: 'Einstein', symbol: '🐕' }
+		],
 		timeline: [
 			{
 				id: 'orig-meet',
@@ -268,7 +286,7 @@ export const specimens: MediaEntry[] = [
 			},
 			{
 				id: 'altered',
-				travelers: ['Marty', 'Doc'],
+				travelers: ['Marty', 'Doc (1955)'],
 				label: 'A better 1985',
 				narrative: 9,
 				chrono: 1985.822,
@@ -280,7 +298,7 @@ export const specimens: MediaEntry[] = [
 			},
 			{
 				id: 'hook',
-				travelers: ['Marty', 'Doc'],
+				travelers: ['Marty', 'Doc (1955)'],
 				label: '“…we don’t need roads.”',
 				narrative: 10,
 				chrono: 1985.823,

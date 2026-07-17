@@ -261,6 +261,46 @@ describe('saga stitching', () => {
 	});
 });
 
+describe('cast resolution', () => {
+	const CAST = [
+		{ id: 'doc-a', name: 'Doc', person: 'Doc Brown', symbol: 'D' },
+		{
+			id: 'doc-b',
+			name: 'Doc (later)',
+			person: 'Doc Brown',
+			images: [{ src: '/young.jpg' }, { src: '/old.jpg', fromEvent: 'd' }]
+		}
+	];
+	const EVS = [
+		ev('a', 0, 1985, { travelers: ['doc-a'] }),
+		ev('b', 1, 1955, { travelers: ['Doc (later)', 'Stranger'] }),
+		ev('d', 2, 1956, { travelers: ['doc-b'] })
+	];
+
+	it('resolves presence refs by id, then name, and keeps unknowns as implicit cast', () => {
+		const L = computeLayout(EVS, [], 'traveler', { cast: CAST });
+		const ids = L.travelers.map((t) => t.id);
+		expect(ids).toEqual(['doc-a', 'doc-b', 'Stranger']);
+		expect(L.travelers[1].beats).toEqual(['b', 'd']); // name ref and id ref unify
+		expect(L.travelers[2].person).toBe('Stranger');
+	});
+
+	it('keeps variants of one person distinct but grouped by person', () => {
+		const L = computeLayout(EVS, [], 'traveler', { cast: CAST });
+		expect(L.travelers[0].person).toBe('Doc Brown');
+		expect(L.travelers[1].person).toBe('Doc Brown');
+		expect(L.travelers[0].id).not.toBe(L.travelers[1].id);
+	});
+
+	it('resolves portrait checkpoints to narrative positions', () => {
+		const L = computeLayout(EVS, [], 'traveler', { cast: CAST });
+		const docB = L.travelers.find((t) => t.id === 'doc-b')!;
+		expect(docB.images.map((i) => i.src)).toEqual(['/young.jpg', '/old.jpg']);
+		expect(docB.images[0].fromNarr).toBe(-Infinity);
+		expect(docB.images[1].fromNarr).toBe(2); // active from beat d onward
+	});
+});
+
 describe('saga identity (sameAs)', () => {
 	const mk = (slug: string, branches: Branch[], events: TimelineEvent[]) => ({
 		slug,

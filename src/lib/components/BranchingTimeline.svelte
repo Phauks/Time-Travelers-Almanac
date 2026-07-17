@@ -18,6 +18,7 @@
 		continuesTo = null,
 		fallbackImage = undefined,
 		onOpenImage,
+		cast = [],
 		saga = []
 	}: {
 		title?: string;
@@ -32,6 +33,8 @@
 		fallbackImage?: string;
 		/** open a given image in the page's gallery lightbox */
 		onOpenImage?: (src: string) => void;
+		/** this entry's cast registry, passed through to the Chronoscope */
+		cast?: import('$lib/types').CastMember[];
 		/** every part of this franchise, in order, for the Chronoscope's saga view */
 		saga?: SagaPart[];
 	} = $props();
@@ -256,6 +259,7 @@
 	{accent}
 	{fallbackImage}
 	{onOpenImage}
+	{cast}
 	{saga}
 	initialSelected={selectedId}
 />

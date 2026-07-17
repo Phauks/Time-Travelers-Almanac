@@ -185,6 +185,31 @@ export interface Branch {
 	note?: string;
 }
 
+/**
+ * A time-travel-significant character in one entry's story. Variants of the
+ * same human are separate cast members (the Doc who lived 1955 to 1985 the
+ * long way is not the Doc who waved Marty off): `person` groups them.
+ */
+export interface CastMember {
+	/** stable id referenced from event `travelers` lists (falls back to name) */
+	id: string;
+	name: string;
+	/** the human being; variants of one person share this */
+	person: string;
+	/** one line on what makes this variant distinct */
+	variant?: string;
+	/** a single character or emoji drawn as this traveller's token on the board */
+	symbol?: string;
+	/** override for the assigned highlight colour */
+	color?: string;
+	/**
+	 * portraits, in narrative order of effect: the entry without `fromEvent`
+	 * is the default; later entries take over from their beat onward (a story
+	 * can scar a face)
+	 */
+	images?: { src: string; fromEvent?: string; credit?: string }[];
+}
+
 export interface MediaEntry {
 	slug: string;
 	title: string;
@@ -239,6 +264,8 @@ export interface MediaEntry {
 
 	/** the branches of this entry's timeline (splinters when the future changes) */
 	branches?: Branch[];
+	/** the time-travel-significant characters of this story */
+	cast?: CastMember[];
 	timeline: TimelineEvent[];
 
 	/** provenance, set only for visitor-contributed entries or edits (future) */

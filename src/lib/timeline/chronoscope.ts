@@ -124,6 +124,7 @@ export class Chronoscope {
 			y1: layout.H + 20
 		});
 		for (const p of layout.pos) if (p.e.image) this.loadImage(p.e.image);
+		for (const t of layout.travelers) for (const im of t.images) this.loadImage(im.src);
 		this.invalidate();
 		if (first) this.fitAll(false);
 		else this.requestDraw();

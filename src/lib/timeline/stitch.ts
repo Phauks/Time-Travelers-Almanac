@@ -15,7 +15,7 @@
 // never leak across a seam), and cross-part references are promoted from
 // labelled off-timeline stubs into real jump arrows.
 
-import type { Branch, TimelineEvent } from '$lib/types';
+import type { Branch, CastMember, TimelineEvent } from '$lib/types';
 import { branchMembership } from './layout';
 
 export interface SagaPart {
@@ -23,6 +23,7 @@ export interface SagaPart {
 	title: string;
 	events: TimelineEvent[];
 	branches: Branch[];
+	cast?: CastMember[];
 }
 
 const ROMAN = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X'];
@@ -30,6 +31,8 @@ const ROMAN = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X'];
 export interface StitchedTimeline {
 	events: TimelineEvent[];
 	branches: Branch[];
+	/** the union of every part's cast; the same id across parts is one person */
+	cast: CastMember[];
 }
 
 export function stitchTimelines(parts: SagaPart[]): StitchedTimeline {
@@ -123,5 +126,15 @@ export function stitchTimelines(parts: SagaPart[]): StitchedTimeline {
 		}
 	}
 
-	return { events, branches };
+	const cast: CastMember[] = [];
+	const seenCast = new Set<string>();
+	for (const part of parts) {
+		for (const c of part.cast ?? []) {
+			if (seenCast.has(c.id)) continue;
+			seenCast.add(c.id);
+			cast.push(c);
+		}
+	}
+
+	return { events, branches, cast };
 }

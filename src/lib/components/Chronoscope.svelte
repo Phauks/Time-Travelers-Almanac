@@ -18,6 +18,7 @@ import { TRAVELER_COLORS } from '$lib/timeline/layers';
 		fallbackImage = undefined,
 		onOpenImage,
 		initialSelected = undefined,
+		cast = [],
 		saga = []
 	}: {
 		open?: boolean;
@@ -29,6 +30,8 @@ import { TRAVELER_COLORS } from '$lib/timeline/layers';
 		onOpenImage?: (src: string) => void;
 		/** beat to select when the view opens (the card's current selection) */
 		initialSelected?: string;
+		/** this entry's cast registry (traveller identities, symbols, portraits) */
+		cast?: import('$lib/types').CastMember[];
 		/** every part of this franchise, in order, for the stitched saga view */
 		saga?: SagaPart[];
 	} = $props();
@@ -47,7 +50,7 @@ import { TRAVELER_COLORS } from '$lib/timeline/layers';
 
 	const canSaga = $derived(saga.length > 1);
 	// the scene on the board: this one story, or the whole stitched saga
-	let scene = $derived(sagaOn && canSaga ? stitchTimelines(saga) : { events, branches });
+	let scene = $derived(sagaOn && canSaga ? stitchTimelines(saga) : { events, branches, cast });
 	// roomier spacing than the in-card board: the full screen can afford it
 	let layout = $derived(
 		computeLayout(scene.events, scene.branches, order, {
@@ -55,7 +58,8 @@ import { TRAVELER_COLORS } from '$lib/timeline/layers';
 			gap: 130,
 			top: 120,
 			ml: 140,
-			mr: 90
+			mr: 90,
+			cast: scene.cast
 		})
 	);
 
@@ -256,7 +260,7 @@ import { TRAVELER_COLORS } from '$lib/timeline/layers';
 						<span class="lg"><svg viewBox="0 0 26 12" aria-hidden="true"><path d="M2 6 H24" stroke="#ff6b74" stroke-width="2" stroke-dasharray="2 5" opacity="0.6"/></svg>overwritten, fading away</span>
 					{/if}
 					{#if uses.presence}
-						<span class="lg"><svg viewBox="0 0 26 12" aria-hidden="true"><circle cx="13" cy="6" r="2.4" fill="var(--color-muted)"/><circle cx="13" cy="6" r="4.6" fill="none" stroke="#35d6a4" stroke-width="1.4"/></svg>a traveler is present here</span>
+						<span class="lg"><svg viewBox="0 0 26 12" aria-hidden="true"><circle cx="13" cy="6" r="5.2" fill="var(--color-panel)" stroke="#35d6a4" stroke-width="1.4"/><text x="13" y="8.6" text-anchor="middle" font-size="7" fill="var(--color-paper)">M</text></svg>a traveler is present here</span>
 					{/if}
 					{#if uses.crossRef}
 						<span class="lg"><svg viewBox="0 0 26 12" aria-hidden="true"><text x="9" y="10" font-size="12" font-weight="700" fill="var(--color-branching)">»</text></svg>crosses into another story</span>
@@ -267,7 +271,6 @@ import { TRAVELER_COLORS } from '$lib/timeline/layers';
 				{/if}
 			</div>
 				<div class="controls">
-					<span class="hint">drag to pan, scroll to zoom, click a beat</span>
 					<button class="nav" onclick={() => engine?.panBy(-260)} aria-label="Pan left">
 						<CaretLeft size={15} weight="bold" />
 					</button>
@@ -329,7 +332,7 @@ import { TRAVELER_COLORS } from '$lib/timeline/layers';
 						<p class="side-title">
 							Travelers
 							<span class="tall">
-								<button onclick={() => (visibleTravelers = layout.travelers.map((t) => t.name))}>All</button>
+								<button onclick={() => (visibleTravelers = layout.travelers.map((t) => t.id))}>All</button>
 								<button onclick={() => (visibleTravelers = [])}>None</button>
 							</span>
 						</p>
@@ -479,14 +482,6 @@ import { TRAVELER_COLORS } from '$lib/timeline/layers';
 		display: flex;
 		align-items: center;
 		gap: 0.4rem;
-	}
-	.hint {
-		font-family: var(--font-mono);
-		font-size: 0.62rem;
-		letter-spacing: 0.08em;
-		text-transform: uppercase;
-		color: var(--color-muted);
-		margin-right: 0.5rem;
 	}
 	.nav {
 		display: inline-flex;

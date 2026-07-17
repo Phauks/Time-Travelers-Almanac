@@ -7,7 +7,7 @@
 // axis: spacing grows with the log of the real time gap, and beats that
 // share an instant across branches share an x.
 
-import type { Branch, TimelineEvent } from '$lib/types';
+import type { Branch, CastMember, TimelineEvent } from '$lib/types';
 
 /**
  * 'traveler' walks the beats in the order the time traveller lives them
@@ -29,6 +29,8 @@ export interface LayoutOpts {
 	step?: number;
 	/** minimum board width */
 	minW?: number;
+	/** the entry's cast registry, for resolving traveller presence */
+	cast?: CastMember[];
 }
 
 export interface BeatPos {
@@ -82,9 +84,19 @@ export interface Birth {
 	color: string;
 }
 
-/** a person with time-travel significance and the beats they appear in */
+/** a resolved cast entry: a person (or variant) and the beats they appear in */
 export interface TravelerInfo {
+	id: string;
 	name: string;
+	/** the human being; variants of one person share this */
+	person: string;
+	variant?: string;
+	/** a single character or emoji drawn as this traveller's board token */
+	symbol?: string;
+	/** explicit colour override (else assigned from the palette by index) */
+	color?: string;
+	/** portrait checkpoints: active from the beat with that narrative value on */
+	images: { fromNarr: number; src: string }[];
 	/** beat ids, in narrative order */
 	beats: string[];
 }
@@ -268,22 +280,49 @@ export function computeDecay(branches: Branch[], posById: Map<string, BeatPos>) 
 }
 
 /**
- * Every named traveller (and variant of a traveller: "Doc (1955)" is not
- * "Doc") with the beats they appear in, ordered by first appearance.
+ * Every traveller with the beats they appear in, ordered by first appearance.
+ * Event presence strings resolve against the cast registry by id, then by
+ * name; unknown names become implicit cast entries, so untagged entries keep
+ * working. Variants stay distinct ("Doc (1955)" is not "Doc"); `person`
+ * groups them.
  */
-export function buildTravelers(byNarr: TimelineEvent[]): TravelerInfo[] {
+export function buildTravelers(byNarr: TimelineEvent[], cast: CastMember[] = []): TravelerInfo[] {
+	const byId = new Map(cast.map((c) => [c.id, c]));
+	const byName = new Map(cast.map((c) => [c.name, c]));
+	const narrOf = new Map(byNarr.map((e) => [e.id, e.narrative]));
 	const order: string[] = [];
 	const beats = new Map<string, string[]>();
+	const member = new Map<string, CastMember | undefined>();
 	for (const e of byNarr) {
-		for (const name of presentAt(e)) {
-			if (!beats.has(name)) {
-				order.push(name);
-				beats.set(name, []);
+		for (const ref of presentAt(e)) {
+			const c = byId.get(ref) ?? byName.get(ref);
+			const key = c?.id ?? ref;
+			if (!beats.has(key)) {
+				order.push(key);
+				beats.set(key, []);
+				member.set(key, c);
 			}
-			beats.get(name)!.push(e.id);
+			beats.get(key)!.push(e.id);
 		}
 	}
-	return order.map((name) => ({ name, beats: beats.get(name)! }));
+	return order.map((key) => {
+		const c = member.get(key);
+		return {
+			id: key,
+			name: c?.name ?? key,
+			person: c?.person ?? key,
+			variant: c?.variant,
+			symbol: c?.symbol,
+			color: c?.color,
+			images: (c?.images ?? [])
+				.map((img) => ({
+					src: img.src,
+					fromNarr: img.fromEvent != null ? (narrOf.get(img.fromEvent) ?? -Infinity) : -Infinity
+				}))
+				.sort((a, z) => a.fromNarr - z.fromNarr),
+			beats: beats.get(key)!
+		};
+	});
 }
 
 export function computeLayout(
@@ -434,7 +473,7 @@ export function computeLayout(
 		}
 	}
 
-	const travelers = buildTravelers(byNarr);
+	const travelers = buildTravelers(byNarr, opts.cast ?? []);
 	const jumps = levelJumps(pos, posById);
 	const offJumps = computeOffJumps(pos);
 

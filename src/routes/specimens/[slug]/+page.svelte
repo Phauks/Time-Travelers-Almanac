@@ -96,7 +96,7 @@
 		return [s, ...mates]
 			.filter((m) => m.timeline?.length && m.continuity === s.continuity)
 			.sort((a, b) => (a.partOrder ?? 0) - (b.partOrder ?? 0))
-			.map((m) => ({ slug: m.slug, title: m.title, events: m.timeline, branches: m.branches ?? [] }));
+			.map((m) => ({ slug: m.slug, title: m.title, events: m.timeline, branches: m.branches ?? [], cast: m.cast ?? [] }));
 	});
 	let related = $derived(relatedSpecimens(s));
 	let franchiseLabel = $derived(s.franchise ? s.franchise.replace(/-/g, ' ') : '');
@@ -274,6 +274,7 @@
 				continuesTo={nextPart}
 				fallbackImage={s.poster}
 				onOpenImage={openImageBySrc}
+				cast={s.cast ?? []}
 				{saga}
 			/>
 		{/key}
